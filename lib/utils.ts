@@ -245,13 +245,13 @@ export function extractContext(title: string, category?: string): SearchContext 
     const nameWords = coreEntity.split(/\s+/);
     // Allow mixed case (e.g. "robert duvall", "Robert duvall")
     // Just ensure they are words with letters.
-    const isProperName = nameWords.length >= 2 && nameWords.length <= 4 &&
+    // UPDATE: Allow single words (e.g. "Almodovar", "Hitchcock") if the pattern is strong ("[Name] movies")
+    const isProperName = nameWords.length >= 1 && nameWords.length <= 4 &&
       nameWords.every(w => /^[a-zA-Z\u00C0-\u00FF]+$/.test(w));
+
     if (isProperName) {
       // It's ambiguous (could be director or actor), but "Robert Duvall" is usually searched as an actor.
       // Let's set it as `actor` primarily, as `moviesProvider` can handle person search.
-      // We'll set both to let the provider decide? 
-      // Actually, let's just set it as `actor` since `getActorFilmography` will be our new smart method.
       actor = coreEntity;
     }
   }

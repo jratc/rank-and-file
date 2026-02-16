@@ -65,7 +65,7 @@ export const booksProvider = {
                             id: `book_${book.id}`,
                             name: info.title,
                             subtitle: `${authors} ${year ? `• ${year}` : ''}`,
-                            imageUrl: info.imageLinks?.thumbnail?.replace('http:', 'https:') || null,
+                            imageUrl: info.imageLinks?.thumbnail?.replace('http:', 'https:') || 'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=400&h=600&fit=crop', // Fallback book image
                             externalUrl: info.infoLink,
                             provider: 'google_books' as const,
                             category: 'books' as const,

@@ -176,6 +176,40 @@ export const moviesProvider = {
                 if (textResults.length > 0) {
                     return textResults.map((movie: any) => mapTmdbMovie(movie));
                 }
+
+                // -----------------------------------------------------------
+                // FALLBACK: PERSON SEARCH
+                // If text search returned nothing, maybe the user searched a name 
+                // but context didn't catch it (e.g. "Almodovar" or "Almodovar movies" with weak context)
+                // -----------------------------------------------------------
+                if (textResults.length === 0 && finalQuery.length > 3) {
+                    console.log(`[TMDB] No text results, attempting fallback person search for: "${finalQuery}"`);
+                    const personResp = await fetch(
+                        `https://api.themoviedb.org/3/search/person?api_key=${apiKey}&query=${encodeURIComponent(finalQuery)}`,
+                        { next: { revalidate: 86400 } }
+                    );
+
+                    if (personResp.ok) {
+                        const personData = await personResp.json();
+                        const topPerson = personData.results?.[0];
+
+                        // Only proceed if the person is reasonably known to avoid noise
+                        if (topPerson && topPerson.popularity > 5) {
+                            console.log(`[TMDB] Fallback found person: ${topPerson.name} (ID: ${topPerson.id})`);
+                            const discoverResp = await fetch(
+                                `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&with_people=${topPerson.id}&sort_by=popularity.desc&page=1`,
+                                { next: { revalidate: 3600 } }
+                            );
+                            if (discoverResp.ok) {
+                                const discoverData = await discoverResp.json();
+                                if (discoverData.results?.length > 0) {
+                                    return discoverData.results.map((movie: any) => mapTmdbMovie(movie));
+                                }
+                            }
+                        }
+                    }
+                }
+
             } catch (error) {
                 console.error('TMDB search failed, falling back to mock', error);
             }

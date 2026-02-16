@@ -1006,12 +1006,17 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                     )}
 
                                     {/* Explain Yourself (Comments) Button - Only for Owner */}
-                                    {currentUserId === expandedList.user_id && (
+                                    {(currentUserId === expandedList.user_id || (expandedList.id === 'temp-pending' && currentUserId)) && (
                                         <Button
                                             variant="outline"
                                             size="sm"
                                             onClick={(e) => {
                                                 e.stopPropagation();
+                                                // If temp-pending, we can't add comments yet, maybe alert?
+                                                if (expandedList.id === 'temp-pending') {
+                                                    toast.error("Finish creating your list first!");
+                                                    return;
+                                                }
                                                 setCommentModal({
                                                     isOpen: true,
                                                     listId: expandedList.id,
