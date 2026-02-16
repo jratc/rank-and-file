@@ -61,12 +61,16 @@ export async function generateSearchIntent(query: string, category: string): Pro
             return null;
         }
 
+
         const data = await response.json();
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
         if (!text) return null;
 
-        const result = JSON.parse(text);
+        // Clean markdown code blocks if present // ```json ... ```
+        const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+
+        const result = JSON.parse(cleanText);
         console.log(`[AI] Intent detected:`, result);
 
         return result as SearchContext;
@@ -74,5 +78,70 @@ export async function generateSearchIntent(query: string, category: string): Pro
     } catch (error) {
         console.error('[AI] Intent detection failed:', error);
         return null;
+    }
+}
+
+export async function generateListFromLLM(topic: string, count: number = 20): Promise<any[]> {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return [];
+
+    try {
+        console.log(`[AI] Generating list for topic: "${topic}"`);
+
+        const prompt = `
+        You are an expert curator for a ranking app.
+        The user wants a list of items for the topic: "${topic}".
+        
+        Generate a JSON array of the top ${count} items that best fit this topic.
+        The list should be high-quality, culturally significant, and accurate.
+        
+        Output format:
+        [
+            {
+                "name": "Item Name",
+                "subtitle": "Short description (10-15 words) explaining why it matches the topic or date/creator",
+                "score": 95 (relevance score 0-100)
+            },
+            ...
+        ]
+
+        Subject: ${topic}
+        
+        Return valid JSON only. No markdown.
+        `;
+
+        const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        temperature: 0.7
+                    }
+                })
+            }
+        );
+
+        if (!response.ok) {
+            console.error(`[AI] Gemini API Error: ${response.status}`);
+            return [];
+        }
+
+        const data = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (!text) return [];
+
+        const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        const items = JSON.parse(cleanText);
+
+        return Array.isArray(items) ? items : [];
+
+    } catch (error) {
+        console.error('[AI] List generation failed:', error);
+        return [];
     }
 }
