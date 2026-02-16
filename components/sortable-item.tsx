@@ -36,7 +36,7 @@ export function SortableItem({ id, item, rank, onRemove, onDoubleClick }: Sortab
     return (
         <div ref={setNodeRef} style={style} className="mb-3">
             <Card
-                className="flex flex-row items-center p-2 cursor-grab active:cursor-grabbing hover:bg-slate-50 transition-all border-slate-200 bg-white shadow-sm hover:shadow-md group gap-0"
+                className="relative flex flex-row items-center p-2 cursor-grab active:cursor-grabbing hover:bg-slate-50 transition-all border-slate-200 bg-white shadow-sm hover:shadow-md group gap-0"
                 {...attributes}
                 {...listeners}
                 onDoubleClick={() => { console.log('SortableItem: Double Click fired'); if (onDoubleClick) onDoubleClick(); }}
