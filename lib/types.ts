@@ -6,7 +6,7 @@ export interface RankedItem {
     subtitle: string; // Artist, Address, or Director
     imageUrl: string | null;
     externalUrl: string | null;
-    provider: 'itunes' | 'google' | 'tmdb' | 'custom' | 'wikipedia' | 'google_books' | 'spotify';
+    provider: 'itunes' | 'google' | 'tmdb' | 'custom' | 'wikipedia' | 'google_books' | 'spotify' | 'gemini';
     category?: Category; // Optional for now, but good for tracking
     rank?: number;
     metadata?: any; // Store full object for retrieval
