@@ -643,13 +643,25 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                 </div>
             )}
 
-            <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 transition-all duration-500 ${(expandedListId || showNameModal) ? 'blur-sm scale-95 pointer-events-none' : ''}`}>
+            {/* CATEGORY GRID / SWIPE VIEW */}
+            <div className={`
+                flex flex-row overflow-x-auto snap-x snap-mandatory gap-4 pb-8 -mx-4 px-4 
+                md:grid md:grid-cols-2 md:gap-6 md:overflow-visible md:pb-0 md:mx-0 md:px-0
+                lg:grid-cols-3 xl:grid-cols-5 
+                transition-all duration-500 
+                scrollbar-hide
+                ${(expandedListId || showNameModal) ? 'blur-sm scale-95 pointer-events-none' : ''}
+            `}>
                 {categories.map((catKey) => {
                     const config = categoryConfig[catKey];
                     const lists = groupedLists[catKey] || [];
 
                     return (
-                        <div key={catKey} className="flex flex-col gap-4 group/cat">
+                        <div key={catKey} className="
+                            min-w-[85vw] snap-center 
+                            md:min-w-0 md:w-auto md:snap-align-none
+                            flex flex-col gap-4 group/cat
+                        ">
                             <div
                                 onClick={() => handleCreateList(catKey)}
                                 className="flex items-end gap-3 pb-2 border-b-4 border-slate-100 hover:border-black dark:border-white/10 dark:hover:border-white transition-colors cursor-pointer group h-20"

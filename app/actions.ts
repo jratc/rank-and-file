@@ -234,6 +234,38 @@ export async function createResponse(parentListId: string) {
         throw new Error(createError.message);
     }
 
+    // 3. COPY ITEMS FROM PARENT
+    // Fetch parent items
+    const { data: parentItems, error: itemsError } = await supabase
+        .from('list_items')
+        .select('*')
+        .eq('list_id', parentListId);
+
+    if (!itemsError && parentItems && parentItems.length > 0) {
+        // Prepare new items
+        const newItems = parentItems.map(item => ({
+            list_id: newList.id,
+            entity_id: item.entity_id,
+            rank: item.rank,
+            metadata: item.metadata,
+            // We don't copy specific user data if any, but metadata is usually shared.
+            // Ensure we don't copy 'id' or 'created_at'
+        }));
+
+        // Batch insert
+        const { error: copyError } = await supabase
+            .from('list_items')
+            .insert(newItems);
+
+        if (copyError) {
+            console.error('Failed to copy list items:', copyError);
+            // We don't fail the whole request, just log it. The user gets an empty list.
+        } else {
+            // Attach items to returned object so UI updates immediately
+            newList.list_items = newItems;
+        }
+    }
+
     revalidatePath('/');
     return newList;
 }
