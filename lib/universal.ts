@@ -149,37 +149,35 @@ export const universalProvider = {
 
                 return items;
             }
-            return items;
+        } catch (e) {
+            console.error('[Wikipedia] getListMembers failed', e);
         }
-        } catch(e) {
-        console.error('[Wikipedia] getListMembers failed', e);
-    }
 
         // 3. FALLBACK: LLM GENERATION
         // If Wikipedia category search failed, ask the AI.
         // This handles "Art Exhibits that changed me" or "Best 90s hip hop albums" (if not caught by other providers)
         try {
-        const { generateListFromLLM } = await import('./ai');
-        const aiItems = await generateListFromLLM(topic, limit || 20);
+            const { generateListFromLLM } = await import('./ai');
+            const aiItems = await generateListFromLLM(topic, limit || 20);
 
-        if(aiItems.length > 0) {
-            console.log(`[Universal] LLM generated ${aiItems.length} items for "${topic}"`);
-return aiItems.map((item, index) => ({
-    id: `ai_${Date.now()}_${index}`,
-    name: item.name,
-    subtitle: item.subtitle,
-    imageUrl: null, // AI doesn't give images yet, maybe we fetch them later or use a generic placeholder icon in frontend
-    externalUrl: null,
-    provider: 'gemini' as const,
-    category: 'more' as Category,
-    rawMetadata: item,
-    rank: index + 1 // Implicit rank from AI order
-}));
+            if (aiItems.length > 0) {
+                console.log(`[Universal] LLM generated ${aiItems.length} items for "${topic}"`);
+                return aiItems.map((item, index) => ({
+                    id: `ai_${Date.now()}_${index}`,
+                    name: item.name,
+                    subtitle: item.subtitle,
+                    imageUrl: null, // AI doesn't give images yet, maybe we fetch them later or use a generic placeholder icon in frontend
+                    externalUrl: null,
+                    provider: 'gemini' as const,
+                    category: 'more' as Category,
+                    rawMetadata: item,
+                    rank: index + 1 // Implicit rank from AI order
+                }));
             }
         } catch (err) {
-    console.error('[Universal] LLM Fallback failed', err);
-}
+            console.error('[Universal] LLM Fallback failed', err);
+        }
 
-return [];
+        return [];
     }
 };

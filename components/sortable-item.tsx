@@ -76,7 +76,7 @@ export function SortableItem({ id, item, rank, onRemove, onDoubleClick }: Sortab
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 w-auto px-1.5 text-[9px] font-black uppercase tracking-widest bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white opacity-0 group-hover:opacity-100 transition-all absolute right-12 shadow-sm border border-blue-100"
+                            className="h-6 w-auto px-1.5 text-[9px] font-black uppercase tracking-widest bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all absolute right-12 shadow-sm border border-blue-100"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 if (onDoubleClick) onDoubleClick();
@@ -90,7 +90,7 @@ export function SortableItem({ id, item, rank, onRemove, onDoubleClick }: Sortab
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full"
+                        className="h-8 w-8 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
                         onClick={() => onRemove(item.id)}
                         onPointerDown={(e) => e.stopPropagation()} // Prevent drag start
                         onMouseDown={(e) => e.stopPropagation()}   // Prevent drag start
