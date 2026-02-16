@@ -988,10 +988,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                             parentListId={expandedList.id}
                                             parentTitle={expandedList.title}
                                             onResponseCreated={async (newList: any) => {
-                                                setExpandedListId(null);
-                                                setEditSession({ id: null, title: null, isExpanded: false });
-
-                                                // Optimistic update
+                                                // 1. Optimistic update for list count
                                                 setLists(prev => prev.map(list => {
                                                     if (list.id === expandedList.id) {
                                                         return { ...list, response_count: (list.response_count || 0) + 1 };
@@ -1000,18 +997,31 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                                 }));
 
                                                 try {
+                                                    // 2. Fetch thread data BEFORE closing current view
                                                     const thread = await getThread(expandedList.id);
+
+                                                    // 3. Update router to show new list in background
                                                     router.refresh();
+
                                                     if (thread) {
+                                                        // 4. Open Response View AND Close Expanded View simultaneously
                                                         setResponseView({
                                                             isOpen: true,
                                                             threadData: thread,
                                                             draftId: newList.id
                                                         });
+                                                        setExpandedListId(null);
+                                                        setEditSession({ id: null, title: null, isExpanded: false });
+                                                    } else {
+                                                        // Fallback if thread fetch fails - keep user in current view but show error?
+                                                        // Or just close?
+                                                        setExpandedListId(null);
                                                     }
                                                 } catch (err) {
                                                     console.error('Failed to load thread:', err);
                                                     toast.error('Failed to open response view');
+                                                    // Ensure we don't get stuck if error occurs
+                                                    setExpandedListId(null);
                                                 }
                                             }}
                                         />
