@@ -1,4 +1,5 @@
 'use client';
+// Trigger Vercel Rebuild - Fix Top 10 Button Visibility
 
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
