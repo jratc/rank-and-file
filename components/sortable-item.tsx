@@ -12,11 +12,12 @@ import { MusicPlayer } from './music-link'
 interface SortableItemProps {
     id: string;
     item: any;
+    rank: number;
     onRemove: (id: string) => void;
     onDoubleClick?: () => void;
 }
 
-export function SortableItem({ id, item, onRemove, onDoubleClick }: SortableItemProps) {
+export function SortableItem({ id, item, rank, onRemove, onDoubleClick }: SortableItemProps) {
     const {
         attributes,
         listeners,
@@ -70,7 +71,22 @@ export function SortableItem({ id, item, onRemove, onDoubleClick }: SortableItem
                 </div>
 
 
-                <div className="flex flex-col items-center justify-center pl-2 pr-1 border-l border-slate-100">
+                <div className="flex flex-col items-center justify-center pl-2 pr-1 border-l border-slate-100 gap-1 bg-white z-10">
+                    {rank > 10 && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-auto px-1.5 text-[9px] font-black uppercase tracking-widest bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white opacity-0 group-hover:opacity-100 transition-all absolute right-12 shadow-sm border border-blue-100"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (onDoubleClick) onDoubleClick();
+                            }}
+                            onPointerDown={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
+                        >
+                            TOP 10
+                        </Button>
+                    )}
                     <Button
                         variant="ghost"
                         size="icon"

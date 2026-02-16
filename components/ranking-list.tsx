@@ -219,6 +219,7 @@ export function RankingList({ initialItems, listId, category = 'items', onChange
                                     <SortableItem
                                         id={item.id}
                                         item={item}
+                                        rank={index + 1}
                                         onRemove={handleRemove}
                                         onDoubleClick={() => handleDoubleClick(item.id)}
                                     />
