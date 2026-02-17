@@ -98,6 +98,28 @@ export async function detectAndPopulateList(listId: string, title: string, categ
         console.error('[Populate] Provider error:', e);
     }
 
+    // Fail-Safe Fallback: If no items found, ask Gemini to generate list based on title
+    if (items.length === 0 && process.env.GEMINI_API_KEY && title) {
+        console.log(`[Populate] No items found. Attempting LLM fallback for: "${title}"`);
+        try {
+            // We treat the title as the topic directly
+            const llmItems = await generateListFromLLM(title, context.limit || 20);
+            if (llmItems.length > 0) {
+                items = llmItems.map((item, idx) => ({
+                    id: `llm-${Date.now()}-${idx}`,
+                    name: item.name,
+                    subtitle: item.subtitle,
+                    imageUrl: null,
+                    externalUrl: null,
+                    provider: 'gemini',
+                    type: 'custom'
+                }));
+            }
+        } catch (e) {
+            console.error('[Populate] LLM Fallback failed:', e);
+        }
+    }
+
     if (items.length === 0) return { populated: false, count: 0 };
 
     // Limit to reasonable amount (e.g. top 50) to prevent blowout
