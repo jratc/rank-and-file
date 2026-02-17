@@ -46,7 +46,23 @@ export async function detectAndPopulateList(listId: string, title: string, categ
     let items: RankedItem[] = [];
 
     try {
-        if (category === 'movies') {
+        // Priority 1: Generic List Intent (LLM-detected)
+        // This overrides category-specific logic if the intent is explicitly 'list'
+        if (context.intent === 'list' && context.subject) {
+            console.log(`[Populate] Detected generic list intent for: ${context.subject}`);
+            // Generate list using LLM
+            const llmItems = await generateListFromLLM(context.subject, context.limit);
+            items = llmItems.map((item, idx) => ({
+                id: `llm-${Date.now()}-${idx}`,
+                name: item.name,
+                subtitle: item.subtitle,
+                imageUrl: null,
+                externalUrl: null,
+                provider: 'gemini',
+                type: 'custom'
+            }));
+        }
+        else if (category === 'movies') {
             // Priority: Actor -> Director -> Genre
             // LLM can detect "Sean Penn" as actor even if we didn't (though our regex fix helps)
             if (context.actor) {
@@ -60,21 +76,7 @@ export async function detectAndPopulateList(listId: string, title: string, categ
                 items = await moviesProvider.getMoviesByGenre(context.genre, context.limit);
             }
         }
-        else if (context.intent === 'list' && context.subject) {
-            console.log(`[Populate] Detected generic list intent for: ${context.subject}`);
-            // Generate list using LLM
-            // We need to import generateListFromLLM first (I'll add the import in a separate block if needed, or assume it's added)
-            const llmItems = await generateListFromLLM(context.subject, context.limit);
-            items = llmItems.map((item, idx) => ({
-                id: `llm-${Date.now()}-${idx}`,
-                name: item.name,
-                subtitle: item.subtitle,
-                imageUrl: null,
-                externalUrl: null,
-                provider: 'gemini',
-                type: 'custom'
-            }));
-        }
+
         else if (category === 'books' && context.author) {
             console.log(`[Populate] Detected author intent for: ${context.author}`);
             // Import dynamically or at top? Top is fine as they are server-side providers
