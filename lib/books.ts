@@ -44,17 +44,51 @@ export const booksProvider = {
                 ];
 
                 if (rawItems.length > 0) {
-                    // Deduplicate by ID
-                    const seenIds = new Set();
-                    const uniqueItems = [];
+                    // DEDUPLICATION LOGIC
+                    // Group by Normalized Title -> Keep Earliest Year
+                    const uniqueBooks = new Map<string, any>();
 
                     for (const book of rawItems) {
-                        if (!seenIds.has(book.id)) {
-                            seenIds.add(book.id);
-                            uniqueItems.push(book);
+                        const info = book.volumeInfo;
+                        if (!info.title) continue;
+
+                        // Normalize: lowercase, remove subtitles/parentheses for grouping? 
+                        // Actually, books often have "Title: A Novel" or "Title (Penguin Classics)".
+                        // We should try to strip those for comparison.
+                        // Regex to remove ": A Novel", " (Classic...)", etc. could be risky but helpful.
+                        // Let's stick to strict title lowercased for safety first, but maybe strip content in parens.
+                        let normalizedTitle = info.title.toLowerCase().trim();
+
+                        // Heuristic: Remove common suffixes for better grouping
+                        normalizedTitle = normalizedTitle.replace(/: a novel$/i, '');
+                        normalizedTitle = normalizedTitle.replace(/\([^)]+\)$/, '').trim(); // Remove trailing (Content)
+
+                        const existing = uniqueBooks.get(normalizedTitle);
+
+                        if (!existing) {
+                            uniqueBooks.set(normalizedTitle, book);
+                        } else {
+                            // Compare Years: We want the EARLIEST (True Original)
+                            const currentYear = parseInt(info.publishedDate?.substring(0, 4) || '9999');
+                            const existingYear = parseInt(existing.volumeInfo.publishedDate?.substring(0, 4) || '9999');
+
+                            if (currentYear < existingYear) {
+                                uniqueBooks.set(normalizedTitle, book);
+                            }
+                            // If years are equal, prefer the one with higher ratingsCount (Popularity)
+                            else if (currentYear === existingYear) {
+                                const currentVotes = info.ratingsCount || 0;
+                                const existingVotes = existing.volumeInfo.ratingsCount || 0;
+                                if (currentVotes > existingVotes) {
+                                    uniqueBooks.set(normalizedTitle, book);
+                                }
+                            }
                         }
                     }
 
+                    const uniqueItems = Array.from(uniqueBooks.values());
+
+                    // Map to RankedItem
                     let items = uniqueItems.map((book: any) => {
                         const info = book.volumeInfo;
                         const authors = info.authors ? info.authors.join(', ') : 'Unknown Author';
@@ -65,7 +99,7 @@ export const booksProvider = {
                             id: `book_${book.id}`,
                             name: info.title,
                             subtitle: `${authors} ${year ? `• ${year}` : ''}`,
-                            imageUrl: info.imageLinks?.thumbnail?.replace('http:', 'https:') || 'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=400&h=600&fit=crop', // Fallback book image
+                            imageUrl: info.imageLinks?.thumbnail?.replace('http:', 'https:') || 'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=400&h=600&fit=crop', // Fallback
                             externalUrl: info.infoLink,
                             provider: 'google_books' as const,
                             category: 'books' as const,
@@ -151,7 +185,40 @@ export const booksProvider = {
             if (response.ok) {
                 const data = await response.json();
                 if (data.items) {
-                    return data.items.map((book: any) => {
+                    const rawItems = data.items;
+                    // DEDUPLICATION LOGIC (Standard Search)
+                    const uniqueBooks = new Map<string, any>();
+
+                    for (const book of rawItems) {
+                        const info = book.volumeInfo;
+                        if (!info.title) continue;
+
+                        let normalizedTitle = info.title.toLowerCase().trim();
+                        normalizedTitle = normalizedTitle.replace(/: a novel$/i, '');
+                        normalizedTitle = normalizedTitle.replace(/\([^)]+\)$/, '').trim();
+
+                        const existing = uniqueBooks.get(normalizedTitle);
+
+                        if (!existing) {
+                            uniqueBooks.set(normalizedTitle, book);
+                        } else {
+                            const currentYear = parseInt(info.publishedDate?.substring(0, 4) || '9999');
+                            const existingYear = parseInt(existing.volumeInfo.publishedDate?.substring(0, 4) || '9999');
+
+                            if (currentYear < existingYear) {
+                                uniqueBooks.set(normalizedTitle, book);
+                            }
+                            else if (currentYear === existingYear) {
+                                const currentVotes = info.ratingsCount || 0;
+                                const existingVotes = existing.volumeInfo.ratingsCount || 0;
+                                if (currentVotes > existingVotes) {
+                                    uniqueBooks.set(normalizedTitle, book);
+                                }
+                            }
+                        }
+                    }
+
+                    return Array.from(uniqueBooks.values()).map((book: any) => {
                         const info = book.volumeInfo;
                         const authors = info.authors ? info.authors.join(', ') : 'Unknown Author';
                         const year = info.publishedDate ? info.publishedDate.split('-')[0] : '';
@@ -204,16 +271,39 @@ export const booksProvider = {
             ];
 
             if (rawItems.length > 0) {
-                // Deduplicate by ID
-                const seenIds = new Set();
-                const uniqueItems = [];
+                // DEDUPLICATION LOGIC (Matches search)
+                const uniqueBooks = new Map<string, any>();
 
                 for (const book of rawItems) {
-                    if (!seenIds.has(book.id)) {
-                        seenIds.add(book.id);
-                        uniqueItems.push(book);
+                    const info = book.volumeInfo;
+                    if (!info.title) continue;
+
+                    let normalizedTitle = info.title.toLowerCase().trim();
+                    normalizedTitle = normalizedTitle.replace(/: a novel$/i, '');
+                    normalizedTitle = normalizedTitle.replace(/\([^)]+\)$/, '').trim();
+
+                    const existing = uniqueBooks.get(normalizedTitle);
+
+                    if (!existing) {
+                        uniqueBooks.set(normalizedTitle, book);
+                    } else {
+                        const currentYear = parseInt(info.publishedDate?.substring(0, 4) || '9999');
+                        const existingYear = parseInt(existing.volumeInfo.publishedDate?.substring(0, 4) || '9999');
+
+                        if (currentYear < existingYear) {
+                            uniqueBooks.set(normalizedTitle, book);
+                        }
+                        else if (currentYear === existingYear) {
+                            const currentVotes = info.ratingsCount || 0;
+                            const existingVotes = existing.volumeInfo.ratingsCount || 0;
+                            if (currentVotes > existingVotes) {
+                                uniqueBooks.set(normalizedTitle, book);
+                            }
+                        }
                     }
                 }
+
+                const uniqueItems = Array.from(uniqueBooks.values());
 
                 let items = uniqueItems.map((book: any) => {
                     const info = book.volumeInfo;

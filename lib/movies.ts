@@ -174,7 +174,42 @@ export const moviesProvider = {
                 }
 
                 if (textResults.length > 0) {
-                    return textResults.map((movie: any) => mapTmdbMovie(movie));
+                    // DEDUPLICATION: Strict Title Match
+                    // If multiple movies have the exact same title, keep the most popular one.
+                    // This handles "Total Recall" (1990) vs "Total Recall" (2012) - usually we want both?
+                    // User said: "if the title is the same... dont include them Only include the original edition"
+                    // "Original edition" for movies implies the OLDER one if titles are identical.
+                    // But popularity might imply the NEW one is what people want?
+                    // Let's stick to the "Original" rule: If Exact Title Match -> Keep Earliest Year.
+
+                    const uniqueMovies = new Map<string, any>();
+
+                    for (const movie of textResults) {
+                        if (!movie.title) continue;
+                        const normalizedTitle = movie.title.toLowerCase().trim();
+
+                        const existing = uniqueMovies.get(normalizedTitle);
+
+                        if (!existing) {
+                            uniqueMovies.set(normalizedTitle, movie);
+                        } else {
+                            // Compare Years: Keep Earliest
+                            const currentYear = parseInt(movie.release_date?.substring(0, 4) || '9999');
+                            const existingYear = parseInt(existing.release_date?.substring(0, 4) || '9999');
+
+                            if (currentYear < existingYear) {
+                                uniqueMovies.set(normalizedTitle, movie);
+                            }
+                            // If same year (weird), use popularity
+                            else if (currentYear === existingYear) {
+                                if ((movie.popularity || 0) > (existing.popularity || 0)) {
+                                    uniqueMovies.set(normalizedTitle, movie);
+                                }
+                            }
+                        }
+                    }
+
+                    return Array.from(uniqueMovies.values()).map((movie: any) => mapTmdbMovie(movie));
                 }
 
                 // -----------------------------------------------------------
@@ -265,12 +300,32 @@ export const moviesProvider = {
 
             // 3. Filter for Director job and Sort by Popularity
             const directedMovies = (creditsData.crew || [])
-                .filter((c: any) => c.job === 'Director')
-                // Deduplicate by ID
-                .filter((v: any, i: number, a: any[]) => a.findIndex((t: any) => t.id === v.id) === i)
+                .filter((c: any) => c.job === 'Director');
+
+            // Deduplicate by Title (Keep Earliest/Most Popular)
+            const uniqueMovies = new Map<string, any>();
+            for (const movie of directedMovies) {
+                if (!movie.title) continue;
+                const normalizedTitle = movie.title.toLowerCase().trim();
+                const existing = uniqueMovies.get(normalizedTitle);
+
+                if (!existing) {
+                    uniqueMovies.set(normalizedTitle, movie);
+                } else {
+                    const currentYear = parseInt(movie.release_date?.substring(0, 4) || '9999');
+                    const existingYear = parseInt(existing.release_date?.substring(0, 4) || '9999');
+                    if (currentYear < existingYear) {
+                        uniqueMovies.set(normalizedTitle, movie);
+                    } else if (currentYear === existingYear && (movie.popularity || 0) > (existing.popularity || 0)) {
+                        uniqueMovies.set(normalizedTitle, movie);
+                    }
+                }
+            }
+
+            const sortedMovies = Array.from(uniqueMovies.values())
                 .sort((a: any, b: any) => (b.popularity || 0) - (a.popularity || 0));
 
-            return directedMovies.map((movie: any) => mapTmdbMovie(movie));
+            return sortedMovies.map((movie: any) => mapTmdbMovie(movie));
 
         } catch (error) {
             console.error('[TMDB] getDirectorFilmography failed:', error);
@@ -308,15 +363,33 @@ export const moviesProvider = {
             const creditsData = await creditsResp.json();
 
             // 3. Filter and Sort by Popularity
-            const actedMovies = (creditsData.cast || [])
-                // Deduplicate by ID
-                .filter((v: any, i: number, a: any[]) => a.findIndex((t: any) => t.id === v.id) === i)
-                // Filter out unreleased or very minor roles? 
-                // Using vote_count is safer than popularity for "classic" status, but popularity works well too.
-                // Let's use vote_count to prioritize "classics" (The Godfather) over recent obscure cameos.
+            const actedMovies = (creditsData.cast || []);
+
+            // Deduplicate by Title (Keep Earliest/Most Popular)
+            const uniqueMovies = new Map<string, any>();
+            for (const movie of actedMovies) {
+                if (!movie.title) continue;
+                const normalizedTitle = movie.title.toLowerCase().trim();
+                const existing = uniqueMovies.get(normalizedTitle);
+
+                if (!existing) {
+                    uniqueMovies.set(normalizedTitle, movie);
+                } else {
+                    const currentYear = parseInt(movie.release_date?.substring(0, 4) || '9999');
+                    const existingYear = parseInt(existing.release_date?.substring(0, 4) || '9999');
+                    // For actors, stick to original release rule too
+                    if (currentYear < existingYear) {
+                        uniqueMovies.set(normalizedTitle, movie);
+                    } else if (currentYear === existingYear && (movie.vote_count || 0) > (existing.vote_count || 0)) {
+                        uniqueMovies.set(normalizedTitle, movie);
+                    }
+                }
+            }
+
+            const sortedMovies = Array.from(uniqueMovies.values())
                 .sort((a: any, b: any) => (b.vote_count || 0) - (a.vote_count || 0));
 
-            return actedMovies.map((movie: any) => mapTmdbMovie(movie));
+            return sortedMovies.map((movie: any) => mapTmdbMovie(movie));
 
         } catch (error) {
             console.error('[TMDB] getActorFilmography failed:', error);

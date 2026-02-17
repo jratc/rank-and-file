@@ -83,29 +83,67 @@ export const itunesProvider = {
             // Let's filter ONLY if we have a strict genre intent and results are mixed? 
             // For now, let's trust the search rank.
 
-            const uniqueItems = new Map<string, RankedItem>();
+            // DEDUPLICATION & CLEANUP
+
+            const uniqueItems = new Map<string, any>();
 
             (data.results || []).forEach((item: any) => {
-                const id = String(item.trackId || item.collectionId);
-                // Filter out if primaryGenreName doesn't match? (Too strict, "Pop/Rock" vs "Rock")
+                const name = item.trackName || item.collectionName;
+                if (!name) return;
 
-                if (!uniqueItems.has(id)) {
-                    uniqueItems.set(id, {
-                        id,
-                        name: item.trackName || item.collectionName,
-                        subtitle: item.artistName + (item.primaryGenreName ? ` • ${item.primaryGenreName}` : ''), // Show Genre in subtitle
-                        imageUrl: item.artworkUrl100?.replace('100x100', '600x600'),
-                        externalUrl: item.trackViewUrl || item.collectionViewUrl,
-                        provider: 'itunes',
-                        // If it's a song, include album name?
-                        // item.collectionName
-                        category: 'music',
-                        rawMetadata: item,
-                    });
+                // Normalize for grouping: remove case, remove common suffixes
+                let normalized = name.toLowerCase();
+                // Strip " (Remastered...)", " - Live", etc.
+                normalized = normalized.replace(/\(remastered.*?\)/g, '');
+                normalized = normalized.replace(/ - remastered.*?$/g, '');
+                normalized = normalized.replace(/\(live.*?\)/g, '');
+                normalized = normalized.replace(/ - live.*?$/g, '');
+                normalized = normalized.replace(/\(deluxe.*?\)/g, '');
+                normalized = normalized.replace(/ - deluxe.*?$/g, '');
+                normalized = normalized.replace(/\(.*?edition\)/g, ''); // " (Special Edition)"
+                normalized = normalized.trim();
+
+                // Key by Normalized Name + Artist
+                const key = `${normalized}|${(item.artistName || '').toLowerCase()}`;
+
+                const existing = uniqueItems.get(key);
+
+                if (!existing) {
+                    uniqueItems.set(key, item);
+                } else {
+                    // SELECTION LOGIC: Keep the "cleaner" version
+                    // 1. Prefer shorter original title (e.g. "Song" > "Song (Remastered)")
+                    const currName = item.trackName || item.collectionName;
+                    const existName = existing.trackName || existing.collectionName;
+
+                    if (currName.length < existName.length) {
+                        uniqueItems.set(key, item);
+                    }
+                    // 2. If lengths same (maybe same track on different albums?), check release date?
+                    // Usually we want the EARLIEST release date for "Original".
+                    else if (currName.length === existName.length) {
+                        const currDate = item.releaseDate || '9999';
+                        const existDate = existing.releaseDate || '9999';
+                        if (currDate < existDate) {
+                            uniqueItems.set(key, item);
+                        }
+                    }
                 }
             });
 
-            return Array.from(uniqueItems.values());
+            return Array.from(uniqueItems.values()).map((item: any) => {
+                const id = String(item.trackId || item.collectionId);
+                return {
+                    id,
+                    name: item.trackName || item.collectionName,
+                    subtitle: item.artistName + (item.primaryGenreName ? ` • ${item.primaryGenreName}` : ''),
+                    imageUrl: item.artworkUrl100?.replace('100x100', '600x600'),
+                    externalUrl: item.trackViewUrl || item.collectionViewUrl,
+                    provider: 'itunes' as const,
+                    category: 'music' as const,
+                    rawMetadata: item,
+                };
+            });
 
         } catch (error) {
             console.error('iTunes Search Exception:', error);
@@ -159,31 +197,63 @@ export const itunesProvider = {
                 });
 
             // Deduplicate (iTunes sometimes sends duplicates / deluxe versions)
-            const uniqueAlbums = new Map<string, RankedItem>();
+            const uniqueAlbums = new Map<string, any>();
 
             albums.forEach((album: any) => {
-                // Key by name to de-dupe "Deluxe" vs regular if names are very similar? 
-                // For now, simple ID deduping (which iTunes might duplicate anyway)
-                // Let's filter out "Clean" versions if "Explicit" exists? unique logic is hard.
-                // Let's just use collectionId.
-                const year = album.releaseDate ? album.releaseDate.split('-')[0] : '';
+                const name = album.collectionName;
+                if (!name) return;
 
-                if (!uniqueAlbums.has(album.collectionId)) {
-                    uniqueAlbums.set(album.collectionId, {
+                // Normalize name
+                let normalized = name.toLowerCase();
+                normalized = normalized.replace(/\(remastered.*?\)/g, '');
+                normalized = normalized.replace(/ - remastered.*?$/g, '');
+                normalized = normalized.replace(/\(live.*?\)/g, '');
+                normalized = normalized.replace(/ - live.*?$/g, '');
+                normalized = normalized.replace(/\(deluxe.*?\)/g, '');
+                normalized = normalized.replace(/ - deluxe.*?$/g, '');
+                normalized = normalized.replace(/\(.*?edition\)/g, '');
+                normalized = normalized.trim();
+
+                const key = normalized; // Artist is same for discography
+
+                const existing = uniqueAlbums.get(key);
+
+                if (!existing) {
+                    uniqueAlbums.set(key, album);
+                } else {
+                    // Prefer shorter name (Cleaner)
+                    const currName = album.collectionName;
+                    const existName = existing.collectionName;
+
+                    if (currName.length < existName.length) {
+                        uniqueAlbums.set(key, album);
+                    }
+                    // If lengths same, earliest date
+                    else if (currName.length === existName.length) {
+                        const currDate = album.releaseDate || '9999';
+                        const existDate = existing.releaseDate || '9999';
+                        if (currDate < existDate) {
+                            uniqueAlbums.set(key, album);
+                        }
+                    }
+                }
+            });
+
+            return Array.from(uniqueAlbums.values())
+                .sort((a: any, b: any) => (b.releaseDate || '').localeCompare(a.releaseDate || ''))
+                .map((album: any) => {
+                    const year = album.releaseDate ? album.releaseDate.split('-')[0] : '';
+                    return {
                         id: String(album.collectionId),
                         name: album.collectionName,
                         subtitle: `${year} • ${album.primaryGenreName}`,
                         imageUrl: album.artworkUrl100?.replace('100x100', '600x600'),
                         externalUrl: album.collectionViewUrl,
-                        provider: 'itunes',
-                        category: 'music',
+                        provider: 'itunes' as const,
+                        category: 'music' as const,
                         rawMetadata: album
-                    });
-                }
-            });
-
-            return Array.from(uniqueAlbums.values())
-                .sort((a, b) => b.rawMetadata.releaseDate?.localeCompare(a.rawMetadata.releaseDate)); // Sort by date desc
+                    };
+                });
 
         } catch (error) {
             console.error('[iTunes] getDiscography failed:', error);

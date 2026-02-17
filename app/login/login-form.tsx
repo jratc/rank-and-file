@@ -15,6 +15,7 @@ const outfit = Outfit({ subsets: ["latin"] });
 
 export default function LoginForm() {
     const [showPassword, setShowPassword] = useState(false)
+    const [isSignup, setIsSignup] = useState(false)
 
     const handleLogin = async (formData: FormData) => {
         const result = await login(formData)
@@ -31,14 +32,16 @@ export default function LoginForm() {
     }
 
     return (
-        <Card className="w-full max-w-md bg-white/90 dark:bg-black/90 backdrop-blur-md shadow-2xl border-slate-200 dark:border-white/10">
+        <Card className="w-full max-w-md bg-white/90 dark:bg-black/90 backdrop-blur-md shadow-2xl border-slate-200 dark:border-white/10 transition-all duration-300">
             <CardHeader className="text-center space-y-2 pb-6">
                 <CardTitle className="text-3xl font-black uppercase text-center tracking-tighter text-slate-900">
                     Rank and File
                 </CardTitle>
                 <CardDescription className="text-center space-y-1">
                     <p className="font-mono text-xs uppercase tracking-widest text-slate-500 font-bold">Welcome to our Ranks</p>
-                    <p className="text-slate-400 text-xs">Create a display name to get started</p>
+                    <p className="text-slate-400 text-xs">
+                        {isSignup ? "Create a display name to get started" : "Login or create an account to continue"}
+                    </p>
                 </CardDescription>
             </CardHeader>
             <form>
@@ -57,12 +60,14 @@ export default function LoginForm() {
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
                             <Label htmlFor="password" className="uppercase text-xs font-bold tracking-widest text-slate-500">Password</Label>
-                            <Link
-                                href="/forgot-password"
-                                className="text-xs font-bold text-slate-400 hover:text-black dark:hover:text-white transition-colors"
-                            >
-                                Forgot password?
-                            </Link>
+                            {!isSignup && (
+                                <Link
+                                    href="/forgot-password"
+                                    className="text-xs font-bold text-slate-400 hover:text-black dark:hover:text-white transition-colors"
+                                >
+                                    Forgot password?
+                                </Link>
+                            )}
                         </div>
                         <div className="relative">
                             <Input
@@ -85,14 +90,54 @@ export default function LoginForm() {
                             </button>
                         </div>
                     </div>
+
+                    {/* DISPLAY NAME FIELD (SIGN UP ONLY) */}
+                    {isSignup && (
+                        <div className="space-y-2 animate-in slide-in-from-top-2 fade-in duration-300">
+                            <Label htmlFor="display_name" className="uppercase text-xs font-bold tracking-widest text-slate-500">Tell us your name</Label>
+                            <Input
+                                id="display_name"
+                                name="display_name"
+                                type="text"
+                                placeholder="e.g. Alex Smith"
+                                required
+                                autoFocus
+                                className="bg-white dark:bg-black font-medium"
+                            />
+                        </div>
+                    )}
+
                 </CardContent>
                 <CardFooter className="flex flex-col gap-3 pt-2">
-                    <Button formAction={handleLogin} className="w-full font-bold uppercase tracking-widest h-11 text-xs">
-                        Sign In
-                    </Button>
-                    <Button formAction={handleSignup} variant="ghost" className="w-full font-bold uppercase tracking-widest text-xs text-slate-500 hover:text-black dark:hover:text-white">
-                        Create Account
-                    </Button>
+                    {!isSignup ? (
+                        <>
+                            <Button formAction={handleLogin} className="w-full font-bold uppercase tracking-widest h-11 text-xs">
+                                Sign In
+                            </Button>
+                            <Button
+                                type="button"
+                                onClick={() => setIsSignup(true)}
+                                variant="ghost"
+                                className="w-full font-bold uppercase tracking-widest text-xs text-slate-500 hover:text-black dark:hover:text-white"
+                            >
+                                Create Account
+                            </Button>
+                        </>
+                    ) : (
+                        <>
+                            <Button formAction={handleSignup} className="w-full font-bold uppercase tracking-widest h-11 text-xs">
+                                Create Account
+                            </Button>
+                            <Button
+                                type="button"
+                                onClick={() => setIsSignup(false)}
+                                variant="ghost"
+                                className="w-full font-bold uppercase tracking-widest text-xs text-slate-500 hover:text-black dark:hover:text-white"
+                            >
+                                Back to Login
+                            </Button>
+                        </>
+                    )}
                 </CardFooter>
             </form>
         </Card>

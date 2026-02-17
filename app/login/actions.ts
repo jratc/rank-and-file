@@ -27,15 +27,36 @@ export async function login(formData: FormData) {
 export async function signup(formData: FormData) {
     const supabase = await createClient()
 
+    const email = formData.get('email') as string
+    const password = formData.get('password') as string
+    const displayName = formData.get('display_name') as string
+
     const data = {
-        email: formData.get('email') as string,
-        password: formData.get('password') as string,
+        email,
+        password,
+        options: {
+            data: {
+                display_name: displayName,
+            },
+        },
     }
 
-    const { error } = await supabase.auth.signUp(data)
+    const { data: authData, error } = await supabase.auth.signUp(data)
 
     if (error) {
         return { error: error.message }
+    }
+
+    // Fallback: If trigger didn't catch it (migration not run) AND we have a session (auto-confirm)
+    if (authData.session && displayName) {
+        const { error: profileError } = await supabase
+            .from('profiles')
+            .update({ display_name: displayName })
+            .eq('id', authData.user?.id)
+
+        if (profileError) {
+            console.error('Manual profile update failed:', profileError)
+        }
     }
 
     revalidatePath('/', 'layout')
