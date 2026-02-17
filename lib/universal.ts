@@ -193,31 +193,69 @@ export const universalProvider = {
         return [];
     },
 
-    async fetchThumbnail(query: string): Promise<string | null> {
+    async fetchThumbnail(query: string, category?: string): Promise<string | null> {
         if (!query) return null;
         try {
-            // Quick search for the page and its main image
-            // Increase gsrlimit to 5 to find better matches if first one lacks image
-            const url = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(query)}&gsrnamespace=0&gsrlimit=5&prop=pageimages&piprop=thumbnail&pithumbsize=400&format=json&origin=*`;
+            // 1. Clean the query: Remove "The", parentheticals, and extra whitespace
+            let cleanedQuery = query
+                .replace(/^(The|A|An)\s+/i, '')
+                .replace(/\(.*\)/g, '')
+                .trim();
 
-            // Set a strict timeout to avoid slowing down the main list generation
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 2000); // 2s max per image
+            const searchQueries = [cleanedQuery];
 
-            const response = await fetch(url, { signal: controller.signal });
-            clearTimeout(timeoutId);
+            // 2. Add category context if available for broader search
+            if (category) {
+                if (['restaurants', 'food', 'bars'].includes(category)) {
+                    searchQueries.push(`${cleanedQuery} restaurant`);
+                    searchQueries.push(`${cleanedQuery} cafe`);
+                    searchQueries.push(`${cleanedQuery} San Francisco`);
+                } else if (category === 'movies') {
+                    searchQueries.push(`${cleanedQuery} film`);
+                    searchQueries.push(`${cleanedQuery} movie`);
+                } else if (category === 'books') {
+                    searchQueries.push(`${cleanedQuery} book`);
+                    searchQueries.push(`${cleanedQuery} novel`);
+                } else if (category === 'music') {
+                    searchQueries.push(`${cleanedQuery} band`);
+                    searchQueries.push(`${cleanedQuery} music artist`);
+                } else if (category === 'places') {
+                    searchQueries.push(`${cleanedQuery} landmark`);
+                    searchQueries.push(`${cleanedQuery} tourist attraction`);
+                } else if (category !== 'other' && category !== 'more') {
+                    searchQueries.push(`${cleanedQuery} ${category}`);
+                }
+            }
 
-            if (response.ok) {
-                const data = await response.json();
-                if (data.query && data.query.pages) {
-                    const pages = Object.values(data.query.pages) as any[];
-                    // Sort by index to maintain relevance
-                    const sortedPages = pages.sort((a, b) => (a.index || 0) - (b.index || 0));
+            // Final fallback for Wikipedia search
+            searchQueries.push(`${cleanedQuery} wiki`);
 
-                    // Return the first one that actually has a thumbnail
-                    for (const page of sortedPages) {
-                        if (page.thumbnail?.source) {
-                            return page.thumbnail.source;
+            for (const q of searchQueries) {
+                // Quick search for the page and its main image
+                const url = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(q)}&gsrnamespace=0&gsrlimit=5&prop=pageimages&piprop=thumbnail&pithumbsize=400&format=json&origin=*`;
+
+                // Set a strict timeout to avoid slowing down the main list generation
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 2000); // 2s max per query
+
+                const response = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeoutId);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.query && data.query.pages) {
+                        const pages = Object.values(data.query.pages) as any[];
+                        // Sort by index to maintain relevance
+                        const sortedPages = pages.sort((a, b) => (a.index || 0) - (b.index || 0));
+
+                        // Return the first one that actually has a thumbnail
+                        for (const page of sortedPages) {
+                            if (page.thumbnail?.source) {
+                                // Filter out generic Wikipedia logos if they leak through
+                                const src = page.thumbnail.source.toLowerCase();
+                                if (src.includes('wikipedia-logo') || src.includes('wiki-logo')) continue;
+                                return page.thumbnail.source;
+                            }
                         }
                     }
                 }

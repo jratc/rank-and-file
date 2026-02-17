@@ -12,7 +12,7 @@ UPDATE lists SET category = 'restaurants' WHERE category = 'restaurant';
 
 -- Update the check constraint by recreating it
 ALTER TABLE lists DROP CONSTRAINT IF EXISTS lists_category_check;
-ALTER TABLE lists ADD CONSTRAINT lists_category_check CHECK (category in ('music', 'movies', 'bars', 'restaurants', 'other'));
+ALTER TABLE lists ADD CONSTRAINT lists_category_check CHECK (category in ('music', 'movies', 'bars', 'restaurants', 'food', 'books', 'other'));
 
 ALTER TABLE lists 
 ADD COLUMN IF NOT EXISTS is_public boolean default true,

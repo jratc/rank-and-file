@@ -7,18 +7,20 @@ import { CSS } from '@dnd-kit/utilities';
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { GripVertical, X } from 'lucide-react'
+import { HydratedImage } from './hydrated-image';
 /* FEATURE: Music Player */
-import { MusicPlayer } from './music-link'
+import { MusicPlayer } from './music-link';
 
 interface SortableItemProps {
     id: string;
     item: any;
     rank: number;
+    category?: string;
     onRemove: (id: string) => void;
     onDoubleClick?: () => void;
 }
 
-export function SortableItem({ id, item, rank, onRemove, onDoubleClick }: SortableItemProps) {
+export function SortableItem({ id, item, rank, category, onRemove, onDoubleClick }: SortableItemProps) {
     const {
         attributes,
         listeners,
@@ -50,13 +52,13 @@ export function SortableItem({ id, item, rank, onRemove, onDoubleClick }: Sortab
                     }}
                 >
                     <div className="w-16 h-16 bg-slate-100 rounded-lg overflow-hidden shrink-0 shadow-sm border border-slate-200">
-                        {item.metadata.imageUrl && (
-                            <img
-                                src={item.metadata.imageUrl}
-                                alt={item.metadata.name}
-                                className="w-full h-full object-cover pointer-events-none"
-                            />
-                        )}
+                        <HydratedImage
+                            initialUrl={item.metadata.imageUrl}
+                            itemId={item.id}
+                            itemName={item.metadata.name}
+                            category={category}
+                            className="w-full h-full object-cover pointer-events-none"
+                        />
                     </div>
 
                     <div className="min-w-0 flex-1 py-1 w-full">

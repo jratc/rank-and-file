@@ -62,6 +62,8 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
     const [isWaitingForComment, setIsWaitingForComment] = useState(false);
     const [waitingComment, setWaitingComment] = useState('');
     const [pendingListAfterCreate, setPendingListAfterCreate] = useState<any>(null);
+    const [populatedCount, setPopulatedCount] = useState(0);
+    const [isPopulating, setIsPopulating] = useState(false);
 
     // FREE-FORM LIST STATE
     const [creationStep, setCreationStep] = useState<'naming' | 'choosing' | 'drafting' | 'waiting' | null>(null);
@@ -378,22 +380,31 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                 await addComment(pendingListAfterCreate.id, waitingComment.trim());
             }
 
-            // 2. Start population
-            const popResult = await detectAndPopulateList(
-                pendingListAfterCreate.id,
-                pendingListAfterCreate.title,
-                pendingListAfterCreate.category
-            );
-
+            // 2. Population is already happening/happened in background via startEarlyPopulation
+            // But if it failed or hasn't started, we trigger it one last time to be sure
             let updatedList = { ...pendingListAfterCreate };
-            let populatedCount = 0;
+            let populatedResultCount = populatedCount;
 
-            if (popResult.populated) {
-                populatedCount = popResult.count;
-                if (popResult.items && popResult.items.length > 0) {
-                    updatedList.list_items = popResult.items;
-                } else {
-                    updatedList.list_items = Array(popResult.count).fill({});
+            if (populatedResultCount < 1) {
+                const popResult = await detectAndPopulateList(
+                    pendingListAfterCreate.id,
+                    pendingListAfterCreate.title,
+                    pendingListAfterCreate.category
+                );
+
+                if (popResult.populated) {
+                    populatedResultCount = popResult.count;
+                    if (popResult.items && popResult.items.length > 0) {
+                        updatedList.list_items = popResult.items;
+                    } else {
+                        updatedList.list_items = Array(popResult.count).fill({});
+                    }
+                }
+            } else {
+                // Get the items from our current state
+                const currentList = lists.find(l => l.id === pendingListAfterCreate.id);
+                if (currentList) {
+                    updatedList = currentList;
                 }
             }
 
@@ -401,17 +412,15 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
             setLists(prev => prev.map(l => l.id === 'temp-pending' || l.id === updatedList.id ? updatedList : l));
             setExpandedListId(updatedList.id);
 
-            if (populatedCount > 0) {
-                toast.success(`List created & populated with ${populatedCount} items!`);
+            if (populatedResultCount > 0) {
+                toast.success(`List created & populated with ${populatedResultCount} items!`);
 
                 // BACKGROUND POPULATION: Continue fetching up to 50 items
-                if (populatedCount < 50) {
+                if (populatedResultCount < 50) {
                     console.log(`[Dashboard] Starting background population for list: ${updatedList.id}`);
-                    populateBackgroundItems(updatedList.id, updatedList.title, updatedList.category, populatedCount).then((count: number) => {
+                    populateBackgroundItems(updatedList.id, updatedList.title, updatedList.category, populatedResultCount).then((count: number) => {
                         if (count > 0) {
                             console.log(`[Dashboard] Background population finish: +${count} items.`);
-                            // We don't necessarily need to update state here if the user can refresh, 
-                            // but let's try to fetch fresh data
                             router.refresh();
                         }
                     });
@@ -429,12 +438,41 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
             setWaitingComment('');
             setCreationStep(null);
             setPendingListAfterCreate(null);
+            setPopulatedCount(0);
+            setIsPopulating(false);
             setEditSession({ id: null, title: null, isExpanded: false });
 
             setTimeout(() => {
                 searchInputRef.current?.focus();
                 handleSearch('', true);
             }, 100);
+        }
+    };
+
+    const startEarlyPopulation = async (targetList: any) => {
+        if (!targetList || isPopulating) return;
+
+        setIsPopulating(true);
+        setPopulatedCount(0);
+
+        console.log(`[Dashboard] Starting early population for: ${targetList.title}`);
+
+        try {
+            const popResult = await detectAndPopulateList(
+                targetList.id,
+                targetList.title,
+                targetList.category
+            );
+
+            if (popResult.populated) {
+                setPopulatedCount(popResult.count);
+                // Update the local lists state so the count is reflected
+                setLists(prev => prev.map(l => l.id === targetList.id ? { ...l, list_items: popResult.items || [] } : l));
+            }
+        } catch (error) {
+            console.error("[Dashboard] Early population failed:", error);
+        } finally {
+            setIsPopulating(false);
         }
     };
 
@@ -562,16 +600,21 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                 const newList = await createList(titleToSave, lists.find(l => l.id === 'temp-pending')?.category || 'other');
                 console.log(`[Dashboard] Created real list:`, newList.id);
 
+                setPendingListAfterCreate(newList);
+
+                // START EARLY POPULATION
+                if (newList.category !== 'other' || creationStep === 'waiting') {
+                    startEarlyPopulation(newList);
+                }
+
                 // FOR 'MORE' CATEGORY, ASK AI VS MANUAL
                 if (newList.category === 'other') {
-                    setPendingListAfterCreate(newList);
                     setCreationStep('choosing');
                     setIsUpdatingTitle(false);
                     return;
                 }
 
                 // TRANSITION TO "WHILE YOU WAIT" COMMENT
-                setPendingListAfterCreate(newList);
                 setIsWaitingForComment(true);
                 setCreationStep('waiting');
                 setIsUpdatingTitle(false);
@@ -1058,16 +1101,29 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                     />
                                     <Button
                                         onClick={handleSubmitWaitingComment}
-                                        disabled={isUpdatingTitle}
-                                        className="w-full h-14 bg-black hover:bg-slate-800 text-white font-black uppercase tracking-widest text-sm rounded-xl transition-all shadow-md active:scale-[0.98]"
+                                        disabled={isUpdatingTitle || (populatedCount < 12 && isPopulating)}
+                                        className="w-full h-14 bg-black hover:bg-slate-800 text-white font-black uppercase tracking-widest text-sm rounded-xl transition-all shadow-md active:scale-[0.98] flex flex-col items-center justify-center"
                                     >
-                                        {isUpdatingTitle ? <Loader2 className="h-5 w-5 animate-spin" /> : "SUBMIT & SEE LIST"}
+                                        {isUpdatingTitle ? (
+                                            <Loader2 className="h-5 w-5 animate-spin" />
+                                        ) : (
+                                            <>
+                                                <span>{populatedCount >= 12 ? "YOUR LIST IS READY!" : "SUBMIT & SEE LIST"}</span>
+                                                {populatedCount > 0 && populatedCount < 12 && (
+                                                    <span className="text-[9px] opacity-70 mt-0.5">({populatedCount} items found so far...)</span>
+                                                )}
+                                                {populatedCount === 0 && isPopulating && (
+                                                    <span className="text-[9px] opacity-70 mt-0.5">Searching for entries...</span>
+                                                )}
+                                            </>
+                                        )}
                                     </Button>
                                     <button
                                         onClick={() => handleSubmitWaitingComment()}
-                                        className="w-full text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-slate-500 transition-colors py-2"
+                                        disabled={populatedCount < 12 && isPopulating}
+                                        className="w-full text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-slate-500 transition-colors py-2 disabled:opacity-30"
                                     >
-                                        No thanks, just show me the list
+                                        {populatedCount >= 12 ? "Just show me the list" : "Skip thoughts and wait"}
                                     </button>
                                 </CardContent>
                             </>

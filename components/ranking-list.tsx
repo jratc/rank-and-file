@@ -185,6 +185,7 @@ export function RankingList({ initialItems, listId, category = 'items', title, o
                                                 initialUrl={item.metadata.imageUrl}
                                                 itemId={item.id}
                                                 itemName={item.metadata.name}
+                                                category={category}
                                                 className="w-full h-full object-cover"
                                             />
                                         </div>
@@ -227,6 +228,7 @@ export function RankingList({ initialItems, listId, category = 'items', title, o
                                         id={item.id}
                                         item={item}
                                         rank={index + 1}
+                                        category={category}
                                         onRemove={handleRemove}
                                         onDoubleClick={() => handleDoubleClick(item.id)}
                                     />

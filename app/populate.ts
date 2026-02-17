@@ -78,7 +78,9 @@ export async function detectAndPopulateList(listId: string, title: string, categ
     if (items.length === 0) {
         try {
             if (context.intent === 'list' && context.subject) {
-                const llmItems = await generateListFromLLM(context.subject, context.limit || 12);
+                // Use the more descriptive string between title and subject
+                const generationTopic = title.length > context.subject.length ? title : context.subject;
+                const llmItems = await generateListFromLLM(generationTopic, context.limit || 12);
                 items = llmItems.map((item, idx) => ({
                     id: `llm-${Date.now()}-${idx}`,
                     name: item.name,
@@ -172,7 +174,22 @@ export async function detectAndPopulateList(listId: string, title: string, categ
     }
 
     revalidatePath('/');
-    return { populated: true, count: insertedData.length, items: insertedData };
+    const populatedItems = insertedData.length;
+
+    // 4. PARALLEL HYDRATION (PRE-FETCH IMAGES)
+    // We kick this off in the background so by the time the user clicks "See List", many images are ready.
+    if (populatedItems > 0) {
+        const { hydrateItemImage } = await import('./draft/actions');
+        // We don't await the entire thing to avoid blocking the initial response, 
+        // but it will run concurrently in the background on the server.
+        Promise.allSettled(
+            insertedData.map(item => hydrateItemImage(item.id, item.metadata.name, category))
+        ).then(() => {
+            console.log(`[Populate] Hydration complete for ${populatedItems} items.`);
+        });
+    }
+
+    return { populated: true, count: populatedItems, items: insertedData };
 }
 
 export async function populateBackgroundItems(listId: string, title: string, category: string, offset: number) {
@@ -209,6 +226,14 @@ export async function populateBackgroundItems(listId: string, title: string, cat
     }
 
     console.log(`[Populate] Successfully added ${insertedData.length} background items.`);
-    revalidatePath('/');
+    if (insertedData && insertedData.length > 0) {
+        const { hydrateItemImage } = await import('./draft/actions');
+        Promise.allSettled(
+            insertedData.map(item => hydrateItemImage(item.id, item.metadata.name, category))
+        ).then(() => {
+            console.log(`[Populate] Background hydration complete for ${insertedData.length} items.`);
+        });
+    }
+
     return insertedData.length;
 }

@@ -116,6 +116,11 @@ export async function generateListFromLLM(topic: string, count: number = 20): Pr
         You are an expert curator for a ranking app.
         The user wants a list of items for the topic: "${topic}".
         
+        CRITICAL REQUIREMENT: If the topic contains a location (e.g., a city like "San Francisco" or "London"), EVERY SINGLE item MUST be strictly within that specific city's legal borders. 
+        - DO NOT include items from neighboring cities (e.g., if topic is "San Francisco", do NOT include restaurants in Atherton, Oakland, or South San Francisco).
+        - DO NOT provide global or national results if a location is specified.
+        - Strict geographical accuracy is the top priority.
+        
         Generate a JSON array of the top ${count} items that best fit this topic.
         The list should be high-quality, culturally significant, and accurate.
         
@@ -123,8 +128,8 @@ export async function generateListFromLLM(topic: string, count: number = 20): Pr
         [
             {
                 "name": "Item Name",
-                "subtitle": "Short description (10-15 words) explaining why it matches the topic or date/creator",
-                "score": 95 (relevance score 0-100)
+                "subtitle": "Short description (10-15 words) explaining why it matches the topic or its specific location/neighborhood within the city",
+                "score": 95
             },
             ...
         ]
@@ -182,14 +187,18 @@ export async function generateMoreItemsFromLLM(topic: string, offset: number, co
         The user wants MORE items for the list: "${topic}".
         They already have the top ${offset} items.
         
+        CRITICAL REQUIREMENT: If the topic contains a location, EVERY SINGLE item MUST be strictly within that specific city's legal borders. 
+        - DO NOT include items from neighboring cities or the broader metro area.
+        - If the topic is "San Francisco", only include items in the city itself.
+        
         Generate the NEXT ${count} items (ranked #${offset + 1} to #${offset + count}).
-        Do NOT repeat the most obvious top choices. Dig deeper for high-quality, relevant items.
+        Do NOT repeat items already found.
         
         Output format:
         [
             {
                 "name": "Item Name",
-                "subtitle": "Short description",
+                "subtitle": "Short description including specific neighborhood",
                 "score": 85
             },
             ...

@@ -106,7 +106,7 @@ CREATE TABLE lists (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
-  category TEXT NOT NULL CHECK (category IN ('music', 'movies', 'bars', 'restaurants', 'other')),
+  category TEXT NOT NULL CHECK (category IN ('music', 'movies', 'bars', 'restaurants', 'food', 'books', 'other')),
   parent_id UUID REFERENCES lists(id) ON DELETE CASCADE,
   is_public BOOLEAN DEFAULT TRUE,
   view_count INTEGER DEFAULT 0,

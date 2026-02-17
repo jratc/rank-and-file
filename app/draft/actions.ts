@@ -140,7 +140,7 @@ export async function publishList(listId: string) {
     }
 }
 
-export async function hydrateItemImage(itemId: string, query: string) {
+export async function hydrateItemImage(itemId: string, query: string, category?: string) {
     try {
         const supabase = await createClient();
 
@@ -159,7 +159,7 @@ export async function hydrateItemImage(itemId: string, query: string) {
 
         // 2. Fetch thumbnail from Universal Provider (Wikipedia)
         const { universalProvider } = await import('@/lib/universal');
-        const imageUrl = await universalProvider.fetchThumbnail(query);
+        const imageUrl = await universalProvider.fetchThumbnail(query, category);
 
         if (imageUrl) {
             // 3. Update DB

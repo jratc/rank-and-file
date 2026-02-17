@@ -12,6 +12,7 @@ export async function createList(title: string = 'NEW LIST', category: string = 
     const { data: authData } = await supabase.auth.getUser();
     const authUser = authData?.user;
     const user = IS_AUTH_DISABLED ? MOCK_USER : authUser;
+    console.log(`[Action] Creating list: "${title}" in category: "${category}" for user: ${user?.id}`);
 
     if (!user) {
         throw new Error("Must be logged in");

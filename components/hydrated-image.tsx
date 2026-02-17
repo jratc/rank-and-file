@@ -7,11 +7,12 @@ interface HydratedImageProps {
     initialUrl: string | null;
     itemId: string;
     itemName: string;
+    category?: string;
     className?: string;
     alt?: string;
 }
 
-export function HydratedImage({ initialUrl, itemId, itemName, className, alt }: HydratedImageProps) {
+export function HydratedImage({ initialUrl, itemId, itemName, category, className, alt }: HydratedImageProps) {
     const [imageUrl, setImageUrl] = useState<string | null>(initialUrl);
     const [isLoading, setIsLoading] = useState(!initialUrl);
 
@@ -20,7 +21,7 @@ export function HydratedImage({ initialUrl, itemId, itemName, className, alt }: 
 
         if (!imageUrl && itemName) {
             setIsLoading(true);
-            hydrateItemImage(itemId, itemName)
+            hydrateItemImage(itemId, itemName, category)
                 .then((url) => {
                     if (mounted && url) {
                         setImageUrl(url);
