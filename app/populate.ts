@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { extractContext } from '@/lib/utils';
-import { generateSearchIntent, generateListFromLLM } from '@/lib/ai';
+import { generateSearchIntent, generateListFromLLM, generateMoreItemsFromLLM } from '@/lib/ai';
 import { moviesProvider } from '@/lib/movies';
 import { booksProvider } from '@/lib/books';
 import { itunesProvider } from '@/lib/itunes';
@@ -173,4 +173,42 @@ export async function detectAndPopulateList(listId: string, title: string, categ
 
     revalidatePath('/');
     return { populated: true, count: insertedData.length, items: insertedData };
+}
+
+export async function populateBackgroundItems(listId: string, title: string, category: string, offset: number) {
+    const supabase = await createClient();
+
+    console.log(`[Populate] Background phase for: "${title}" (Offset: ${offset})`);
+
+    // 1. Generate more items using LLM
+    const moreItems = await generateMoreItemsFromLLM(title, offset, 38);
+
+    if (!moreItems || moreItems.length === 0) {
+        console.log(`[Populate] No more items found for "${title}"`);
+        return 0;
+    }
+
+    // 2. Insert into database
+    const { data: insertedData, error: insertError } = await supabase.from('list_items').insert(
+        moreItems.map((item, index) => ({
+            list_id: listId,
+            entity_id: `llm-bg-${Date.now()}-${index}`,
+            rank: offset + index + 1,
+            metadata: {
+                ...item,
+                id: `llm-bg-${Date.now()}-${index}`,
+                provider: 'gemini',
+                type: 'custom'
+            }
+        }))
+    ).select();
+
+    if (insertError) {
+        console.error('[Populate] Background insert error:', insertError);
+        return 0;
+    }
+
+    console.log(`[Populate] Successfully added ${insertedData.length} background items.`);
+    revalidatePath('/');
+    return insertedData.length;
 }

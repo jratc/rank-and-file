@@ -12,7 +12,7 @@ import { deleteList, createList, updateListTitle, getThread, findListByTitle, up
 import { PlacesMap, itemsToPlaces } from './places-map';
 /* FEATURE: Music Playlist Export */
 import { PlaylistExport } from './music-link';
-import { detectAndPopulateList } from '@/app/populate';
+import { detectAndPopulateList, populateBackgroundItems } from '@/app/populate';
 import { searchEntities, addToList } from "@/app/search/actions";
 import { RankedItem, Category } from "@/lib/types";
 import { toast } from 'sonner';
@@ -399,6 +399,20 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
 
             if (populatedCount > 0) {
                 toast.success(`List created & populated with ${populatedCount} items!`);
+
+                // BACKGROUND POPULATION: Continue fetching up to 50 items
+                if (populatedCount < 50) {
+                    console.log(`[Dashboard] Starting background population for list: ${updatedList.id}`);
+                    populateBackgroundItems(updatedList.id, updatedList.title, updatedList.category, populatedCount).then((count: number) => {
+                        if (count > 0) {
+                            console.log(`[Dashboard] Background population finish: +${count} items.`);
+                            // We don't necessarily need to update state here if the user can refresh, 
+                            // but let's try to fetch fresh data
+                            router.refresh();
+                        }
+                    });
+                }
+
                 router.refresh();
             } else {
                 toast.success("List created!");
@@ -461,6 +475,8 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
             setIsUpdatingTitle(false);
         };
 
+        if (isUpdatingTitle) return;
+
         // BLOCK EMPTY TITLES
         if (!editSession.title || !editSession.title.trim()) {
             if (targetListId === 'temp-pending') {
@@ -490,11 +506,13 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
             setIsUpdatingTitle(true);
             try {
                 const newList = await createList(titleToSave, lists.find(l => l.id === 'temp-pending')?.category || 'other');
+                console.log(`[Dashboard] Created real list:`, newList.id);
 
                 // TRANSITION TO "WHILE YOU WAIT" COMMENT
                 setPendingListAfterCreate(newList);
                 setIsWaitingForComment(true);
                 setIsUpdatingTitle(false);
+                console.log(`[Dashboard] Transitioned to isWaitingForComment: true`);
                 // We keep the modal open, but the render logic will switch to the comment box
 
             } catch (error) {
