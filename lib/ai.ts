@@ -2,7 +2,8 @@
 import { SearchContext } from './utils';
 
 // Using Gemini Flash Latest for speed and availability
-const GEMINI_MODEL = 'gemini-flash-latest';
+// Using Gemini Flash 8b for maximum speed
+const GEMINI_MODEL = 'gemini-1.5-flash-8b';
 
 // Helper for Exponential Backoff
 async function fetchWithRetry(url: string, options: RequestInit, retries = 3, delay = 1000): Promise<Response> {
