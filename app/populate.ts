@@ -89,10 +89,34 @@ export async function detectAndPopulateList(listId: string, title: string, categ
             } else {
                 items = await itunesProvider.getDiscography(context.artist);
             }
-        } else if ((category === 'other' || category === 'more') && context.subject) {
-            // Experimental: Wikipedia Categories
-            console.log(`[Populate] Detected generic subject for More: ${context.subject} (limit: ${context.limit})`);
-            items = await universalProvider.getListMembers(context.subject, context.limit);
+        } else if (category === 'other' || category === 'more') {
+            // Priority: Try to generate a valid list via LLM first (User Request: "ask gemini to generate a list based on its interpretation")
+            console.log(`[Populate] 'More' category detected. Attempting LLM generation for: "${title}"`);
+
+            if (process.env.GEMINI_API_KEY) {
+                try {
+                    const llmItems = await generateListFromLLM(title, context.limit || 20);
+                    if (llmItems && llmItems.length > 0) {
+                        items = llmItems.map((item, idx) => ({
+                            id: `llm-${Date.now()}-${idx}`,
+                            name: item.name,
+                            subtitle: item.subtitle,
+                            imageUrl: null,
+                            externalUrl: null,
+                            provider: 'gemini',
+                            type: 'custom'
+                        }));
+                    }
+                } catch (e) {
+                    console.error('[Populate] LLM generation failed for More category:', e);
+                }
+            }
+
+            // Fallback: Wikipedia (Universal Provider) if LLM failed or no key
+            if (items.length === 0 && context.subject) {
+                console.log(`[Populate] LLM failed/skipped. Falling back to Wikipedia for: ${context.subject}`);
+                items = await universalProvider.getListMembers(context.subject, context.limit);
+            }
         }
     } catch (e) {
         console.error('[Populate] Provider error:', e);
