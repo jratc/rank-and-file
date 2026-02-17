@@ -89,9 +89,9 @@ export async function detectAndPopulateList(listId: string, title: string, categ
             } else {
                 items = await itunesProvider.getDiscography(context.artist);
             }
-        } else if (category === 'other' || category === 'more') {
-            // Priority: Try to generate a valid list via LLM first (User Request: "ask gemini to generate a list based on its interpretation")
-            console.log(`[Populate] 'More' category detected. Attempting LLM generation for: "${title}"`);
+        } else if (['food', 'bars', 'restaurants', 'places', 'other', 'more'].includes(category)) {
+            // Categories without dedicated APIs -> Gemini First
+            console.log(`[Populate] '${category}' category detected. Attempting LLM generation for: "${title}"`);
 
             if (process.env.GEMINI_API_KEY) {
                 try {
