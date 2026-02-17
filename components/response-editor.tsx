@@ -94,10 +94,12 @@ export function ResponseEditor({ listId, userId, initialItems, category, context
         return () => clearTimeout(timer);
     }, [searchQuery, handleSearch]);
 
-    // Trigger initial contextual search on mount
+    // Trigger initial contextual search on mount ONLY if list is empty
     useEffect(() => {
-        handleSearch('', true);
-    }, []);
+        if (items.length === 0) {
+            handleSearch('', true);
+        }
+    }, [items.length]);
 
     const handleAddItem = async (item: RankedItem) => {
         setAddingItemId(item.id);

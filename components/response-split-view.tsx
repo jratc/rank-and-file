@@ -35,6 +35,13 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
     // Keyboard navigation
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            // Ignore if user is typing in an input
+            if (document.activeElement?.tagName === 'INPUT' ||
+                document.activeElement?.tagName === 'TEXTAREA' ||
+                (document.activeElement as HTMLElement)?.isContentEditable) {
+                return;
+            }
+
             if (e.key === 'ArrowLeft') prevItem();
             if (e.key === 'ArrowRight') nextItem();
             if (e.key === 'Escape') onClose();
@@ -43,12 +50,18 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [thread.length]);
 
+    // Lock body scroll
+    useEffect(() => {
+        document.body.style.overflow = 'hidden';
+        return () => { document.body.style.overflow = ''; };
+    }, []);
+
     if (!currentThreadItem) return null;
 
     const isEditing = !!initialDraftId;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 md:p-8 animate-in fade-in duration-200 touch-none">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 md:p-8 animate-in fade-in duration-200 overflow-y-auto">
 
             {/* Close Button */}
             <button
