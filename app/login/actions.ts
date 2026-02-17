@@ -48,15 +48,39 @@ export async function signup(formData: FormData) {
         return { error: `Signup failed: ${error.message} (Code: ${error.status || 'Unknown'})` }
     }
 
-    // Fallback: If trigger didn't catch it (migration not run) AND we have a session (auto-confirm)
-    if (authData.session && displayName) {
+    // Manual Profile Creation (Reliable Replacement for Triggers)
+    if (authData.user) {
+        // 1. Generate Username Base
+        const emailUser = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
+        const randomSuffix = Math.floor(Math.random() * 10000).toString();
+
+        // Ensure at least 3 chars
+        let usernameBase = emailUser.length >= 3 ? emailUser : `user${randomSuffix}`;
+
+        // Append random suffix to be safe (read-before-write is too slow/complex here)
+        const username = `${usernameBase}${randomSuffix}`;
+
+        const finalDisplayName = displayName || username;
+
+        // 2. Insert into Profiles
+        // We use upsert to be safe, though ID should be unique from Auth
         const { error: profileError } = await supabase
             .from('profiles')
-            .update({ display_name: displayName })
-            .eq('id', authData.user?.id)
+            .upsert({
+                id: authData.user.id,
+                email: email,
+                username: username,
+                display_name: finalDisplayName,
+            })
+            .select()
+            .single()
 
         if (profileError) {
-            console.error('Manual profile update failed:', profileError)
+            console.error('Manual profile creation failed:', profileError)
+            // Note: We don't return error here because the Auth User IS created. 
+            // Better to let them log in and maybe have a broken profile than fail securely.
+        } else {
+            console.log('Manual profile creation successful for:', username);
         }
     }
 
