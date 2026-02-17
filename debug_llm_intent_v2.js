@@ -75,10 +75,9 @@ async function generateSearchIntent(query, category) {
 
 async function testIntent() {
     const cases = [
-        { query: "NPR Journalists", category: "more" },
-        { query: "Best Sci-Fi Books", category: "books" },
-        { query: "Sean Penn Movies", category: "movies" },
-        { query: "Chloe Veltman", category: "more" }
+        { query: "Langston Hughes books", category: "books" },
+        { query: "Best Pizza in NY", category: "food" },
+        { query: "Best Dive Bars", category: "bars" },
     ];
 
     console.log("Testing Intent Detection...");

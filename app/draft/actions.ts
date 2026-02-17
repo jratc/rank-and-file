@@ -139,3 +139,42 @@ export async function publishList(listId: string) {
         return { error: error.message };
     }
 }
+
+export async function hydrateItemImage(itemId: string, query: string) {
+    try {
+        const supabase = await createClient();
+
+        // 1. Check if image already exists (Optimization)
+        const { data: item, error: fetchError } = await supabase
+            .from('list_items')
+            .select('metadata')
+            .eq('id', itemId)
+            .single();
+
+        if (fetchError || !item) return null;
+
+        if (item.metadata.imageUrl) {
+            return item.metadata.imageUrl; // Already hydrated
+        }
+
+        // 2. Fetch thumbnail from Universal Provider (Wikipedia)
+        const { universalProvider } = await import('@/lib/universal');
+        const imageUrl = await universalProvider.fetchThumbnail(query);
+
+        if (imageUrl) {
+            // 3. Update DB
+            const newMetadata = { ...item.metadata, imageUrl };
+            await supabase
+                .from('list_items')
+                .update({ metadata: newMetadata })
+                .eq('id', itemId);
+
+            return imageUrl;
+        }
+
+        return null;
+    } catch (error) {
+        console.error('hydrateItemImage error:', error);
+        return null;
+    }
+}

@@ -168,3 +168,63 @@ export async function generateListFromLLM(topic: string, count: number = 20): Pr
         return [];
     }
 }
+
+export async function generateMoreItemsFromLLM(topic: string, offset: number, count: number = 10): Promise<any[]> {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return [];
+
+    try {
+        console.log(`[AI] Generating MORE items for: "${topic}" (Offset: ${offset})`);
+
+        const prompt = `
+        You are an expert curator for a ranking app.
+        The user wants MORE items for the list: "${topic}".
+        They already have the top ${offset} items.
+        
+        Generate the NEXT ${count} items (ranked #${offset + 1} to #${offset + count}).
+        Do NOT repeat the most obvious top choices. Dig deeper for high-quality, relevant items.
+        
+        Output format:
+        [
+            {
+                "name": "Item Name",
+                "subtitle": "Short description",
+                "score": 85
+            },
+            ...
+        ]
+
+        Return valid JSON only. No markdown.
+        `;
+
+        const response = await fetchWithRetry(
+            `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        temperature: 0.8 // Slightly higher temp for variety
+                    }
+                })
+            }
+        );
+
+        if (!response.ok) return [];
+
+        const data = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) return [];
+
+        const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        const items = JSON.parse(cleanText);
+
+        return Array.isArray(items) ? items : [];
+
+    } catch (error) {
+        console.error('[AI] More items generation failed:', error);
+        return [];
+    }
+}

@@ -90,7 +90,7 @@ function EditPageContent() {
                         {list.list_items?.length || 0} Total
                     </span>
                 </div>
-                <RankingList initialItems={list.list_items} listId={list.id} />
+                <RankingList initialItems={list.list_items} listId={list.id} title={list.title} />
             </div>
         </div>
     );

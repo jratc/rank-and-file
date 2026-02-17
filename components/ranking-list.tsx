@@ -2,6 +2,7 @@
 
 /* FEATURE: Music Player — to disable, comment out the MusicPlayer import below */
 import { MusicPlayer } from './music-link';
+import { HydratedImage } from './hydrated-image';
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -177,9 +178,12 @@ export function RankingList({ initialItems, listId, category = 'items', onChange
                                 <div className="flex flex-row items-center p-2 border border-slate-200 bg-white shadow-sm rounded-lg gap-0">
                                     <div className="flex-1 flex items-center gap-5 pl-4 min-w-0">
                                         <div className="w-16 h-16 bg-slate-100 rounded-lg overflow-hidden shrink-0 shadow-sm border border-slate-200">
-                                            {item.metadata.imageUrl && (
-                                                <img src={item.metadata.imageUrl} alt={item.metadata.name} className="w-full h-full object-cover" />
-                                            )}
+                                            <HydratedImage
+                                                initialUrl={item.metadata.imageUrl}
+                                                itemId={item.id}
+                                                itemName={item.metadata.name}
+                                                className="w-full h-full object-cover"
+                                            />
                                         </div>
 
                                         <div className="min-w-0 flex-1 py-1 w-full">
