@@ -178,3 +178,59 @@ export async function hydrateItemImage(itemId: string, query: string) {
         return null;
     }
 }
+
+export async function loadMoreItems(listId: string, topic: string, currentCount: number) {
+    try {
+        const supabase = await createClient();
+        const { data } = await supabase.auth.getUser();
+        const user = IS_AUTH_DISABLED ? MOCK_USER : data?.user;
+
+        if (!user) return null;
+
+        // 1. Generate items
+        const { generateMoreItemsFromLLM } = await import('@/lib/ai');
+        const newItems = await generateMoreItemsFromLLM(topic, currentCount, 10);
+
+        if (!newItems || newItems.length === 0) return [];
+
+        // 2. Format for DB
+        const itemsToInsert = newItems.map((item, index) => ({
+            list_id: listId,
+            entity_id: `llm-more-${Date.now()}-${index}`,
+            rank: currentCount + 1 + index,
+            metadata: {
+                id: `llm-more-${Date.now()}-${index}`,
+                name: item.name,
+                subtitle: item.subtitle,
+                imageUrl: null, // Client will hydrate
+                externalUrl: null,
+                provider: 'gemini',
+                type: 'custom'
+            }
+        }));
+
+        // 3. Insert
+        const { data: insertedData, error } = await supabase
+            .from('list_items')
+            .insert(itemsToInsert)
+            .select();
+
+        if (error) {
+            console.error('loadMoreItems DB error:', error);
+            return [];
+        }
+
+        revalidatePath('/');
+
+        // Return structured items for frontend state
+        return insertedData.map((row: any) => ({
+            id: row.entity_id,
+            rank: row.rank,
+            metadata: row.metadata
+        }));
+
+    } catch (error) {
+        console.error('loadMoreItems error:', error);
+        return [];
+    }
+}
