@@ -4,6 +4,28 @@ import { SearchContext } from './utils';
 // Using Gemini Flash Latest for speed and availability
 const GEMINI_MODEL = 'gemini-flash-latest';
 
+// Helper for Exponential Backoff
+async function fetchWithRetry(url: string, options: RequestInit, retries = 3, delay = 1000): Promise<Response> {
+    try {
+        const response = await fetch(url, options);
+
+        if (response.status === 429 && retries > 0) {
+            console.warn(`[AI] Rate limit hit. Retrying in ${delay}ms... (${retries} attempts left)`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return fetchWithRetry(url, options, retries - 1, delay * 2);
+        }
+
+        return response;
+    } catch (error) {
+        if (retries > 0) {
+            console.warn(`[AI] Network error. Retrying in ${delay}ms...`, error);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return fetchWithRetry(url, options, retries - 1, delay * 2);
+        }
+        throw error;
+    }
+}
+
 export async function generateSearchIntent(query: string, category: string): Promise<SearchContext | null> {
     const apiKey = process.env.GEMINI_API_KEY;
 
@@ -45,7 +67,7 @@ export async function generateSearchIntent(query: string, category: string): Pro
         Response must be valid JSON only. No markdown formatting.
         `;
 
-        const response = await fetch(
+        const response = await fetchWithRetry(
             `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
             {
                 method: 'POST',
@@ -111,7 +133,7 @@ export async function generateListFromLLM(topic: string, count: number = 20): Pr
         Return valid JSON only. No markdown.
         `;
 
-        const response = await fetch(
+        const response = await fetchWithRetry(
             `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
             {
                 method: 'POST',
