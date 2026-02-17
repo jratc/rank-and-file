@@ -191,7 +191,8 @@ export const universalProvider = {
         }
 
         return [];
-    }
+    },
+
     async fetchThumbnail(query: string): Promise<string | null> {
         if (!query) return null;
         try {
