@@ -37,8 +37,38 @@ export async function createList(title: string = 'NEW LIST', category: string = 
 
     revalidatePath('/');
     return newList;
+}
+
+export async function addItemsToList(listId: string, items: string[]) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Must be logged in");
+
+    // Clean and filter items
+    const filteredItems = items
+        .map(i => i.trim())
+        .filter(i => i.length > 0);
+
+    if (filteredItems.length === 0) return { success: true, count: 0 };
+
+    // Create the batch
+    const insertData = filteredItems.map((name, index) => ({
+        list_id: listId,
+        name: name,
+        rank_position: index + 1,
+    }));
+
+    const { error } = await supabase
+        .from('list_items')
+        .insert(insertData);
+
+    if (error) {
+        console.error('Add items error:', error);
+        throw new Error(error.message);
+    }
+
     revalidatePath('/');
-    return newList;
+    return { success: true, count: filteredItems.length };
 }
 
 export async function findListByTitle(title: string) {

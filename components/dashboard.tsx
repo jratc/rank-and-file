@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight, Share2, Copy, Check, Plus, MessageSquare, Search, Loader2, Link as LinkIcon, MapPin, Download, Music, MessageCircle, Twitter, Mail, X, Users, Film, Beer, Utensils, MoreHorizontal, Clock, Trash2, Pencil } from 'lucide-react';
 import { RankingList } from "./ranking-list";
-import { deleteList, createList, updateListTitle, getThread, findListByTitle, updateProfile, getFollowingLists, addComment } from "@/app/actions";
+import { deleteList, createList, updateListTitle, getThread, findListByTitle, updateProfile, getFollowingLists, addComment, addItemsToList } from "@/app/actions";
 /* FEATURE: Places Map — to disable, comment out the PlacesMap import below */
 import { PlacesMap, itemsToPlaces } from './places-map';
 /* FEATURE: Music Playlist Export */
@@ -62,6 +62,10 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
     const [isWaitingForComment, setIsWaitingForComment] = useState(false);
     const [waitingComment, setWaitingComment] = useState('');
     const [pendingListAfterCreate, setPendingListAfterCreate] = useState<any>(null);
+
+    // FREE-FORM LIST STATE
+    const [creationStep, setCreationStep] = useState<'naming' | 'choosing' | 'drafting' | 'waiting' | null>(null);
+    const [freeFormItems, setFreeFormItems] = useState<string[]>(Array(10).fill(''));
 
     const [commentModal, setCommentModal] = useState<{
         isOpen: boolean;
@@ -423,6 +427,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
             setIsUpdatingTitle(false);
             setIsWaitingForComment(false);
             setWaitingComment('');
+            setCreationStep(null);
             setPendingListAfterCreate(null);
             setEditSession({ id: null, title: null, isExpanded: false });
 
@@ -430,6 +435,41 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                 searchInputRef.current?.focus();
                 handleSearch('', true);
             }, 100);
+        }
+    };
+
+    const handleCreateFreeForm = async () => {
+        if (!pendingListAfterCreate) return;
+        const validItems = freeFormItems.filter(i => i.trim().length > 0);
+        if (validItems.length === 0) {
+            toast.error("Please add at least one item");
+            return;
+        }
+
+        setIsUpdatingTitle(true);
+        try {
+            await addItemsToList(pendingListAfterCreate.id, validItems);
+
+            // Update local state so it shows up immediately
+            const newListWithItems = {
+                ...pendingListAfterCreate,
+                list_items: validItems.map((name, idx) => ({
+                    id: `temp-${idx}`,
+                    name,
+                    rank_position: idx + 1
+                }))
+            };
+
+            setLists(prev => prev.map(l => l.id === 'temp-pending' || l.id === pendingListAfterCreate.id ? newListWithItems : l));
+            setExpandedListId(pendingListAfterCreate.id);
+            setCreationStep(null);
+            setFreeFormItems(Array(10).fill(''));
+            router.refresh();
+        } catch (error) {
+            toast.error("Failed to add items");
+        } finally {
+            setIsUpdatingTitle(false);
+            setPendingListAfterCreate(null);
         }
     };
 
@@ -460,6 +500,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
 
         setLists(prev => [tempList, ...prev]);
         setExpandedListId('temp-pending');
+        setCreationStep('naming');
         setEditSession({
             id: 'temp-pending',
             title: '',
@@ -508,9 +549,18 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                 const newList = await createList(titleToSave, lists.find(l => l.id === 'temp-pending')?.category || 'other');
                 console.log(`[Dashboard] Created real list:`, newList.id);
 
+                // FOR 'MORE' CATEGORY, ASK AI VS MANUAL
+                if (newList.category === 'other') {
+                    setPendingListAfterCreate(newList);
+                    setCreationStep('choosing');
+                    setIsUpdatingTitle(false);
+                    return;
+                }
+
                 // TRANSITION TO "WHILE YOU WAIT" COMMENT
                 setPendingListAfterCreate(newList);
                 setIsWaitingForComment(true);
+                setCreationStep('waiting');
                 setIsUpdatingTitle(false);
                 console.log(`[Dashboard] Transitioned to isWaitingForComment: true`);
                 // We keep the modal open, but the render logic will switch to the comment box
@@ -859,6 +909,8 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                             setSearchQuery('');
                             setShowShareOptions(false);
                             setShowMap(false);
+                            setCreationStep(null);
+                            setFreeFormItems(Array(10).fill(''));
                             // Clean up temp list if it was never saved
                             if (expandedList.id === 'temp-pending') {
                                 setLists(prev => prev.filter(l => l.id !== 'temp-pending'));
@@ -883,7 +935,90 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                             <X className="h-4 w-4" />
                         </button>
 
-                        {isWaitingForComment ? (
+                        {creationStep === 'choosing' ? (
+                            <>
+                                <CardHeader className="p-5 pb-2 text-center pt-8">
+                                    <Plus className="h-8 w-8 text-slate-200 mx-auto mb-4" />
+                                    <CardTitle className="text-xl font-black uppercase tracking-tighter">Choose your path</CardTitle>
+                                    <CardDescription className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2 px-8 leading-relaxed">
+                                        How should we start this list?
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="p-6 pt-2 grid grid-cols-1 gap-3">
+                                    <button
+                                        onClick={() => {
+                                            setIsWaitingForComment(true);
+                                            setCreationStep('waiting');
+                                        }}
+                                        className="group w-full p-4 border-2 border-slate-100 hover:border-black rounded-xl transition-all text-left flex items-start gap-4"
+                                    >
+                                        <div className="p-2 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
+                                            <Loader2 className="h-5 w-5 text-blue-600" />
+                                        </div>
+                                        <div>
+                                            <div className="font-black text-sm uppercase tracking-tight">Magic Help (AI)</div>
+                                            <div className="text-[10px] font-bold text-slate-400 leading-tight mt-0.5 uppercase">We'll generate a draft for you based on the title.</div>
+                                        </div>
+                                    </button>
+
+                                    <button
+                                        onClick={() => setCreationStep('drafting')}
+                                        className="group w-full p-4 border-2 border-slate-100 hover:border-black rounded-xl transition-all text-left flex items-start gap-4"
+                                    >
+                                        <div className="p-2 bg-purple-50 rounded-lg group-hover:bg-purple-100 transition-colors">
+                                            <Pencil className="h-5 w-5 text-purple-600" />
+                                        </div>
+                                        <div>
+                                            <div className="font-black text-sm uppercase tracking-tight">Manual Entry</div>
+                                            <div className="text-[10px] font-bold text-slate-400 leading-tight mt-0.5 uppercase">Draft your own list from scratch (10 items).</div>
+                                        </div>
+                                    </button>
+                                </CardContent>
+                            </>
+                        ) : creationStep === 'drafting' ? (
+                            <>
+                                <CardHeader className="p-5 pb-2 text-center pt-8">
+                                    <Pencil className="h-8 w-8 text-slate-200 mx-auto mb-4" />
+                                    <CardTitle className="text-xl font-black uppercase tracking-tighter">Draft your list</CardTitle>
+                                    <CardDescription className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2 px-8 leading-relaxed">
+                                        Enter up to 10 items for your ranking
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="p-5 pt-2 space-y-2 overflow-y-auto max-h-[50vh]">
+                                    {freeFormItems.map((item, idx) => (
+                                        <div key={idx} className="flex items-center gap-3">
+                                            <span className="w-6 text-[10px] font-black text-slate-300">#{idx + 1}</span>
+                                            <Input
+                                                value={item}
+                                                onChange={(e) => {
+                                                    const newItems = [...freeFormItems];
+                                                    newItems[idx] = e.target.value;
+                                                    setFreeFormItems(newItems);
+                                                }}
+                                                placeholder={`Item #${idx + 1}`}
+                                                className="h-10 border-2 border-slate-50 rounded-lg font-bold text-sm focus-visible:ring-black uppercase"
+                                                autoFocus={idx === 0}
+                                            />
+                                        </div>
+                                    ))}
+                                    <div className="pt-4 space-y-3">
+                                        <Button
+                                            onClick={handleCreateFreeForm}
+                                            disabled={isUpdatingTitle || !freeFormItems.some(i => i.trim())}
+                                            className="w-full h-14 bg-black hover:bg-slate-800 text-white font-black uppercase tracking-widest text-sm rounded-xl transition-all shadow-md active:scale-[0.98]"
+                                        >
+                                            {isUpdatingTitle ? <Loader2 className="h-5 w-5 animate-spin" /> : "CREATE LIST"}
+                                        </Button>
+                                        <button
+                                            onClick={() => setCreationStep('choosing')}
+                                            className="w-full text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-slate-500 transition-colors py-2"
+                                        >
+                                            Back
+                                        </button>
+                                    </div>
+                                </CardContent>
+                            </>
+                        ) : creationStep === 'waiting' ? (
                             <>
                                 <CardHeader className="p-5 pb-2 text-center pt-8">
                                     <Clock className="h-8 w-8 text-slate-200 mx-auto mb-4 animate-pulse" />
