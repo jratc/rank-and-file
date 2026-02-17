@@ -122,5 +122,6 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-color: #9333ea !important; /* purple-600 */
   }
 }
