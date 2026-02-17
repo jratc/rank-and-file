@@ -112,11 +112,8 @@ export async function detectAndPopulateList(listId: string, title: string, categ
                 }
             }
 
-            // Fallback: Wikipedia (Universal Provider) if LLM failed or no key
-            if (items.length === 0 && context.subject) {
-                console.log(`[Populate] LLM failed/skipped. Falling back to Wikipedia for: ${context.subject}`);
-                items = await universalProvider.getListMembers(context.subject, context.limit);
-            }
+            // Fallback: Wikipedia REMOVED to prevent garbage data. 
+            // If LLM fails, we prefer empty (to trigger the final fail-safe).
         }
     } catch (e) {
         console.error('[Populate] Provider error:', e);
