@@ -192,4 +192,29 @@ export const universalProvider = {
 
         return [];
     }
+    async fetchThumbnail(query: string): Promise<string | null> {
+        if (!query) return null;
+        try {
+            // Quick search for the page and its main image
+            const url = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(query)}&gsrnamespace=0&gsrlimit=1&prop=pageimages&piprop=thumbnail&pithumbsize=400&format=json&origin=*`;
+
+            // Set a strict timeout to avoid slowing down the main list generation
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 1500); // 1.5s max per image
+
+            const response = await fetch(url, { signal: controller.signal });
+            clearTimeout(timeoutId);
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.query && data.query.pages) {
+                    const page = Object.values(data.query.pages)[0] as any;
+                    return page.thumbnail?.source || null;
+                }
+            }
+        } catch (e) {
+            // Ignore abort errors or network blips, just return null
+        }
+        return null;
+    }
 };

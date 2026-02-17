@@ -51,7 +51,8 @@ export async function detectAndPopulateList(listId: string, title: string, categ
         if (context.intent === 'list' && context.subject) {
             console.log(`[Populate] Detected generic list intent for: ${context.subject}`);
             // Generate list using LLM
-            const llmItems = await generateListFromLLM(context.subject, context.limit);
+            // Optimization: Limit 12 for speed
+            const llmItems = await generateListFromLLM(context.subject, context.limit || 12);
             items = llmItems.map((item, idx) => ({
                 id: `llm-${Date.now()}-${idx}`,
                 name: item.name,
@@ -60,6 +61,12 @@ export async function detectAndPopulateList(listId: string, title: string, categ
                 externalUrl: null,
                 provider: 'gemini',
                 type: 'custom'
+            }));
+
+            // Hydrate with Images (Parallel)
+            await Promise.all(items.map(async (item) => {
+                const img = await universalProvider.fetchThumbnail(item.name);
+                if (img) item.imageUrl = img;
             }));
         }
         else if (category === 'movies') {
