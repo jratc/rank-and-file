@@ -102,7 +102,8 @@ export async function detectAndPopulateList(listId: string, title: string, categ
 
             if (process.env.GEMINI_API_KEY) {
                 try {
-                    const llmItems = await generateListFromLLM(title, context.limit || 20);
+                    // Optimization: Limit 12 for speed
+                    const llmItems = await generateListFromLLM(title, context.limit || 12);
                     if (llmItems && llmItems.length > 0) {
                         items = llmItems.map((item, idx) => ({
                             id: `llm-${Date.now()}-${idx}`,
@@ -112,6 +113,12 @@ export async function detectAndPopulateList(listId: string, title: string, categ
                             externalUrl: null,
                             provider: 'gemini',
                             type: 'custom'
+                        }));
+
+                        // Hydrate with Images (Parallel)
+                        await Promise.all(items.map(async (item) => {
+                            const img = await universalProvider.fetchThumbnail(item.name);
+                            if (img) item.imageUrl = img;
                         }));
                     }
                 } catch (e) {
@@ -136,7 +143,8 @@ export async function detectAndPopulateList(listId: string, title: string, categ
         console.log(`[Populate] No items found. Attempting LLM fallback for: "${title}"`);
         try {
             // We treat the title as the topic directly
-            const llmItems = await generateListFromLLM(title, context.limit || 20);
+            // Optimization: Limit 12 for speed
+            const llmItems = await generateListFromLLM(title, context.limit || 12);
             if (llmItems.length > 0) {
                 items = llmItems.map((item, idx) => ({
                     id: `llm-${Date.now()}-${idx}`,
@@ -146,6 +154,12 @@ export async function detectAndPopulateList(listId: string, title: string, categ
                     externalUrl: null,
                     provider: 'gemini',
                     type: 'custom'
+                }));
+
+                // Hydrate with Images (Parallel)
+                await Promise.all(items.map(async (item) => {
+                    const img = await universalProvider.fetchThumbnail(item.name);
+                    if (img) item.imageUrl = img;
                 }));
             }
         } catch (e) {
