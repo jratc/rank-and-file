@@ -197,11 +197,12 @@ export const universalProvider = {
         if (!query) return null;
         try {
             // Quick search for the page and its main image
-            const url = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(query)}&gsrnamespace=0&gsrlimit=1&prop=pageimages&piprop=thumbnail&pithumbsize=400&format=json&origin=*`;
+            // Increase gsrlimit to 5 to find better matches if first one lacks image
+            const url = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(query)}&gsrnamespace=0&gsrlimit=5&prop=pageimages&piprop=thumbnail&pithumbsize=400&format=json&origin=*`;
 
             // Set a strict timeout to avoid slowing down the main list generation
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 1500); // 1.5s max per image
+            const timeoutId = setTimeout(() => controller.abort(), 2000); // 2s max per image
 
             const response = await fetch(url, { signal: controller.signal });
             clearTimeout(timeoutId);
@@ -209,8 +210,16 @@ export const universalProvider = {
             if (response.ok) {
                 const data = await response.json();
                 if (data.query && data.query.pages) {
-                    const page = Object.values(data.query.pages)[0] as any;
-                    return page.thumbnail?.source || null;
+                    const pages = Object.values(data.query.pages) as any[];
+                    // Sort by index to maintain relevance
+                    const sortedPages = pages.sort((a, b) => (a.index || 0) - (b.index || 0));
+
+                    // Return the first one that actually has a thumbnail
+                    for (const page of sortedPages) {
+                        if (page.thumbnail?.source) {
+                            return page.thumbnail.source;
+                        }
+                    }
                 }
             }
         } catch (e) {

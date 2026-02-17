@@ -448,15 +448,27 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
 
         setIsUpdatingTitle(true);
         try {
+            // Update title if it changed during drafting
+            if (editSession.title && editSession.title.trim().toUpperCase() !== pendingListAfterCreate.title.toUpperCase()) {
+                await updateListTitle(pendingListAfterCreate.id, editSession.title.trim().toUpperCase());
+            }
+
             await addItemsToList(pendingListAfterCreate.id, validItems);
 
             // Update local state so it shows up immediately
             const newListWithItems = {
                 ...pendingListAfterCreate,
+                title: editSession.title?.trim().toUpperCase() || pendingListAfterCreate.title,
                 list_items: validItems.map((name, idx) => ({
                     id: `temp-${idx}`,
                     name,
-                    rank_position: idx + 1
+                    rank_position: idx + 1,
+                    metadata: {
+                        name,
+                        subtitle: 'Manual Entry',
+                        imageUrl: null,
+                        provider: 'manual'
+                    }
                 }))
             };
 
@@ -464,6 +476,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
             setExpandedListId(pendingListAfterCreate.id);
             setCreationStep(null);
             setFreeFormItems(Array(10).fill(''));
+            setEditSession({ id: null, title: null, isExpanded: false });
             router.refresh();
         } catch (error) {
             toast.error("Failed to add items");
@@ -980,7 +993,15 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                 <CardHeader className="p-5 pb-2 text-center pt-8">
                                     <Pencil className="h-8 w-8 text-slate-200 mx-auto mb-4" />
                                     <CardTitle className="text-xl font-black uppercase tracking-tighter">Draft your list</CardTitle>
-                                    <CardDescription className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2 px-8 leading-relaxed">
+                                    <div className="mt-4 px-6">
+                                        <Input
+                                            value={editSession.title || ''}
+                                            onChange={(e) => setEditSession(s => ({ ...s, title: e.target.value }))}
+                                            placeholder="LIST TITLE"
+                                            className="h-12 border-2 border-slate-100 rounded-xl font-black text-center text-lg focus-visible:ring-black uppercase placeholder:text-slate-200"
+                                        />
+                                    </div>
+                                    <CardDescription className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-4 px-8 leading-relaxed">
                                         Enter up to 10 items for your ranking
                                     </CardDescription>
                                 </CardHeader>

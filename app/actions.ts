@@ -54,8 +54,14 @@ export async function addItemsToList(listId: string, items: string[]) {
     // Create the batch
     const insertData = filteredItems.map((name, index) => ({
         list_id: listId,
-        name: name,
-        rank_position: index + 1,
+        entity_id: `manual-${Date.now()}-${index}`,
+        rank: index + 1,
+        metadata: {
+            name: name,
+            subtitle: 'Manual Entry',
+            imageUrl: null,
+            provider: 'manual'
+        }
     }));
 
     const { error } = await supabase
