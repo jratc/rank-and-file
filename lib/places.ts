@@ -90,7 +90,7 @@ function sanitizePlacesQuery(
     typedQuery: string,
     category: Category,
     context?: any
-): { textQuery: string; location: string | null; placeType: string } {
+): { textQuery: string; location: string | null; placeType: string; subjectParts: string[] } {
     const typeMap: Record<string, string> = {
         'food': 'restaurant',
         'restaurants': 'restaurant', // legacy
@@ -171,7 +171,7 @@ function sanitizePlacesQuery(
     // Final cleanup: collapse whitespace
     textQuery = textQuery.replace(/\s+/g, ' ').trim();
 
-    return { textQuery, location, placeType };
+    return { textQuery, location, placeType, subjectParts: parts };
 }
 
 export async function searchPlaces(query: string, category: Category, context?: any): Promise<RankedItem[]> {
@@ -179,7 +179,8 @@ export async function searchPlaces(query: string, category: Category, context?: 
 
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
 
-    const { textQuery: fullQuery, location, placeType } = sanitizePlacesQuery(query, category, context);
+    // sanitizePlacesQuery now returns the raw subject parts too
+    const { textQuery: fullQuery, location, placeType, subjectParts } = sanitizePlacesQuery(query, category, context);
 
     if (apiKey) {
         try {
@@ -263,12 +264,24 @@ export async function searchPlaces(query: string, category: Category, context?: 
     }
 
     // Fallback to Photon API
-    console.log(`Searching Photon fallback for: ${fullQuery}`);
+    // Construct query with commas instead of "in" for better OSM parsing
+    let photonQuery = subjectParts.join(' ');
+    if (location) {
+        photonQuery = `${photonQuery}, ${location}`;
+    } else {
+        // Fallback to full query if construction fails
+        photonQuery = fullQuery;
+    }
+
+    console.log(`Searching Photon fallback for: ${photonQuery}`);
     try {
         const params = new URLSearchParams({
-            q: fullQuery,
+            q: photonQuery,
             limit: '15'
         });
+
+        // Add location bias if we have coordinates (e.g. from client context)? No client coords here yet.
+        // Photon can handle location strings in query well if comma separated.
 
         const response = await fetch(`https://photon.komoot.io/api/?${params.toString()}`);
         if (!response.ok) throw new Error('Photon API error');
@@ -288,7 +301,7 @@ export async function searchPlaces(query: string, category: Category, context?: 
                 subtitle: subtitle || 'Address unavailable',
                 imageUrl: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=400&fit=crop',
                 externalUrl: `https://www.openstreetmap.org/${props.osm_type}/${props.osm_id}`,
-                provider: 'google',
+                provider: 'google', // Keep consistent provider ID for UI compatibility
                 category: category,
                 rawMetadata: props
             };

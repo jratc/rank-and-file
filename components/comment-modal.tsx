@@ -83,7 +83,7 @@ export function CommentModal({ isOpen, onClose, listId, listTitle, currentUserId
             <DialogContent className="sm:max-w-md max-h-[80vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle className="uppercase font-black text-xl tracking-tighter">
-                        Explain: {listTitle}
+                        Thoughts: {listTitle}
                     </DialogTitle>
                 </DialogHeader>
 
@@ -94,7 +94,7 @@ export function CommentModal({ isOpen, onClose, listId, listTitle, currentUserId
                         </div>
                     ) : comments.length === 0 ? (
                         <div className="text-center text-slate-400 text-sm py-8 italic">
-                            No explanations yet. Be the first to explain yourself!
+                            No thoughts yet. Be the first to share!
                         </div>
                     ) : (
                         comments.map((comment) => (
@@ -132,7 +132,7 @@ export function CommentModal({ isOpen, onClose, listId, listTitle, currentUserId
                             <Textarea
                                 value={newComment}
                                 onChange={(e) => setNewComment(e.target.value)}
-                                placeholder="Explain yourself..."
+                                placeholder="Add your thoughts..."
                                 className="min-h-[80px] resize-none"
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter' && !e.shiftKey) {
@@ -152,7 +152,7 @@ export function CommentModal({ isOpen, onClose, listId, listTitle, currentUserId
                         </div>
                     ) : (
                         <div className="text-center text-sm text-slate-500 bg-slate-50 p-3 rounded">
-                            Log in to explain yourself or comment.
+                            Log in to share your thoughts.
                         </div>
                     )}
                 </div>

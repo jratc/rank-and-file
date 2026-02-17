@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, X, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Trash2, MessageSquare, Share2, Copy, Mail, Twitter } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { FollowButton } from "./follow-button";
 import { RankingList } from "./ranking-list";
 import { ResponseEditor } from "./response-editor";
+import { CommentModal } from "./comment-modal";
 import { getThread, deleteList } from "@/app/actions";
 import { toast } from 'sonner';
 
@@ -25,6 +26,28 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
         }
         return 0;
     });
+
+    const [commentModal, setCommentModal] = useState<{
+        isOpen: boolean;
+        listId: string | null;
+        listTitle: string;
+        userId: string | null;
+    }>({ isOpen: false, listId: null, listTitle: "", userId: null });
+
+    // Share state
+    const [showShareOptions, setShowShareOptions] = useState(false);
+
+    const handleCopyLink = (listId: string) => {
+        const url = `${window.location.origin}?listId=${listId}`;
+        navigator.clipboard.writeText(url);
+        toast.success("Link copied to clipboard");
+    };
+
+    const handleShareTwitter = (list: any) => {
+        const text = `Check out "${list.title}" on Rank and File!`;
+        const url = `${window.location.origin}?listId=${list.id}`;
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
+    };
 
     const currentThreadItem = thread[currentIndex];
 
@@ -98,8 +121,62 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
                                     {currentThreadItem.title}
                                 </h2>
                             </div>
-                            <div className="text-xs font-mono font-bold text-slate-400 bg-slate-100 dark:bg-white/10 px-2 py-1 rounded">
-                                {currentIndex + 1} / {thread.length}
+                            <div className="flex items-center gap-2">
+                                <div className="relative">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-slate-400 hover:text-slate-900"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setShowShareOptions(!showShareOptions);
+                                        }}
+                                    >
+                                        <Share2 className="h-4 w-4" />
+                                    </Button>
+
+                                    {showShareOptions && (
+                                        <>
+                                            <div
+                                                className="fixed inset-0 z-40"
+                                                onClick={() => setShowShareOptions(false)}
+                                            />
+                                            <div className="absolute top-full right-0 mt-2 w-40 bg-white border border-slate-200 rounded-lg shadow-xl z-50 p-1 animate-in fade-in zoom-in-95 duration-100">
+                                                <button
+                                                    onClick={() => { handleCopyLink(currentThreadItem.id); setShowShareOptions(false); }}
+                                                    className="w-full flex items-center gap-2 p-2 rounded hover:bg-slate-50 text-[10px] font-bold text-slate-700 transition-colors"
+                                                >
+                                                    <Copy className="h-3 w-3" />
+                                                    COPY LINK
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        const authorName = currentThreadItem.profiles?.display_name || currentThreadItem.profiles?.username || 'Someone';
+                                                        const text = `${authorName} shared a list on Rank and File: "${currentThreadItem.title}"`;
+                                                        const url = `${window.location.origin}?listId=${currentThreadItem.id}`;
+                                                        window.open(`mailto:?subject=${encodeURIComponent(currentThreadItem.title)}&body=${encodeURIComponent(text + '\n' + url)}`);
+                                                        setShowShareOptions(false);
+                                                    }}
+                                                    className="w-full flex items-center gap-2 p-2 rounded hover:bg-slate-50 text-[10px] font-bold text-slate-700 transition-colors"
+                                                >
+                                                    <Mail className="h-3 w-3" />
+                                                    EMAIL
+                                                </button>
+                                                <button
+                                                    onClick={() => { handleShareTwitter(currentThreadItem); setShowShareOptions(false); }}
+                                                    className="w-full flex items-center gap-2 p-2 rounded hover:bg-slate-50 text-[10px] font-bold text-slate-700 transition-colors"
+                                                >
+                                                    <Twitter className="h-3 w-3" />
+                                                    TWEET
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+
+                                <div className="text-xs font-mono font-bold text-slate-400 bg-slate-100 dark:bg-white/10 px-2 py-1 rounded">
+                                    {currentIndex + 1} / {thread.length}
+                                </div>
                             </div>
                         </div>
 
@@ -135,8 +212,12 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
                                     />
                                 )}
                             </div>
-                            {/* Respond button in browse mode */}
-                            {!isEditing && currentUserId !== currentThreadItem.user_id && onStartResponse && (
+                        </div>
+                        {/* Respond button in browse mode - HIDE if user already has a response in thread */}
+                        {!isEditing &&
+                            currentUserId !== currentThreadItem.user_id &&
+                            onStartResponse &&
+                            !thread.some(item => item.user_id === currentUserId) && (
                                 <button
                                     onClick={() => onStartResponse(thread[0].id)}
                                     className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-black text-xs font-black uppercase tracking-widest rounded-lg transition-colors"
@@ -145,66 +226,89 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
                                 </button>
                             )}
 
-                            {/* Owner Actions (Edit/Delete) */}
-                            {currentUserId === currentThreadItem.user_id && (
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={async () => {
-                                            if (confirm('Are you sure you want to delete your response?')) {
-                                                await deleteList(currentThreadItem.id);
-                                                toast.success('Response deleted');
-                                                onClose();
-                                                window.location.reload(); // Refresh to update list
-                                            }
-                                        }}
-                                        className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition-colors"
-                                        title="Delete Response"
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </button>
-                                </div>
-                            )}
+                        {/* Add your thoughts (Comments) Button - For ALL users */}
+                        {(!isEditing || currentUserId !== currentThreadItem.user_id) && (
+                            <button
+                                onClick={() => setCommentModal({
+                                    isOpen: true,
+                                    listId: currentThreadItem.id,
+                                    listTitle: currentThreadItem.title,
+                                    userId: currentUserId
+                                })}
+                                className="px-3 py-2 text-slate-400 hover:text-black hover:bg-slate-50 rounded-lg transition-colors flex items-center gap-2"
+                                title="Add your thoughts"
+                            >
+                                <MessageSquare className="h-4 w-4" />
+                                <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">Add your thoughts</span>
+                            </button>
+                        )}
 
-                        </div>
-                    </div>
+                        {/* Owner Actions (Edit/Delete) */}
+                        {currentUserId === currentThreadItem.user_id && (
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={async () => {
+                                        if (confirm('Are you sure you want to delete your response?')) {
+                                            await deleteList(currentThreadItem.id);
+                                            toast.success('Response deleted');
+                                            onClose();
+                                            window.location.reload(); // Refresh to update list
+                                        }
+                                    }}
+                                    className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition-colors"
+                                    title="Delete Response"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </button>
+                            </div>
+                        )}
 
-                    {/* Nav: Next */}
-                    <div className="absolute top-1/2 -right-4 -translate-y-1/2 z-10 lg:-right-12">
-                        <button
-                            onClick={nextItem}
-                            disabled={currentIndex === thread.length - 1}
-                            className="p-2 bg-white/10 text-white rounded-full hover:bg-white/20 disabled:opacity-0 transition-all shadow-xl backdrop-blur-md"
-                        >
-                            <ChevronRight className="h-8 w-8" />
-                        </button>
                     </div>
                 </div>
 
-
-                {/* RIGHT CARD: EDITOR — only when actively editing a response */}
-                {isEditing && initialDraftId && (
-                    <div className="h-full flex flex-col relative w-full">
-                        <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border-4 border-yellow-400/50 dark:border-yellow-500/30 flex flex-col h-full w-full">
-                            {/* Header */}
-                            <div className="p-6 border-b border-slate-100 dark:border-white/5 bg-yellow-50/50 dark:bg-yellow-900/10">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">YOUR RESPONSE TO</span>
-                                <h2 className="text-xl md:text-2xl font-black uppercase tracking-tighter leading-[0.9] text-slate-800 dark:text-slate-100 line-clamp-2">
-                                    {thread[0]?.title || currentThreadItem.title}
-                                </h2>
-                            </div>
-                            <ResponseEditor
-                                listId={initialDraftId}
-                                userId={currentUserId}
-                                initialItems={thread.find(l => l.id === initialDraftId)?.list_items || []}
-                                category={currentThreadItem.category}
-                                contextTitle={thread[0]?.title || currentThreadItem.title}
-                                onClose={onClose}
-                            />
-                        </div>
-                    </div>
-                )}
-
+                {/* Nav: Next */}
+                <div className="absolute top-1/2 -right-4 -translate-y-1/2 z-10 lg:-right-12">
+                    <button
+                        onClick={nextItem}
+                        disabled={currentIndex === thread.length - 1}
+                        className="p-2 bg-white/10 text-white rounded-full hover:bg-white/20 disabled:opacity-0 transition-all shadow-xl backdrop-blur-md"
+                    >
+                        <ChevronRight className="h-8 w-8" />
+                    </button>
+                </div>
             </div>
+
+
+            {/* RIGHT CARD: EDITOR — only when actively editing a response */}
+            {isEditing && initialDraftId && (
+                <div className="h-full flex flex-col relative w-full">
+                    <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border-4 border-yellow-400/50 dark:border-yellow-500/30 flex flex-col h-full w-full">
+                        {/* Header */}
+                        <div className="p-6 border-b border-slate-100 dark:border-white/5 bg-yellow-50/50 dark:bg-yellow-900/10">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">YOUR RESPONSE TO</span>
+                            <h2 className="text-xl md:text-2xl font-black uppercase tracking-tighter leading-[0.9] text-slate-800 dark:text-slate-100 line-clamp-2">
+                                {thread[0]?.title || currentThreadItem.title}
+                            </h2>
+                        </div>
+                        <ResponseEditor
+                            listId={initialDraftId}
+                            userId={currentUserId}
+                            initialItems={thread.find(l => l.id === initialDraftId)?.list_items || []}
+                            category={currentThreadItem.category}
+                            contextTitle={thread[0]?.title || currentThreadItem.title}
+                            onClose={onClose}
+                        />
+                    </div>
+                </div>
+            )}
+
+            <CommentModal
+                isOpen={commentModal.isOpen}
+                onClose={() => setCommentModal(prev => ({ ...prev, isOpen: false }))}
+                listId={commentModal.listId || ""}
+                listTitle={commentModal.listTitle}
+                currentUserId={currentUserId}
+            />
         </div>
     );
 }

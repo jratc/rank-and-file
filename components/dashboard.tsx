@@ -852,7 +852,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                         onClick={() => setCommentModal({ isOpen: true, listId: expandedList.id, listTitle: expandedList.title, userId: currentUserId })}
                                         className="absolute top-4 right-14 text-[10px] uppercase font-bold tracking-wider text-slate-400 hover:text-slate-900 h-6 px-2"
                                     >
-                                        Explain Yourself
+                                        Add your thoughts
                                     </Button>
                                 )}
                                 <div className="space-y-0 flex-1 min-w-0">
@@ -896,7 +896,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                                     }`}
                                                 rows={1}
                                             />
-                                            {isUpdatingTitle && <span className="text-[8px] font-mono text-slate-400">SAVING TITLE...</span>}
+                                            {isUpdatingTitle && <span className="text-[8px] font-mono text-slate-400">FETCHING LIST...</span>}
                                         </div>
                                     ) : (
                                         <CardTitle
@@ -1027,8 +1027,8 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                         />
                                     )}
 
-                                    {/* Explain Yourself (Comments) Button - Only for Owner */}
-                                    {(currentUserId === expandedList.user_id || (expandedList.id === 'temp-pending' && currentUserId)) && (
+                                    {/* Add your thoughts (Comments) Button - For ALL users */}
+                                    {(currentUserId || expandedList.id !== 'temp-pending') && (
                                         <Button
                                             variant="outline"
                                             size="sm"
@@ -1049,7 +1049,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                             className="h-7 px-3 text-[9px] font-black tracking-widest uppercase bg-white border-slate-200 text-slate-500 hover:text-black hover:bg-slate-50 rounded-md flex items-center gap-1.5"
                                         >
                                             <MessageSquare className="h-3 w-3" />
-                                            EXPLAIN YOURSELF
+                                            ADD YOUR THOUGHTS
                                         </Button>
                                     )}
                                     {/* View Responses Button (Owner with responses) */}
