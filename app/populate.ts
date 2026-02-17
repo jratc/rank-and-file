@@ -112,8 +112,13 @@ export async function detectAndPopulateList(listId: string, title: string, categ
                 }
             }
 
-            // Fallback: Wikipedia REMOVED to prevent garbage data. 
-            // If LLM fails, we prefer empty (to trigger the final fail-safe).
+            // Fallback: Wikipedia (Universal Provider)
+            // Restored with robust filtering in lib/universal.ts to exclude "Template:" stubs.
+            // This ensures we get *some* results if LLM fails/timeouts.
+            if (items.length === 0 && context.subject) {
+                console.log(`[Populate] LLM failed/skipped. Falling back to Filtered Wikipedia for: ${context.subject}`);
+                items = await universalProvider.getListMembers(context.subject, context.limit);
+            }
         }
     } catch (e) {
         console.error('[Populate] Provider error:', e);

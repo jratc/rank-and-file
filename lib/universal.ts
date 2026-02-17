@@ -65,11 +65,23 @@ export const universalProvider = {
 
                     return sortedPages
                         .filter((page: any) => {
-                            // Filter out disambiguation pages and junk
-                            if (page.title.toLowerCase().includes('disambiguation')) return false;
-                            if (page.title.toLowerCase().includes('list of')) return true; // Lists are okay
+                            // Robust Filter for Garbage/Stubs
+                            const title = page.title;
+                            if (title.startsWith('Template:')) return false;
+                            if (title.startsWith('Category:')) return false;
+                            if (title.startsWith('Portal:')) return false;
+                            if (title.startsWith('Draft:')) return false;
+                            if (title.startsWith('User:')) return false;
+                            if (title.startsWith('Talk:')) return false;
+                            if (title.startsWith('Help:')) return false;
+                            if (title.startsWith('File:')) return false;
+                            if (title.startsWith('MediaWiki:')) return false;
+
+                            // Existing Logic
+                            if (title.toLowerCase().includes('disambiguation')) return false;
                             if (!page.extract) return false; // Must have content
                             if (page.extract.includes('may refer to:')) return false; // Stub/Disambig page
+
                             return true;
                         })
                         .map((page: any) => ({
