@@ -105,7 +105,7 @@ export function RankingList({ initialItems, listId, category = 'items', onChange
         // cutoffIndex is the index of the last item to KEEP.
         // e.g. if cutoffIndex is 4 (Rank 5), we keep indices 0,1,2,3,4.
 
-        if (!confirm(`Are you sure you want to delete all items below #${cutoffIndex + 1}?`)) return;
+        // Removed confirmation as per request
 
         const itemsToKeep = items.slice(0, cutoffIndex + 1);
         const itemsToDelete = items.slice(cutoffIndex + 1);

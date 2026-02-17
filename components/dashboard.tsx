@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Music, Film, Beer, Utensils, MoreHorizontal, ChevronRight, Clock, Plus, X, Search, Trash2, Share2, Twitter, Copy, Check, Loader2, Pencil, MapPin, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Share2, Copy, Check, Plus, MessageSquare, Search, Loader2, Link as LinkIcon, MapPin, Download, Music, MessageCircle, Twitter, Mail, X, Users, Film, Beer, Utensils, MoreHorizontal, Clock, Trash2, Pencil } from 'lucide-react';
 import { RankingList } from "./ranking-list";
 import { deleteList, createList, updateListTitle, getThread, findListByTitle, updateProfile, getFollowingLists } from "@/app/actions";
 /* FEATURE: Places Map — to disable, comment out the PlacesMap import below */
@@ -18,7 +18,6 @@ import { RankedItem, Category } from "@/lib/types";
 import { toast } from 'sonner';
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Mail, MessageSquare } from "lucide-react";
 import { ResponseBtn } from '@/components/response-btn';
 import { ResponseSplitView } from '@/components/response-split-view';
 import { CommentModal } from '@/components/comment-modal';
@@ -205,7 +204,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
     const handleCopyLink = (list: any) => {
         const url = `${window.location.origin}/list/${list.id}`;
         const authorName = list.profiles?.display_name || list.profiles?.username || 'Someone';
-        const text = `${authorName} made a list on Rank and File. What do you think? Respond now. ${url}`;
+        const text = `${authorName} made a list on Rank and file. Take a look, and respond. ${url}`;
         navigator.clipboard.writeText(text);
         setIsCopied(true);
         toast.success('Link copied to clipboard');
@@ -215,7 +214,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
     const handleShareTwitter = (list: any) => {
         const url = `${window.location.origin}/list/${list.id}`;
         const authorName = list.profiles?.display_name || list.profiles?.username || 'Someone';
-        const text = `${authorName} made a list on Rank and File. What do you think? Respond now.`;
+        const text = `${authorName} made a list on Rank and File. Take a look, and respond.`;
         window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
     };
 
@@ -845,16 +844,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
 
                         <CardHeader className="p-5 pb-3 shrink-0">
                             <div className="flex flex-row items-center justify-between gap-4">
-                                {expandedList.id !== 'temp-pending' && (
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => setCommentModal({ isOpen: true, listId: expandedList.id, listTitle: expandedList.title, userId: currentUserId })}
-                                        className="absolute top-4 right-14 text-[10px] uppercase font-bold tracking-wider text-slate-400 hover:text-slate-900 h-6 px-2"
-                                    >
-                                        Add your thoughts
-                                    </Button>
-                                )}
+
                                 <div className="space-y-0 flex-1 min-w-0">
                                     <div className={`text-[9px] font-black tracking-widest uppercase mb-0.5 ${categoryConfig[expandedList.category as keyof typeof categoryConfig]?.color || categoryConfig.other.color}`}>
                                         {categoryConfig[expandedList.category as keyof typeof categoryConfig]?.label || expandedList.category}
@@ -947,7 +937,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                                     <button
                                                         onClick={() => {
                                                             const authorName = expandedList.profiles?.display_name || expandedList.profiles?.username || 'Someone';
-                                                            const text = `${authorName} made a list on Rank and File. What do you think? Respond now.`;
+                                                            const text = `${authorName} made a list on Rank and File. Take a look, and respond.`;
                                                             const url = window.location.href;
                                                             window.open(`mailto:?subject=${encodeURIComponent(expandedList.title)}&body=${encodeURIComponent(text + '\n' + url)}`);
                                                             setShowShareOptions(false);
@@ -960,14 +950,14 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                                     <button
                                                         onClick={() => {
                                                             const authorName = expandedList.profiles?.display_name || expandedList.profiles?.username || 'Someone';
-                                                            const text = `${authorName} made a list on Rank and File. What do you think? Respond now.`;
+                                                            const text = `${authorName} made a list on Rank and File. Take a look, and respond.`;
                                                             const url = window.location.href;
                                                             window.open(`sms:?&body=${encodeURIComponent(text + ' ' + url)}`);
                                                             setShowShareOptions(false);
                                                         }}
                                                         className="w-full flex items-center gap-2 p-2 rounded hover:bg-slate-50 text-[10px] font-bold text-slate-700 transition-colors"
                                                     >
-                                                        <MessageSquare className="h-3 w-3" />
+                                                        <MessageCircle className="h-3 w-3" />
                                                         TEXT
                                                     </button>
                                                     <button
@@ -1027,18 +1017,13 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                         />
                                     )}
 
-                                    {/* Add your thoughts (Comments) Button - For ALL users */}
-                                    {(currentUserId || expandedList.id !== 'temp-pending') && (
+                                    {/* Add your thoughts (Comments) Button - For ALL users, but only for SAVED lists */}
+                                    {expandedList.id !== 'temp-pending' && (
                                         <Button
                                             variant="outline"
                                             size="sm"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                // If temp-pending, we can't add comments yet, maybe alert?
-                                                if (expandedList.id === 'temp-pending') {
-                                                    toast.error("Finish creating your list first!");
-                                                    return;
-                                                }
                                                 setCommentModal({
                                                     isOpen: true,
                                                     listId: expandedList.id,
@@ -1048,8 +1033,8 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                             }}
                                             className="h-7 px-3 text-[9px] font-black tracking-widest uppercase bg-white border-slate-200 text-slate-500 hover:text-black hover:bg-slate-50 rounded-md flex items-center gap-1.5"
                                         >
-                                            <MessageSquare className="h-3 w-3" />
-                                            ADD YOUR THOUGHTS
+                                            <MessageCircle className="h-3 w-3" />
+                                            THOUGHTS?
                                         </Button>
                                     )}
                                     {/* View Responses Button (Owner with responses) */}
@@ -1205,45 +1190,46 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
             }
 
             {/* Response Split View Modal */}
-            {responseView.isOpen && responseView.threadData && (
-                <ResponseSplitView
-                    thread={responseView.threadData}
-                    initialDraftId={responseView.draftId}
-                    currentUserId={currentUserId || ''}
-                    onClose={() => {
-                        setResponseView({ isOpen: false, threadData: null, draftId: null });
-                        router.refresh();
-                    }}
-                    onStartResponse={async (parentListId: string) => {
-                        try {
-                            const { createResponse } = await import('@/app/actions');
-                            const newList = await createResponse(parentListId);
+            {
+                responseView.isOpen && responseView.threadData && (
+                    <ResponseSplitView
+                        thread={responseView.threadData}
+                        initialDraftId={responseView.draftId}
+                        currentUserId={currentUserId || ''}
+                        onClose={() => {
+                            setResponseView({ isOpen: false, threadData: null, draftId: null });
+                            router.refresh();
+                        }}
+                        onStartResponse={async (parentListId: string) => {
+                            try {
+                                const { createResponse } = await import('@/app/actions');
+                                const newList = await createResponse(parentListId);
 
-                            // Optimistic update: Increment response count immediately
-                            setLists(prev => prev.map(list => {
-                                if (list.id === parentListId) {
-                                    return { ...list, response_count: (list.response_count || 0) + 1 };
+                                // Optimistic update: Increment response count immediately
+                                setLists(prev => prev.map(list => {
+                                    if (list.id === parentListId) {
+                                        return { ...list, response_count: (list.response_count || 0) + 1 };
+                                    }
+                                    return list;
+                                }));
+
+                                toast.success(`Started response to "${responseView.threadData?.[0]?.title}"`);
+                                // Re-fetch thread to include the new response
+                                const updatedThread = await getThread(parentListId);
+                                if (updatedThread) {
+                                    setResponseView({
+                                        isOpen: true,
+                                        threadData: updatedThread,
+                                        draftId: newList.id
+                                    });
                                 }
-                                return list;
-                            }));
-
-                            toast.success(`Started response to "${responseView.threadData?.[0]?.title}"`);
-                            // Re-fetch thread to include the new response
-                            const updatedThread = await getThread(parentListId);
-                            if (updatedThread) {
-                                setResponseView({
-                                    isOpen: true,
-                                    threadData: updatedThread,
-                                    draftId: newList.id
-                                });
+                            } catch (err) {
+                                console.error('Failed to create response:', err);
+                                toast.error('Failed to create response');
                             }
-                        } catch (err) {
-                            console.error('Failed to create response:', err);
-                            toast.error('Failed to create response');
-                        }
-                    }}
-                />
-            )
+                        }}
+                    />
+                )
             }
 
             < CommentModal
@@ -1253,6 +1239,6 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                 listTitle={commentModal.listTitle}
                 currentUserId={currentUserId}
             />
-        </div>
+        </div >
     );
 }

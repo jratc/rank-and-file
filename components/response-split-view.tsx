@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, X, Trash2, MessageSquare, Share2, Copy, Mail, Twitter } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Trash2, MessageSquare, Share2, Copy, Mail, Twitter, MessageCircle } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { FollowButton } from "./follow-button";
 import { RankingList } from "./ranking-list";
@@ -9,6 +9,7 @@ import { ResponseEditor } from "./response-editor";
 import { CommentModal } from "./comment-modal";
 import { getThread, deleteList } from "@/app/actions";
 import { toast } from 'sonner';
+import { calculateSimilarity } from "@/lib/utils";
 
 interface ResponseSplitViewProps {
     thread: any[]; // [Root, Response1, Response2...]
@@ -50,6 +51,11 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
     };
 
     const currentThreadItem = thread[currentIndex];
+
+    // Similarity Calculation
+    const matchPercentage = currentIndex > 0 && thread[0]
+        ? calculateSimilarity(thread[0].list_items, currentThreadItem.list_items)
+        : null;
 
     // Navigation handlers
     const nextItem = () => setCurrentIndex(prev => Math.min(prev + 1, thread.length - 1));
@@ -112,16 +118,23 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
 
                     <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-white/10 flex flex-col h-full transform transition-all hover:scale-[1.005]">
                         {/* Header */}
-                        <div className="p-6 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] flex justify-between items-center">
-                            <div className="flex flex-col">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
-                                    {currentIndex === 0 ? "ORIGINAL LIST" : `RESPONSE #${currentIndex}`}
-                                </span>
-                                <h2 className="text-xl md:text-2xl font-black uppercase tracking-tighter leading-[0.9] text-slate-800 dark:text-slate-100 line-clamp-1">
+                        <div className="p-6 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] flex justify-between items-start gap-4">
+                            <div className="flex flex-col flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                        {currentIndex === 0 ? "ORIGINAL LIST" : `RESPONSE #${currentIndex}`}
+                                    </span>
+                                    {matchPercentage !== null && (
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded-full">
+                                            {matchPercentage}% Match
+                                        </span>
+                                    )}
+                                </div>
+                                <h2 className="text-lg md:text-xl font-black uppercase tracking-tighter leading-[0.9] text-slate-800 dark:text-slate-100 line-clamp-2 break-words">
                                     {currentThreadItem.title}
                                 </h2>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 shrink-0">
                                 <div className="relative">
                                     <Button
                                         variant="ghost"
@@ -238,8 +251,8 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
                                 className="px-3 py-2 text-slate-400 hover:text-black hover:bg-slate-50 rounded-lg transition-colors flex items-center gap-2"
                                 title="Add your thoughts"
                             >
-                                <MessageSquare className="h-4 w-4" />
-                                <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">Add your thoughts</span>
+                                <MessageCircle className="h-4 w-4" />
+                                <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">Thoughts?</span>
                             </button>
                         )}
 

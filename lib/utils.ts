@@ -294,11 +294,39 @@ export function extractContext(title: string, category?: string): SearchContext 
   };
 }
 
+
 /**
- * Normalize location strings for better search matching.
- * "Austin Texas" -> "Austin, Texas"
- * "New York" -> "New York" (already correct)
+ * Calculate similarity between two lists of items.
+ * Uses Jaccard Index based on normalized item names/subtitles.
+ * Returns percentage (0-100).
  */
+export function calculateSimilarity(itemsA: any[], itemsB: any[]): number {
+  if (!itemsA?.length || !itemsB?.length) return 0;
+
+  const normalize = (item: any) => {
+    // Prefer ID if provider is consistent
+    if (item.metadata?.rawMetadata?.id) return String(item.metadata.rawMetadata.id);
+
+    // Fallback to name+subtitle
+    const name = item.metadata?.name || '';
+    const sub = item.metadata?.subtitle || '';
+    return `${name.toLowerCase().trim()}|${sub.toLowerCase().trim()}`;
+  };
+
+  const setA = new Set(itemsA.map(normalize));
+  const setB = new Set(itemsB.map(normalize));
+
+  let intersection = 0;
+  for (const item of setA) {
+    if (setB.has(item)) intersection++;
+  }
+
+  const union = setA.size + setB.size - intersection;
+  if (union === 0) return 0;
+
+  return Math.round((intersection / union) * 100);
+}
+
 function normalizeLocation(loc: string): string {
   const usStates: Record<string, string> = {
     'alabama': 'AL', 'alaska': 'AK', 'arizona': 'AZ', 'arkansas': 'AR',
