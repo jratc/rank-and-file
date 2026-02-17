@@ -8,7 +8,7 @@ export function cn(...inputs: ClassValue[]) {
 export interface SearchContext {
   subject: string | null;
   location: string | null;
-  intent?: 'song' | 'album' | 'movie' | 'place' | 'book' | 'general';
+  intent?: 'song' | 'album' | 'movie' | 'place' | 'book' | 'general' | 'list';
   category?: string;
   artist?: string;
   genre?: string;

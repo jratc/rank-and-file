@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { extractContext } from '@/lib/utils';
-import { generateSearchIntent } from '@/lib/ai';
+import { generateSearchIntent, generateListFromLLM } from '@/lib/ai';
 import { moviesProvider } from '@/lib/movies';
 import { booksProvider } from '@/lib/books';
 import { itunesProvider } from '@/lib/itunes';
@@ -22,20 +22,23 @@ export async function detectAndPopulateList(listId: string, title: string, categ
 
     if (listError || !listData) return { populated: false, count: 0 };
 
-    // 2. Extract Context (Heuristic + LLM)
-    // First, try fast heuristic
+    // 2. Extract Context (Gemini First -> Heuristic Fallback)
     let context = extractContext(title, category);
 
-    // If heuristic didn't find specific intent (like actor/director/genre), or if we want to be smarter:
-    // User requested "Pass the query through a lite version of the gemini LLM api".
-    // We'll try the LLM if we have enough info to make it worth it, or just always call it if key exists.
-    // Given the user's strong request for "Sean Penn Movies" to work perfectly, let's prioritize LLM if available.
+    // User Request: "Always use gemini to determine user intent"
     if (process.env.GEMINI_API_KEY) {
         const llmContext = await generateSearchIntent(title, category);
         if (llmContext) {
-            console.log(`[Populate] Using LLM Context over Heuristic`, llmContext);
-            // Merge LLM context with heuristic (LLM takes precedence)
-            context = { ...context, ...llmContext };
+            console.log(`[Populate] Using LLM Context:`, llmContext);
+            // Completely override heuristic with LLM context (Gemini First)
+            // We keep location from heuristic if LLM didn't return it, just in case, but trust LLM for subject/intent
+            context = {
+                ...context,
+                ...llmContext,
+                // Ensure we don't leverage heuristic intent if LLM provided one
+                intent: llmContext.intent || context.intent,
+                subject: llmContext.subject || context.subject
+            };
         }
     }
 
@@ -56,6 +59,21 @@ export async function detectAndPopulateList(listId: string, title: string, categ
                 console.log(`[Populate] Detected genre intent for: ${context.genre}`);
                 items = await moviesProvider.getMoviesByGenre(context.genre, context.limit);
             }
+        }
+        else if (context.intent === 'list' && context.subject) {
+            console.log(`[Populate] Detected generic list intent for: ${context.subject}`);
+            // Generate list using LLM
+            // We need to import generateListFromLLM first (I'll add the import in a separate block if needed, or assume it's added)
+            const llmItems = await generateListFromLLM(context.subject, context.limit);
+            items = llmItems.map((item, idx) => ({
+                id: `llm-${Date.now()}-${idx}`,
+                name: item.name,
+                subtitle: item.subtitle,
+                imageUrl: null,
+                externalUrl: null,
+                provider: 'gemini',
+                type: 'custom'
+            }));
         }
         else if (category === 'books' && context.author) {
             console.log(`[Populate] Detected author intent for: ${context.author}`);

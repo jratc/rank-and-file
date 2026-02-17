@@ -44,7 +44,8 @@ export async function signup(formData: FormData) {
     const { data: authData, error } = await supabase.auth.signUp(data)
 
     if (error) {
-        return { error: error.message }
+        console.error('Signup Error:', error)
+        return { error: `Signup failed: ${error.message} (Code: ${error.status || 'Unknown'})` }
     }
 
     // Fallback: If trigger didn't catch it (migration not run) AND we have a session (auto-confirm)
