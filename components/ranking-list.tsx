@@ -3,6 +3,9 @@
 /* FEATURE: Music Player — to disable, comment out the MusicPlayer import below */
 import { MusicPlayer } from './music-link';
 import { HydratedImage } from './hydrated-image';
+import { updateListOrder, deleteListItem, loadMoreItems } from '@/app/draft/actions';
+import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -21,20 +24,20 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { SortableItem } from './sortable-item';
-import { updateListOrder, deleteListItem } from '@/app/draft/actions';
-import { toast } from 'sonner';
 
 interface RankingListProps {
     initialItems: any[];
     listId: string;
     category?: string;
+    title?: string;
     onChange?: (newItems: any[]) => void;
     readOnly?: boolean;
 }
 
-export function RankingList({ initialItems, listId, category = 'items', onChange, readOnly = false }: RankingListProps) {
+export function RankingList({ initialItems, listId, category = 'items', title, onChange, readOnly = false }: RankingListProps) {
     const [items, setItems] = useState(initialItems);
     const [isSaving, setIsSaving] = useState(false);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -251,6 +254,37 @@ export function RankingList({ initialItems, listId, category = 'items', onChange
                 </div>
             </SortableContext>
             {isSaving && <div className="text-xs text-gray-400 text-center mt-2">Saving order...</div>}
+
+            {/* Load More Button */}
+            {!readOnly && title && (
+                <div className="mt-8 flex justify-center">
+                    <button
+                        onClick={async () => {
+                            setIsLoadingMore(true);
+                            try {
+                                const newItems = await loadMoreItems(listId, title, items.length);
+                                if (newItems && newItems.length > 0) {
+                                    const updatedList = [...items, ...newItems];
+                                    setItems(updatedList);
+                                    toast.success(`Added ${newItems.length} more items!`);
+                                    if (onChange) onChange(updatedList);
+                                } else {
+                                    toast.info("No more items found.");
+                                }
+                            } catch (e) {
+                                toast.error("Failed to load more items.");
+                            } finally {
+                                setIsLoadingMore(false);
+                            }
+                        }}
+                        disabled={isLoadingMore}
+                        className="flex items-center gap-2 px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-full transition-all disabled:opacity-50"
+                    >
+                        {isLoadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                        {isLoadingMore ? 'Loading...' : 'Load More Ideas'}
+                    </button>
+                </div>
+            )}
         </DndContext>
     );
 }
