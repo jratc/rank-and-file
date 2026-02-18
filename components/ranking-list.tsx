@@ -60,6 +60,7 @@ export function RankingList({ initialItems, listId, category = 'items', title, o
     useEffect(() => {
         if (!listId) return;
 
+        console.log(`[RankingList] Subscribing to realtime for list: ${listId}`);
         const supabase = createClient();
         const channel = supabase
             .channel(`list-items-${listId}`)
@@ -76,18 +77,24 @@ export function RankingList({ initialItems, listId, category = 'items', title, o
 
                     if (payload.eventType === 'INSERT') {
                         const newItem = payload.new;
+                        console.log('[Realtime] INSERTING item:', newItem.id);
                         setItems((currentItems) => {
                             // Avoid duplicates
-                            if (currentItems.some((i) => i.id === newItem.id)) return currentItems;
+                            if (currentItems.some((i) => i.id === newItem.id)) {
+                                console.log('[Realtime] Duplicate ignored:', newItem.id);
+                                return currentItems;
+                            }
                             const newSafeItems = [...currentItems, newItem];
                             // Sort by rank to maintain order
                             return newSafeItems.sort((a, b) => (a.rank || 0) - (b.rank || 0));
                         });
                     } else if (payload.eventType === 'DELETE') {
+                        console.log('[Realtime] DELETING item:', payload.old.id);
                         setItems((currentItems) =>
                             currentItems.filter((i) => i.id !== payload.old.id)
                         );
                     } else if (payload.eventType === 'UPDATE') {
+                        console.log('[Realtime] UPDATING item:', payload.new.id);
                         setItems((currentItems) => {
                             return currentItems.map((i) =>
                                 i.id === payload.new.id ? { ...i, ...payload.new } : i
@@ -96,9 +103,12 @@ export function RankingList({ initialItems, listId, category = 'items', title, o
                     }
                 }
             )
-            .subscribe();
+            .subscribe((status) => {
+                console.log(`[Realtime] Subscription status for ${listId}:`, status);
+            });
 
         return () => {
+            console.log(`[RankingList] Unsubscribing from ${listId}`);
             supabase.removeChannel(channel);
         };
     }, [listId]);

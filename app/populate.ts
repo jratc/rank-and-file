@@ -184,6 +184,7 @@ export async function detectAndPopulateList(listId: string, title: string, categ
 
     const maxItems = context.limit ? context.limit : 50;
     const itemsToInsert = items.slice(0, maxItems);
+    console.log(`[Populate] Inserting ${itemsToInsert.length} items for list: ${listId}...`);
 
     const { data: insertedData, error: insertError } = await supabase.from('list_items').insert(
         itemsToInsert.map((item, index) => ({
