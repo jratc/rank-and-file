@@ -67,7 +67,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
     const [isPopulatingComplete, setIsPopulatingComplete] = useState(false);
 
     // FREE-FORM LIST STATE
-    const [creationStep, setCreationStep] = useState<'naming' | 'choosing' | 'drafting' | 'waiting' | null>(null);
+    const [creationStep, setCreationStep] = useState<'naming' | 'choosing' | 'drafting' | 'waiting' | 'ranking' | null>(null);
     const [freeFormItems, setFreeFormItems] = useState<string[]>(Array(10).fill(''));
 
     const [commentModal, setCommentModal] = useState<{
@@ -626,11 +626,12 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                     return;
                 }
 
-                // TRANSITION TO "WHILE YOU WAIT" COMMENT
-                setIsWaitingForComment(true);
-                setCreationStep('waiting');
+                // TRANSITION TO UNIFIED LIST VIEW
+                setIsWaitingForComment(false);
+                setCreationStep('ranking');
+                setExpandedListId(newList.id);
                 setIsUpdatingTitle(false);
-                console.log(`[Dashboard] Transitioned to isWaitingForComment: true`);
+                console.log(`[Dashboard] Transitioned to ranking view for unified modal`);
                 // We keep the modal open, but the render logic will switch to the comment box
 
             } catch (error) {
@@ -1015,8 +1016,8 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                 <CardContent className="p-6 pt-2 grid grid-cols-1 gap-3">
                                     <button
                                         onClick={() => {
-                                            setIsWaitingForComment(true);
-                                            setCreationStep('waiting');
+                                            setIsWaitingForComment(false);
+                                            setCreationStep('ranking' as any);
                                         }}
                                         className="group w-full p-4 border-2 border-slate-100 hover:border-black rounded-xl transition-all text-left flex items-start gap-4"
                                     >
@@ -1098,280 +1099,212 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                             <div className="flex-1 flex flex-col min-h-0 relative">
                                 {/* WHILE YOU WAIT VIEW - Hidden but keeps RankingList mounted if we want, 
                                     actually we want the LIST to be mounted to catch events. */}
-                                {creationStep === 'waiting' && (
-                                    <div className="absolute inset-0 z-10 bg-white dark:bg-slate-900 overflow-y-auto">
-                                        <CardHeader className="p-5 pb-2 text-center pt-8">
-                                            <Clock className="h-8 w-8 text-slate-200 mx-auto mb-4 animate-pulse" />
-                                            <CardTitle className="text-xl font-black uppercase tracking-tighter">While you are waiting...</CardTitle>
-                                            <CardDescription className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2 px-8 leading-relaxed">
-                                                Why is this list important to you?
-                                            </CardDescription>
-                                        </CardHeader>
-                                        <CardContent className="p-5 pt-2 space-y-4">
-                                            <Textarea
-                                                placeholder="Enter your thoughts here..."
-                                                value={waitingComment}
-                                                onChange={(e) => setWaitingComment(e.target.value)}
-                                                className="min-h-[120px] font-bold text-lg resize-none border-2 border-slate-100 focus-visible:ring-black rounded-xl p-4 placeholder:opacity-50"
-                                                autoFocus
-                                            />
-                                            <Button
-                                                onClick={handleSubmitWaitingComment}
-                                                disabled={isUpdatingTitle || (!isPopulatingComplete && populatedCount < 12 && isPopulating)}
-                                                className="w-full h-14 bg-black hover:bg-slate-800 text-white font-black uppercase tracking-widest text-sm rounded-xl transition-all shadow-md active:scale-[0.98] flex flex-col items-center justify-center"
-                                            >
-                                                {isUpdatingTitle ? (
-                                                    <Loader2 className="h-5 w-5 animate-spin" />
-                                                ) : (
-                                                    <>
-                                                        <span>{isPopulatingComplete || populatedCount >= 12 ? "YOUR LIST IS READY!" : "SUBMIT & SEE LIST"}</span>
-                                                        {!isPopulatingComplete && populatedCount > 0 && populatedCount < 12 && (
-                                                            <span className="text-[9px] opacity-70 mt-0.5">({populatedCount} items found so far...)</span>
-                                                        )}
-                                                        {populatedCount === 0 && isPopulating && (
-                                                            <span className="text-[9px] opacity-70 mt-0.5">Searching for entries...</span>
-                                                        )}
-                                                    </>
-                                                )}
-                                            </Button>
-                                            <button
-                                                onClick={() => handleSubmitWaitingComment()}
-                                                disabled={!isPopulatingComplete && populatedCount < 12 && isPopulating}
-                                                className="w-full text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-slate-500 transition-colors py-2 disabled:opacity-30"
-                                            >
-                                                {isPopulatingComplete || populatedCount >= 12 ? "Just show me the list" : "Skip thoughts and wait"}
-                                            </button>
-                                        </CardContent>
-                                    </div>
-                                )}
-
-                                <div className={`flex-1 flex flex-col min-h-0 ${creationStep === 'waiting' ? 'invisible pointer-events-none' : 'visible'}`}>
+                                <div className="flex-1 flex flex-col min-h-0 relative">
                                     <CardHeader className="p-5 pb-3 shrink-0">
-                                        <div className="flex flex-row items-center justify-between gap-4">
-
-                                            <div className="space-y-0 flex-1 min-w-0">
-                                                <div className={`text-[9px] font-black tracking-widest uppercase mb-0.5 ${categoryConfig[expandedList.category as keyof typeof categoryConfig]?.color || categoryConfig.other.color}`}>
-                                                    {categoryConfig[expandedList.category as keyof typeof categoryConfig]?.label || expandedList.category}
-                                                </div>
-                                                {editSession.isExpanded && editSession.title !== null ? (
-                                                    <div className="flex flex-col">
-                                                        <Textarea
-                                                            autoFocus
-                                                            value={editSession.title}
-                                                            placeholder="NAME YOUR LIST"
-                                                            onFocus={(e) => {
-                                                                // Only move cursor to end if it's the initial focus (we can check if value matches title)
-                                                                // Actually, standard behavior is fine. The issue was on CHANGE.
-                                                                // But let's keep it simple: do nothing special on focus, 
-                                                                // or just let autoFocus handle it.
-                                                                // If we want to move to end on mount, use a ref or autoFocus.
-                                                                // The previous code forced it on EVERY focus event.
-                                                            }}
-                                                            onChange={(e) => {
-                                                                // Do NOT uppercase here, it resets cursor position in some browsers/react versions
-                                                                // because the value prop changes to something other than what was typed.
-                                                                // We rely on CSS for uppercase visual, and uppercase on save.
-                                                                setEditSession(s => ({ ...s, title: e.target.value }));
-                                                                // Auto-resize
-                                                                e.target.style.height = 'auto';
-                                                                e.target.style.height = e.target.scrollHeight + 'px';
-                                                            }}
-                                                            onBlur={() => handleUpdateTitle(expandedList.id)}
-                                                            onKeyDown={(e) => {
-                                                                if (e.key === 'Enter') {
-                                                                    e.preventDefault(); // Prevent newline
-                                                                    handleUpdateTitle(expandedList.id);
-                                                                }
-                                                                if (e.key === 'Escape') {
-                                                                    setEditSession({ id: null, title: null, isExpanded: false });
-                                                                }
-                                                            }}
-                                                            className={`text-3xl font-black tracking-tighter leading-[0.9] min-h-[1em] h-auto p-0 border-none bg-transparent focus-visible:ring-0 uppercase resize-none overflow-hidden placeholder:text-slate-300 placeholder:font-black placeholder:uppercase ${expandedList.id === 'temp-pending' && !editSession.title?.trim() ? 'text-slate-300' : 'text-slate-900'
-                                                                }`}
-                                                            rows={1}
-                                                        />
-                                                        {isUpdatingTitle && <span className="text-[8px] font-mono text-slate-400">FETCHING LIST...</span>}
+                                        <div className="flex flex-col gap-2">
+                                            <div className="flex flex-row items-center justify-between gap-4">
+                                                <div className="space-y-0 flex-1 min-w-0">
+                                                    <div className={`text-[9px] font-black tracking-widest uppercase mb-0.5 ${categoryConfig[expandedList.category as keyof typeof categoryConfig]?.color || categoryConfig.other.color}`}>
+                                                        {categoryConfig[expandedList.category as keyof typeof categoryConfig]?.label || expandedList.category}
                                                     </div>
-                                                ) : (
-                                                    <CardTitle
-                                                        onClick={() => {
-                                                            if (currentUserId !== expandedList.user_id) return;
-                                                            console.log('START EXPANDED EDIT (CLICK):', expandedList.id);
-                                                            setEditSession({ id: expandedList.id, title: expandedList.title.toUpperCase(), isExpanded: true });
-                                                        }}
-                                                        className={`text-3xl font-black tracking-tighter text-slate-900 leading-[0.9] py-0.5 rounded break-words whitespace-pre-wrap ${currentUserId === expandedList.user_id ? 'cursor-text hover:text-slate-500 transition-colors' : 'cursor-default'}`}
-                                                    >
-                                                        {expandedList.title.toUpperCase()}
-                                                    </CardTitle>
-                                                )}
-                                            </div>
+                                                    {editSession.isExpanded && editSession.title !== null ? (
+                                                        <div className="flex flex-col">
+                                                            <Textarea
+                                                                autoFocus
+                                                                value={editSession.title}
+                                                                placeholder="NAME YOUR LIST"
+                                                                onChange={(e) => {
+                                                                    setEditSession(s => ({ ...s, title: e.target.value }));
+                                                                    e.target.style.height = 'auto';
+                                                                    e.target.style.height = e.target.scrollHeight + 'px';
+                                                                }}
+                                                                onBlur={() => handleUpdateTitle(expandedList.id)}
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === 'Enter') {
+                                                                        e.preventDefault();
+                                                                        handleUpdateTitle(expandedList.id);
+                                                                    }
+                                                                    if (e.key === 'Escape') {
+                                                                        setEditSession({ id: null, title: null, isExpanded: false });
+                                                                    }
+                                                                }}
+                                                                className={`text-3xl font-black tracking-tighter leading-[0.9] min-h-[1em] h-auto p-0 border-none bg-transparent focus-visible:ring-0 uppercase resize-none overflow-hidden placeholder:text-slate-300 placeholder:font-black placeholder:uppercase ${expandedList.id === 'temp-pending' && !editSession.title?.trim() ? 'text-slate-300' : 'text-slate-900'}`}
+                                                                rows={1}
+                                                            />
+                                                            {isUpdatingTitle && <span className="text-[8px] font-mono text-slate-400">FETCHING LIST...</span>}
+                                                        </div>
+                                                    ) : (
+                                                        <CardTitle
+                                                            onClick={() => {
+                                                                if (currentUserId !== expandedList.user_id) return;
+                                                                setEditSession({ id: expandedList.id, title: expandedList.title.toUpperCase(), isExpanded: true });
+                                                            }}
+                                                            className={`text-3xl font-black tracking-tighter text-slate-900 leading-[0.9] py-0.5 rounded break-words whitespace-pre-wrap ${currentUserId === expandedList.user_id ? 'cursor-text hover:text-slate-500 transition-colors' : 'cursor-default'}`}
+                                                        >
+                                                            {expandedList.title.toUpperCase()}
+                                                        </CardTitle>
+                                                    )}
+                                                </div>
 
-                                            <div className="flex items-center gap-1.5 relative shrink-0">
-                                                <div className="relative">
-                                                    {/* Only show Share button for SAVED lists (not temp-pending) */}
+                                                <div className="flex items-center gap-1.5 relative shrink-0">
+                                                    {/* ... Share / Respond controls ... */}
+                                                </div>
+
+                                                <div className="flex items-center gap-1.5 relative shrink-0">
+                                                    {/* Share / Respond controls */}
                                                     {expandedList.id !== 'temp-pending' && (
+                                                        <div className="relative">
+                                                            <Button
+                                                                variant="default"
+                                                                size="sm"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setShowShareOptions(!showShareOptions);
+                                                                }}
+                                                                className="h-7 px-3 text-[9px] font-black tracking-widest uppercase bg-slate-900 hover:bg-black text-white rounded-md flex items-center gap-1.5"
+                                                            >
+                                                                <Share2 className="h-2.5 w-2.5" />
+                                                                SHARE
+                                                            </Button>
+
+                                                            {showShareOptions && (
+                                                                <>
+                                                                    <div
+                                                                        className="fixed inset-0 z-30"
+                                                                        onClick={() => setShowShareOptions(false)}
+                                                                    />
+                                                                    <div className="absolute top-full right-0 mt-2 w-40 bg-white border border-slate-200 rounded-lg shadow-xl z-40 p-1 animate-in fade-in zoom-in-95 duration-100">
+                                                                        <button
+                                                                            onClick={() => { handleCopyLink(expandedList); setShowShareOptions(false); }}
+                                                                            className="w-full flex items-center gap-2 p-2 rounded hover:bg-slate-50 text-[10px] font-bold text-slate-700 transition-colors"
+                                                                        >
+                                                                            <Copy className="h-3 w-3" />
+                                                                            COPY LINK
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                const authorName = expandedList.profiles?.display_name || expandedList.profiles?.username || 'Someone';
+                                                                                const text = `${authorName} made a list on Rank and File. Take a look, and respond.`;
+                                                                                const url = window.location.href;
+                                                                                window.open(`mailto:?subject=${encodeURIComponent(expandedList.title)}&body=${encodeURIComponent(text + '\n' + url)}`);
+                                                                                setShowShareOptions(false);
+                                                                            }}
+                                                                            className="w-full flex items-center gap-2 p-2 rounded hover:bg-slate-50 text-[10px] font-bold text-slate-700 transition-colors"
+                                                                        >
+                                                                            <Mail className="h-3 w-3" />
+                                                                            EMAIL
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                const authorName = expandedList.profiles?.display_name || expandedList.profiles?.username || 'Someone';
+                                                                                const text = `${authorName} made a list on Rank and File. Take a look, and respond.`;
+                                                                                const url = window.location.href;
+                                                                                window.open(`sms:?&body=${encodeURIComponent(text + ' ' + url)}`);
+                                                                                setShowShareOptions(false);
+                                                                            }}
+                                                                            className="w-full flex items-center gap-2 p-2 rounded hover:bg-slate-50 text-[10px] font-bold text-slate-700 transition-colors"
+                                                                        >
+                                                                            <MessageCircle className="h-3 w-3" />
+                                                                            TEXT
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => { handleShareTwitter(expandedList); setShowShareOptions(false); }}
+                                                                            className="w-full flex items-center gap-2 p-2 rounded hover:bg-slate-50 text-[10px] font-bold text-slate-700 transition-colors"
+                                                                        >
+                                                                            <Twitter className="h-3 w-3" />
+                                                                            TWEET
+                                                                        </button>
+                                                                    </div>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Respond Button (Only for Non-Owners) */}
+                                                    {currentUserId !== expandedList.user_id && (
+                                                        <ResponseBtn
+                                                            parentListId={expandedList.id}
+                                                            parentTitle={expandedList.title}
+                                                            onResponseCreated={async (newList: any) => {
+                                                                setLists(prev => prev.map(list => {
+                                                                    if (list.id === expandedList.id) {
+                                                                        return { ...list, response_count: (list.response_count || 0) + 1 };
+                                                                    }
+                                                                    return list;
+                                                                }));
+
+                                                                try {
+                                                                    const thread = await getThread(expandedList.id);
+                                                                    router.refresh();
+
+                                                                    if (thread) {
+                                                                        setResponseView({
+                                                                            isOpen: true,
+                                                                            threadData: thread,
+                                                                            draftId: newList.id
+                                                                        });
+                                                                        setExpandedListId(null);
+                                                                        setEditSession({ id: null, title: null, isExpanded: false });
+                                                                    } else {
+                                                                        setExpandedListId(null);
+                                                                    }
+                                                                } catch (err) {
+                                                                    console.error('Failed to load thread:', err);
+                                                                    toast.error('Failed to open response view');
+                                                                    setExpandedListId(null);
+                                                                }
+                                                            }}
+                                                        />
+                                                    )}
+
+                                                    {/* View Responses Button (Owner with responses) */}
+                                                    {currentUserId === expandedList.user_id && expandedList.response_count > 0 && (
                                                         <Button
                                                             variant="default"
                                                             size="sm"
-                                                            onClick={(e) => {
+                                                            onClick={async (e) => {
                                                                 e.stopPropagation();
-                                                                setShowShareOptions(!showShareOptions);
+                                                                try {
+                                                                    const thread = await getThread(expandedList.id);
+                                                                    if (thread) {
+                                                                        setExpandedListId(null);
+                                                                        setShowMap(false);
+                                                                        setResponseView({
+                                                                            isOpen: true,
+                                                                            threadData: thread,
+                                                                            draftId: null
+                                                                        });
+                                                                    }
+                                                                } catch (err) {
+                                                                    console.error('Failed to load thread:', err);
+                                                                    toast.error('Failed to load responses');
+                                                                }
                                                             }}
-                                                            className="h-7 px-3 text-[9px] font-black tracking-widest uppercase bg-slate-900 hover:bg-black text-white rounded-md flex items-center gap-1.5"
+                                                            className="h-7 px-3 text-[9px] font-black tracking-widest uppercase bg-blue-500 hover:bg-blue-600 text-white rounded-md flex items-center gap-1.5"
                                                         >
-                                                            <Share2 className="h-2.5 w-2.5" />
-                                                            SHARE
+                                                            <MessageSquare className="h-2.5 w-2.5" />
+                                                            {expandedList.response_count} {expandedList.response_count === 1 ? 'RESPONSE' : 'RESPONSES'}
                                                         </Button>
                                                     )}
-
-                                                    {showShareOptions && (
-                                                        <>
-                                                            <div
-                                                                className="fixed inset-0 z-30"
-                                                                onClick={() => setShowShareOptions(false)}
-                                                            />
-                                                            <div className="absolute top-full right-0 mt-2 w-40 bg-white border border-slate-200 rounded-lg shadow-xl z-40 p-1 animate-in fade-in zoom-in-95 duration-100">
-                                                                <button
-                                                                    onClick={() => { handleCopyLink(expandedList); setShowShareOptions(false); }}
-                                                                    className="w-full flex items-center gap-2 p-2 rounded hover:bg-slate-50 text-[10px] font-bold text-slate-700 transition-colors"
-                                                                >
-                                                                    <Copy className="h-3 w-3" />
-                                                                    COPY LINK
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => {
-                                                                        const authorName = expandedList.profiles?.display_name || expandedList.profiles?.username || 'Someone';
-                                                                        const text = `${authorName} made a list on Rank and File. Take a look, and respond.`;
-                                                                        const url = window.location.href;
-                                                                        window.open(`mailto:?subject=${encodeURIComponent(expandedList.title)}&body=${encodeURIComponent(text + '\n' + url)}`);
-                                                                        setShowShareOptions(false);
-                                                                    }}
-                                                                    className="w-full flex items-center gap-2 p-2 rounded hover:bg-slate-50 text-[10px] font-bold text-slate-700 transition-colors"
-                                                                >
-                                                                    <Mail className="h-3 w-3" />
-                                                                    EMAIL
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => {
-                                                                        const authorName = expandedList.profiles?.display_name || expandedList.profiles?.username || 'Someone';
-                                                                        const text = `${authorName} made a list on Rank and File. Take a look, and respond.`;
-                                                                        const url = window.location.href;
-                                                                        window.open(`sms:?&body=${encodeURIComponent(text + ' ' + url)}`);
-                                                                        setShowShareOptions(false);
-                                                                    }}
-                                                                    className="w-full flex items-center gap-2 p-2 rounded hover:bg-slate-50 text-[10px] font-bold text-slate-700 transition-colors"
-                                                                >
-                                                                    <MessageCircle className="h-3 w-3" />
-                                                                    TEXT
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => { handleShareTwitter(expandedList); setShowShareOptions(false); }}
-                                                                    className="w-full flex items-center gap-2 p-2 rounded hover:bg-slate-50 text-[10px] font-bold text-slate-700 transition-colors"
-                                                                >
-                                                                    <Twitter className="h-3 w-3" />
-                                                                    TWEET
-                                                                </button>
-                                                            </div>
-                                                        </>
-                                                    )}
                                                 </div>
-
-                                                {/* Respond Button (Only for Non-Owners) */}
-                                                {currentUserId !== expandedList.user_id && (
-                                                    <ResponseBtn
-                                                        parentListId={expandedList.id}
-                                                        parentTitle={expandedList.title}
-                                                        onResponseCreated={async (newList: any) => {
-                                                            // 1. Optimistic update for list count
-                                                            setLists(prev => prev.map(list => {
-                                                                if (list.id === expandedList.id) {
-                                                                    return { ...list, response_count: (list.response_count || 0) + 1 };
-                                                                }
-                                                                return list;
-                                                            }));
-
-                                                            try {
-                                                                // 2. Fetch thread data BEFORE closing current view
-                                                                const thread = await getThread(expandedList.id);
-
-                                                                // 3. Update router to show new list in background
-                                                                router.refresh();
-
-                                                                if (thread) {
-                                                                    // 4. Open Response View AND Close Expanded View simultaneously
-                                                                    setResponseView({
-                                                                        isOpen: true,
-                                                                        threadData: thread,
-                                                                        draftId: newList.id
-                                                                    });
-                                                                    setExpandedListId(null);
-                                                                    setEditSession({ id: null, title: null, isExpanded: false });
-                                                                } else {
-                                                                    // Fallback if thread fetch fails - keep user in current view but show error?
-                                                                    // Or just close?
-                                                                    setExpandedListId(null);
-                                                                }
-                                                            } catch (err) {
-                                                                console.error('Failed to load thread:', err);
-                                                                toast.error('Failed to open response view');
-                                                                // Ensure we don't get stuck if error occurs
-                                                                setExpandedListId(null);
-                                                            }
-                                                        }}
-                                                    />
-                                                )}
-
-                                                {/* Add your thoughts (Comments) Button - For ALL users, but only for SAVED lists */}
-                                                {expandedList.id !== 'temp-pending' && (
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setCommentModal({
-                                                                isOpen: true,
-                                                                listId: expandedList.id,
-                                                                listTitle: expandedList.title,
-                                                                userId: currentUserId
-                                                            });
-                                                        }}
-                                                        className="h-7 px-3 text-[9px] font-black tracking-widest uppercase bg-white border-slate-200 text-slate-500 hover:text-black hover:bg-slate-50 rounded-md flex items-center gap-1.5"
-                                                    >
-                                                        <MessageCircle className="h-3 w-3" />
-                                                        THOUGHTS?
-                                                    </Button>
-                                                )}
-                                                {/* View Responses Button (Owner with responses) */}
-                                                {currentUserId === expandedList.user_id && expandedList.response_count > 0 && (
-                                                    <Button
-                                                        variant="default"
-                                                        size="sm"
-                                                        onClick={async (e) => {
-                                                            e.stopPropagation();
-                                                            try {
-                                                                const thread = await getThread(expandedList.id);
-                                                                if (thread) {
-                                                                    setExpandedListId(null);
-                                                                    setShowMap(false);
-                                                                    setResponseView({
-                                                                        isOpen: true,
-                                                                        threadData: thread,
-                                                                        draftId: null
-                                                                    });
-                                                                }
-                                                            } catch (err) {
-                                                                console.error('Failed to load thread:', err);
-                                                                toast.error('Failed to load responses');
-                                                            }
-                                                        }}
-                                                        className="h-7 px-3 text-[9px] font-black tracking-widest uppercase bg-blue-500 hover:bg-blue-600 text-white rounded-md flex items-center gap-1.5"
-                                                    >
-                                                        <MessageSquare className="h-2.5 w-2.5" />
-                                                        {expandedList.response_count} {expandedList.response_count === 1 ? 'RESPONSE' : 'RESPONSES'}
-                                                    </Button>
-                                                )}
-
                                             </div>
+
+                                            {/* INTEGRATED COMMENT AREA */}
+                                            {currentUserId === expandedList.user_id && (
+                                                <div className="mt-2 group">
+                                                    <Textarea
+                                                        placeholder="Why is this list important to you?"
+                                                        value={waitingComment}
+                                                        onChange={(e) => setWaitingComment(e.target.value)}
+                                                        onBlur={async () => {
+                                                            if (waitingComment.trim() && expandedList.id !== 'temp-pending') {
+                                                                await addComment(expandedList.id, waitingComment.trim());
+                                                            }
+                                                        }}
+                                                        className="min-h-[60px] max-h-[120px] font-bold text-sm resize-none border-none bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus-visible:ring-1 focus-visible:ring-slate-100 rounded-xl p-3 placeholder:opacity-40 transition-all overflow-y-auto"
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* Search Section Inside Header - Only for Owner, only after list is named */}
@@ -1453,6 +1386,37 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                                 ));
                                             }}
                                         />
+
+                                        {/* POPULATION FEEDBACK & READY ACTION */}
+                                        {isPopulating && (
+                                            <div className="mt-6 space-y-4 animate-in fade-in duration-500">
+                                                <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-100 rounded-2xl bg-slate-50/30">
+                                                    <Loader2 className="h-6 w-6 animate-spin text-slate-300 mb-2" />
+                                                    <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                                        {populatedCount === 0 ? "Searching for entries..." : `Found ${populatedCount} items so far...`}
+                                                    </div>
+                                                </div>
+
+                                                <Button
+                                                    onClick={handleSubmitWaitingComment}
+                                                    disabled={isUpdatingTitle || (!isPopulatingComplete && populatedCount < 12)}
+                                                    className="w-full h-14 bg-black hover:bg-slate-800 text-white font-black uppercase tracking-widest text-sm rounded-xl transition-all shadow-md active:scale-[0.98] flex flex-col items-center justify-center"
+                                                >
+                                                    {isUpdatingTitle ? (
+                                                        <Loader2 className="h-5 w-5 animate-spin" />
+                                                    ) : (
+                                                        <span>{isPopulatingComplete || populatedCount >= 12 ? "YOUR LIST IS READY!" : "FINDING MORE ITEMS..."}</span>
+                                                    )}
+                                                </Button>
+
+                                                <button
+                                                    onClick={() => handleSubmitWaitingComment()}
+                                                    className="w-full text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-slate-500 transition-colors py-2"
+                                                >
+                                                    Stop searching and keep current list
+                                                </button>
+                                            </div>
+                                        )}
                                         {/* FEATURE: Places Map — inline map toggle */}
                                         {['places', 'bars', 'restaurants'].includes(expandedList.category) && expandedList.list_items.length > 0 && (
                                             <div className="mt-4 pt-3 border-t border-slate-100">
@@ -1490,9 +1454,10 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                     </CardContent>
                                 </div>
                             </div>
-                        )}
-                    </Card>
-                </div>
+                        )
+                        }
+                    </Card >
+                </div >
             )}
 
             {/* Response Split View Modal */}
@@ -1545,6 +1510,6 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                 listTitle={commentModal.listTitle}
                 currentUserId={currentUserId}
             />
-        </div>
+        </div >
     );
 }
