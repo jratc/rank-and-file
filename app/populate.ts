@@ -21,7 +21,7 @@ export async function detectAndPopulateList(listId: string, title: string, categ
         .eq('id', listId)
         .single();
 
-    if (listError || !listData) return { populated: false, count: 0 };
+    if (listError || !listData) return { populated: false, count: 0, isComplete: false };
 
     // 2. Extract Context (Gemini First -> Heuristic Fallback)
     let context = extractContext(title, category);
@@ -180,7 +180,7 @@ export async function detectAndPopulateList(listId: string, title: string, categ
         }
     }
 
-    if (items.length === 0) return { populated: false, count: 0 };
+    if (items.length === 0) return { populated: false, count: 0, isComplete: false };
 
     const maxItems = context.limit ? context.limit : 50;
     const itemsToInsert = items.slice(0, maxItems);
@@ -197,7 +197,7 @@ export async function detectAndPopulateList(listId: string, title: string, categ
 
     if (insertError) {
         console.error('[Populate] Failed to insert items:', insertError);
-        return { populated: false, count: 0 };
+        return { populated: false, count: 0, isComplete: false };
     }
 
     revalidatePath('/');
@@ -216,7 +216,11 @@ export async function detectAndPopulateList(listId: string, title: string, categ
         });
     }
 
-    return { populated: true, count: populatedItems, items: insertedData };
+    // 5. Check if complete
+    // Curated bibliographies are complete immediately.
+    const isComplete = (category === 'books' && context.author) || (populatedItems >= maxItems);
+
+    return { populated: true, count: populatedItems, items: insertedData, isComplete };
 }
 
 export async function populateBackgroundItems(listId: string, title: string, category: string, offset: number) {
@@ -225,11 +229,19 @@ export async function populateBackgroundItems(listId: string, title: string, cat
     console.log(`[Populate] Background phase for: "${title}" (Offset: ${offset})`);
 
     // 1. Generate more items using LLM
+    // SPECIAL CASE: For curated bibliographies (Books + Author), we usually have the full set already.
+    // If we have an author context, we should skip generic "more items" to avoid noise.
+    const intentContext = await import('@/lib/utils').then(m => m.extractContext(title, category));
+    if (category === 'books' && intentContext.author) {
+        console.log(`[Populate] Curated book list detected, skipping background "more-items" generation.`);
+        return { count: 0, isComplete: true };
+    }
+
     const moreItems = await generateMoreItemsFromLLM(title, offset, 38);
 
     if (!moreItems || moreItems.length === 0) {
         console.log(`[Populate] No more items found for "${title}"`);
-        return 0;
+        return { count: 0, isComplete: true };
     }
 
     // 2. Insert into database
@@ -249,7 +261,7 @@ export async function populateBackgroundItems(listId: string, title: string, cat
 
     if (insertError) {
         console.error('[Populate] Background insert error:', insertError);
-        return 0;
+        return { count: 0, isComplete: false };
     }
 
     console.log(`[Populate] Successfully added ${insertedData.length} background items.`);
@@ -262,5 +274,6 @@ export async function populateBackgroundItems(listId: string, title: string, cat
         });
     }
 
-    return insertedData.length;
+    const totalCount = offset + insertedData.length;
+    return { count: insertedData.length, isComplete: totalCount >= 50 };
 }

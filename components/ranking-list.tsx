@@ -86,7 +86,15 @@ export function RankingList({ initialItems, listId, category = 'items', title, o
                             }
                             const newSafeItems = [...currentItems, newItem];
                             // Sort by rank to maintain order
-                            return newSafeItems.sort((a, b) => (a.rank || 0) - (b.rank || 0));
+                            const sorted = newSafeItems.sort((a, b) => (a.rank || 0) - (b.rank || 0));
+
+                            // SYNC WITH PARENT
+                            if (onChange) {
+                                console.log('[Realtime] Notifying parent of sync for', listId);
+                                onChange(sorted);
+                            }
+
+                            return sorted;
                         });
                     } else if (payload.eventType === 'DELETE') {
                         console.log('[Realtime] DELETING item:', payload.old.id);
