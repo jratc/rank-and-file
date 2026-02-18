@@ -238,3 +238,67 @@ export async function generateMoreItemsFromLLM(topic: string, offset: number, co
         return [];
     }
 }
+
+export async function generateAuthorBibliography(author: string): Promise<any[]> {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return [];
+
+    try {
+        console.log(`[AI] Generating bibliography for author: "${author}"`);
+
+        const prompt = `
+        You are an expert literary curator.
+        The user wants a list of the PRIMARY WORKS (Novels, Major Non-Fiction) by the author: "${author}".
+
+        CRITICAL RULES:
+        1.  **NO FLUFF**: Exclude short stories, essays, introductions, forewords, anthologies (unless edited by them and famous), and minor works.
+        2.  **NO BIOGRAPHIES**: Do not include biographies ABOUT the author.
+        3.  **NO DUPLICATES**: Ensure each book is listed only once.
+        4.  **ORDER**: Chronological order of publication (Oldest to Newest).
+        5.  **LIMIT**: Return all major works, up to a maximum of 30.
+
+        Output format:
+        [
+            {
+                "name": "Book Title",
+                "subtitle": "Year (e.g. 1999) - Short description",
+                "year": 1999, // Number
+                "score": 90
+            },
+            ...
+        ]
+
+        Return valid JSON only. No markdown.
+        `;
+
+        const response = await fetchWithRetry(
+            `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        temperature: 0.2 // Low temp for factual accuracy
+                    }
+                })
+            }
+        );
+
+        if (!response.ok) return [];
+
+        const data = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) return [];
+
+        const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        const items = JSON.parse(cleanText);
+
+        return Array.isArray(items) ? items : [];
+
+    } catch (error) {
+        console.error('[AI] Author bibliography generation failed:', error);
+        return [];
+    }
+}

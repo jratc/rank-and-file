@@ -99,7 +99,33 @@ export async function detectAndPopulateList(listId: string, title: string, categ
                     items = await moviesProvider.getMoviesByGenre(context.genre, context.limit);
                 }
             } else if (category === 'books' && context.author) {
-                items = await booksProvider.getBooksByAuthor(context.author);
+                // Use LLM for cleaner bibliographies (User Feedback: Google Books API is too noisy)
+                if (process.env.GEMINI_API_KEY) {
+                    try {
+                        const authorBooks = await import('@/lib/ai').then(m => m.generateAuthorBibliography(context.author!));
+                        if (authorBooks.length > 0) {
+                            items = authorBooks.map((item, idx) => ({
+                                id: `llm-book-${Date.now()}-${idx}`,
+                                name: item.name,
+                                subtitle: item.subtitle,
+                                imageUrl: null,
+                                externalUrl: null,
+                                provider: 'gemini',
+                                type: 'custom',
+                                metadata: {
+                                    year: item.year
+                                }
+                            }));
+                        } else {
+                            // Fallback if LLM fails
+                            items = await booksProvider.getBooksByAuthor(context.author);
+                        }
+                    } catch (e) {
+                        items = await booksProvider.getBooksByAuthor(context.author);
+                    }
+                } else {
+                    items = await booksProvider.getBooksByAuthor(context.author);
+                }
             } else if (category === 'music' && context.artist) {
                 if (context.intent === 'song') {
                     items = await itunesProvider.getTopSongs(context.artist);

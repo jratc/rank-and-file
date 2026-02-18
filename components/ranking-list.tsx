@@ -25,6 +25,8 @@ import {
 } from '@dnd-kit/sortable';
 import { SortableItem } from './sortable-item';
 
+import { createClient } from '@/lib/supabase/client';
+
 interface RankingListProps {
     initialItems: any[];
     listId: string;
@@ -53,6 +55,53 @@ export function RankingList({ initialItems, listId, category = 'items', title, o
     useEffect(() => {
         setItems(initialItems);
     }, [initialItems]);
+
+    // REALTIME SUBSCRIPTION
+    useEffect(() => {
+        if (!listId) return;
+
+        const supabase = createClient();
+        const channel = supabase
+            .channel(`list-items-${listId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'list_items',
+                    filter: `list_id=eq.${listId}`,
+                },
+                (payload) => {
+                    console.log('[Realtime] Change received:', payload);
+
+                    if (payload.eventType === 'INSERT') {
+                        const newItem = payload.new;
+                        setItems((currentItems) => {
+                            // Avoid duplicates
+                            if (currentItems.some((i) => i.id === newItem.id)) return currentItems;
+                            const newSafeItems = [...currentItems, newItem];
+                            // Sort by rank to maintain order
+                            return newSafeItems.sort((a, b) => (a.rank || 0) - (b.rank || 0));
+                        });
+                    } else if (payload.eventType === 'DELETE') {
+                        setItems((currentItems) =>
+                            currentItems.filter((i) => i.id !== payload.old.id)
+                        );
+                    } else if (payload.eventType === 'UPDATE') {
+                        setItems((currentItems) => {
+                            return currentItems.map((i) =>
+                                i.id === payload.new.id ? { ...i, ...payload.new } : i
+                            ).sort((a, b) => (a.rank || 0) - (b.rank || 0));
+                        });
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [listId]);
 
     const handleDragEnd = async (event: DragEndEvent) => {
         const { active, over } = event;
