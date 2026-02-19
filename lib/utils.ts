@@ -303,28 +303,36 @@ export function extractContext(title: string, category?: string): SearchContext 
 export function calculateSimilarity(itemsA: any[], itemsB: any[]): number {
   if (!itemsA?.length || !itemsB?.length) return 0;
 
-  const normalize = (item: any) => {
-    // Prefer ID if provider is consistent
-    if (item.metadata?.rawMetadata?.id) return String(item.metadata.rawMetadata.id);
+  const getComparableKey = (item: any) => {
+    if (!item) return null;
 
-    // Fallback to name+subtitle
-    const name = item.metadata?.name || '';
-    const sub = item.metadata?.subtitle || '';
-    return `${name.toLowerCase().trim()}|${sub.toLowerCase().trim()}`;
+    // Use name + subtitle as the primary comparable key.
+    // This is more robust than IDs when items are added from search results.
+    const name = (item.metadata?.name || item.name || '').toLowerCase().trim();
+    const sub = (item.metadata?.subtitle || item.subtitle || '').toLowerCase().trim();
+
+    if (!name && !sub) return null;
+    return `${name}|${sub}`;
   };
 
-  const setA = new Set(itemsA.map(normalize));
-  const setB = new Set(itemsB.map(normalize));
+  const keysA = itemsA.map(getComparableKey);
+  const keysB = itemsB.map(getComparableKey);
 
-  let intersection = 0;
-  for (const item of setA) {
-    if (setB.has(item)) intersection++;
+  let exactMatches = 0;
+  // We compare relative to the original list length (A)
+  const originalCount = keysA.length;
+
+  // Position-based matching: Item at rank I must match item at rank I
+  for (let i = 0; i < originalCount; i++) {
+    const keyA = keysA[i];
+    const keyB = keysB[i];
+
+    if (keyA && keyB && keyA === keyB) {
+      exactMatches++;
+    }
   }
 
-  const union = setA.size + setB.size - intersection;
-  if (union === 0) return 0;
-
-  return Math.round((intersection / union) * 100);
+  return Math.round((exactMatches / originalCount) * 100);
 }
 
 function normalizeLocation(loc: string): string {

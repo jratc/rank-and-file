@@ -81,11 +81,24 @@ export async function addItemsToList(listId: string, items: string[]) {
 
     if (filteredItems.length === 0) return { success: true, count: 0 };
 
+    // CHECK FOR DUPLICATES (Manual entries)
+    // For manual entries, duplication is harder to define (names can clash).
+    // We'll check by name in metadata for this specific list.
+    const { data: existingItems } = await supabase
+        .from('list_items')
+        .select('metadata')
+        .eq('list_id', listId);
+
+    const existingNames = new Set((existingItems || []).map(i => i.metadata?.name?.toLowerCase()));
+    const finalItems = filteredItems.filter(name => !existingNames.has(name.toLowerCase()));
+
+    if (finalItems.length === 0) return { success: true, count: 0, skipped: filteredItems.length };
+
     // Create the batch
-    const insertData = filteredItems.map((name, index) => ({
+    const insertData = finalItems.map((name, index) => ({
         list_id: listId,
         entity_id: `manual-${Date.now()}-${index}`,
-        rank: index + 1,
+        rank: (existingItems?.length || 0) + index + 1,
         metadata: {
             name: name,
             subtitle: 'Manual Entry',
@@ -701,7 +714,13 @@ export async function submitFeedback(content: string) {
         });
 
     if (error) {
-        console.error('Submit feedback error:', error);
+        console.error('Submit feedback DATABASE ERROR:', {
+            code: error.code,
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            userId: user?.id
+        });
         // Fallback for when table doesn't exist yet
         if (error.code === 'PGRST116' || error.code === '42P01' || error.message?.includes('relation "public.feedback" does not exist')) {
             console.log(`FEEDBACK FALLBACK (User: ${profile?.username || 'Guest'}):`, content);

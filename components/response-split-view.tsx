@@ -22,9 +22,14 @@ interface ResponseSplitViewProps {
 }
 
 export function ResponseSplitView({ thread, initialDraftId, onClose, currentUserId, currentUsername, currentDisplayName, onStartResponse }: ResponseSplitViewProps) {
+    const [editListId, setEditListId] = useState<string | null>(initialDraftId || null);
     const [currentIndex, setCurrentIndex] = useState(() => {
+        // If editing, start at the root (0) to compare, or find the response index?
+        // Usually we want to compare with the root.
+        if (initialDraftId) return 0;
+
         // If viewing thread (not editing) and there are responses, start at first response
-        if (!initialDraftId && thread.length > 1) {
+        if (thread.length > 1) {
             return 1;
         }
         return 0;
@@ -89,7 +94,7 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
 
     if (!currentThreadItem) return null;
 
-    const isEditing = !!initialDraftId;
+    const isEditing = !!editListId;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 md:p-8 animate-in fade-in duration-200 overflow-y-auto">
@@ -102,10 +107,10 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
                 <X className="h-8 w-8" />
             </button>
 
-            <div className={`w-full h-full max-h-[85vh] flex flex-col lg:flex-row items-center justify-center gap-4 md:gap-8 lg:gap-8 relative ${isEditing ? 'max-w-6xl' : 'max-w-2xl'}`}>
+            <div className={`w-full h-full max-h-[85vh] flex flex-col lg:flex-row items-stretch justify-center gap-4 md:gap-8 lg:gap-8 relative ${isEditing ? 'max-w-7xl' : 'max-w-2xl'}`}>
 
                 {/* LEFT CARD: CAROUSEL (Thread) */}
-                <div className={`relative h-full flex flex-col group/carousel w-full ${isEditing ? 'lg:max-w-[480px]' : ''}`}>
+                <div className={`relative flex flex-col group/carousel w-full h-full ${isEditing ? 'lg:flex-1 lg:max-w-none' : ''}`}>
 
                     {/* Nav: Previous */}
                     <div className="absolute top-1/2 -left-4 -translate-y-1/2 z-10 lg:-left-12">
@@ -118,9 +123,9 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
                         </button>
                     </div>
 
-                    <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-white/10 flex flex-col h-full transform transition-all hover:scale-[1.005]">
+                    <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border-2 border-slate-200 dark:border-white/10 flex flex-col h-full w-full">
                         {/* Header */}
-                        <div className="p-6 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] flex justify-between items-start gap-4">
+                        <div className="p-6 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] flex justify-between items-start gap-4 shrink-0">
                             <div className="flex flex-col flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
                                     <span className="text-[10px] font-black uppercase tracking-widest text-blue-500">
@@ -208,8 +213,8 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
                             />
                         </div>
 
-                        {/* User Footer - Minimized since info is in header */}
-                        <div className="p-3 bg-white dark:bg-white/5 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
+                        {/* Actions Footer */}
+                        <div className="p-3 bg-white dark:bg-white/5 border-t border-slate-100 dark:border-white/5 flex items-center justify-between shrink-0">
                             <div className="flex items-center gap-2">
                                 <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-white/10 flex items-center justify-center font-bold text-slate-500 text-[10px]">
                                     {currentThreadItem.profiles?.username?.[0]?.toUpperCase()}
@@ -218,57 +223,65 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
                                     {currentThreadItem.category}
                                 </span>
                             </div>
-                        </div>
-                        {/* Respond button in browse mode - HIDE if user already has a response in thread */}
-                        {!isEditing &&
-                            currentUserId !== currentThreadItem.user_id &&
-                            onStartResponse &&
-                            !thread.some(item => item.user_id === currentUserId) && (
-                                <button
-                                    onClick={() => onStartResponse(thread[0].id)}
-                                    className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-black text-xs font-black uppercase tracking-widest rounded-lg transition-colors"
-                                >
-                                    Respond
-                                </button>
-                            )}
 
-                        {/* Add your thoughts (Comments) Button - For ALL users */}
-                        {(!isEditing || currentUserId !== currentThreadItem.user_id) && (
-                            <button
-                                onClick={() => setCommentModal({
-                                    isOpen: true,
-                                    listId: currentThreadItem.id,
-                                    listTitle: currentThreadItem.title,
-                                    userId: currentUserId
-                                })}
-                                className="px-3 py-2 text-slate-400 hover:text-black hover:bg-slate-50 rounded-lg transition-colors flex items-center gap-2"
-                                title="Add your thoughts"
-                            >
-                                <MessageCircle className="h-4 w-4" />
-                                <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">Thoughts?</span>
-                            </button>
-                        )}
-
-                        {/* Owner Actions (Edit/Delete) */}
-                        {currentUserId === currentThreadItem.user_id && (
                             <div className="flex items-center gap-2">
-                                <button
-                                    onClick={async () => {
-                                        if (confirm('Are you sure you want to delete your response?')) {
-                                            await deleteList(currentThreadItem.id);
-                                            toast.success('Response deleted');
-                                            onClose();
-                                            window.location.reload(); // Refresh to update list
-                                        }
-                                    }}
-                                    className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition-colors"
-                                    title="Delete Response"
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </button>
-                            </div>
-                        )}
+                                {/* Respond button in browse mode - HIDE if user already has a response in thread */}
+                                {!isEditing &&
+                                    currentUserId !== currentThreadItem.user_id &&
+                                    onStartResponse &&
+                                    !thread.some(item => item.user_id === currentUserId) && (
+                                        <button
+                                            onClick={() => onStartResponse(thread[0].id)}
+                                            className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-black text-xs font-black uppercase tracking-widest rounded-lg transition-colors"
+                                        >
+                                            Respond
+                                        </button>
+                                    )}
 
+                                {/* Add your thoughts (Comments) Button - For ALL users */}
+                                {(!isEditing || currentUserId !== currentThreadItem.user_id) && (
+                                    <button
+                                        onClick={() => setCommentModal({
+                                            isOpen: true,
+                                            listId: currentThreadItem.id,
+                                            listTitle: currentThreadItem.title,
+                                            userId: currentUserId
+                                        })}
+                                        className="px-3 py-2 text-slate-400 hover:text-black hover:bg-slate-50 rounded-lg transition-colors flex items-center gap-2"
+                                        title="Add your thoughts"
+                                    >
+                                        <MessageCircle className="h-4 w-4" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">Thoughts?</span>
+                                    </button>
+                                )}
+
+                                {/* Owner Actions (Edit/Delete) */}
+                                {currentUserId === currentThreadItem.user_id && (
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            onClick={() => setEditListId(currentThreadItem.id)}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white dark:bg-white dark:text-black text-[10px] font-black uppercase tracking-widest rounded-lg hover:opacity-80 transition-opacity"
+                                        >
+                                            Edit
+                                        </button>
+                                        <button
+                                            onClick={async () => {
+                                                if (confirm('Are you sure you want to delete your response?')) {
+                                                    await deleteList(currentThreadItem.id);
+                                                    toast.success('Response deleted');
+                                                    onClose();
+                                                    window.location.reload(); // Refresh to update list
+                                                }
+                                            }}
+                                            className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition-colors"
+                                            title="Delete Response"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -282,36 +295,38 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
                         <ChevronRight className="h-8 w-8" />
                     </button>
                 </div>
-            </div>
 
-
-            {/* RIGHT CARD: EDITOR — only when actively editing a response */}
-            {isEditing && (
-                <div className="h-full flex flex-col relative w-full lg:max-w-[480px]">
-                    <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border-4 border-yellow-400/50 dark:border-yellow-500/30 flex flex-col h-full w-full">
-                        {/* Header */}
-                        <div className="p-6 border-b border-slate-100 dark:border-white/5 bg-yellow-50/50 dark:bg-yellow-900/10">
-                            <div className="flex items-center gap-2 mb-1">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-blue-500">YOUR RESPONSE</span>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">
-                                    BY {currentDisplayName || currentUsername || 'GUEST'}
-                                </span>
+                {/* RIGHT CARD: EDITOR — only when actively editing a response */}
+                {isEditing && (
+                    <div className="flex flex-col relative w-full h-full lg:flex-1">
+                        <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border-2 border-yellow-400 dark:border-yellow-500/50 flex flex-col h-full w-full">
+                            {/* Header */}
+                            <div className="p-6 border-b border-slate-100 dark:border-white/5 bg-yellow-50/50 dark:bg-yellow-900/10 shrink-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-blue-500">YOUR RESPONSE</span>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                        BY {currentDisplayName || currentUsername || 'GUEST'}
+                                    </span>
+                                </div>
+                                <h2 className="text-xl font-black uppercase tracking-tighter leading-[0.9] text-slate-800 dark:text-slate-100 line-clamp-2">
+                                    {thread[0]?.title || currentThreadItem.title}
+                                </h2>
                             </div>
-                            <h2 className="text-xl font-black uppercase tracking-tighter leading-[0.9] text-slate-800 dark:text-slate-100 line-clamp-2">
-                                {thread[0]?.title || currentThreadItem.title}
-                            </h2>
+                            <ResponseEditor
+                                listId={editListId!}
+                                userId={currentUserId}
+                                initialItems={thread.find(l => l.id === editListId)?.list_items || []}
+                                category={currentThreadItem.category}
+                                contextTitle={thread[0]?.title || currentThreadItem.title}
+                                onClose={() => {
+                                    setEditListId(null);
+                                    if (initialDraftId) onClose(); // If it was the initial reason for the modal, close it all
+                                }}
+                            />
                         </div>
-                        <ResponseEditor
-                            listId={initialDraftId!}
-                            userId={currentUserId}
-                            initialItems={thread.find(l => l.id === initialDraftId)?.list_items || []}
-                            category={currentThreadItem.category}
-                            contextTitle={thread[0]?.title || currentThreadItem.title}
-                            onClose={onClose}
-                        />
                     </div>
-                </div>
-            )}
+                )}
+            </div>
 
             <CommentModal
                 isOpen={commentModal.isOpen}

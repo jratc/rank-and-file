@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { logout } from '@/app/logout/actions'
 import { Button } from '@/components/ui/button'
-import { LogOut, User, Home } from 'lucide-react'
+import { LogOut, User, Home, MessageSquare } from 'lucide-react'
 import Link from 'next/link'
 import { SettingsDropdown } from '@/components/settings-dropdown'
 import { FollowingDropdown } from '@/components/following-dropdown'
@@ -46,6 +46,10 @@ export async function Header() {
                 <nav className="flex items-center gap-1 sm:gap-3">
                     <Link href="/" className="p-2 text-slate-400 hover:text-black transition-colors" title="Home">
                         <Home className="h-5 w-5" />
+                    </Link>
+
+                    <Link href="/feedback" className="p-2 text-slate-400 hover:text-black transition-colors" title="Feedback">
+                        <MessageSquare className="h-5 w-5" />
                     </Link>
 
                     {user && username ? (

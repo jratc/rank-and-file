@@ -70,6 +70,18 @@ export async function addToList(item: RankedItem, listId: string) {
         return { error: 'List not found or unauthorized.' };
     }
 
+    // CHECK FOR DUPLICATES
+    const { data: existingItem } = await supabase
+        .from('list_items')
+        .select('id')
+        .eq('list_id', listId)
+        .eq('entity_id', item.id)
+        .maybeSingle();
+
+    if (existingItem) {
+        return { error: 'Item already in list' };
+    }
+
     // Get max rank
     const { data: maxRankData } = await supabase
         .from('list_items')

@@ -38,7 +38,7 @@ export function RankedItemCard({
                     />
                 </div>
 
-                <div className="min-w-0 flex-1 py-1 w-full text-left">
+                <div className="min-w-0 flex-1 py-1 w-full text-left pr-12">
                     <h4 className="font-black text-xl tracking-tighter leading-tight break-words whitespace-pre-wrap text-slate-900 uppercase w-full">
                         {item.metadata.name}
                     </h4>

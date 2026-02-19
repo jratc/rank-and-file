@@ -42,6 +42,7 @@ export function RankingList({ initialItems, listId, category = 'items', title, o
     const [items, setItems] = useState(initialItems);
     const [isSaving, setIsSaving] = useState(false);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [displayLimit, setDisplayLimit] = useState(15);
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -291,7 +292,7 @@ export function RankingList({ initialItems, listId, category = 'items', title, o
                 strategy={verticalListSortingStrategy}
             >
                 <div className="space-y-0">
-                    {items.map((item, index) => (
+                    {items.slice(0, displayLimit).map((item, index) => (
                         <React.Fragment key={item.id}>
                             <div className="flex gap-4 items-center mb-2">
                                 <span className={`font-mono font-black text-4xl w-14 text-right tabular-nums ${getRankColor(index)}`}>#{index + 1}</span>
@@ -329,8 +330,20 @@ export function RankingList({ initialItems, listId, category = 'items', title, o
             </SortableContext>
             {isSaving && <div className="text-xs text-gray-400 text-center mt-2">Saving order...</div>}
 
-            {/* Load More Button */}
-            {!readOnly && title && (
+            {/* Load More Button (Pagination) */}
+            {items.length > displayLimit && (
+                <div className="mt-4 flex justify-center">
+                    <button
+                        onClick={() => setDisplayLimit(prev => prev + 15)}
+                        className="px-6 py-2 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 font-black uppercase tracking-widest text-[10px] rounded-full transition-all"
+                    >
+                        Load More ({items.length - displayLimit} remaining)
+                    </button>
+                </div>
+            )}
+
+            {/* Load More Ideas Button (Fetch) */}
+            {!readOnly && title && items.length <= displayLimit && (
                 <div className="mt-8 flex justify-center">
                     <button
                         onClick={async () => {

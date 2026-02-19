@@ -21,5 +21,11 @@ ON public.feedback FOR INSERT
 TO anon 
 WITH CHECK (user_id IS NULL);
 
+-- Allow authenticated users to view feedback (for moderation)
+CREATE POLICY "Allow authenticated users to view feedback" 
+ON public.feedback FOR SELECT 
+TO authenticated 
+USING (true);
+
 -- Admin can view all feedback (assuming an admin role exists or just for superuser)
 -- For now, we'll keep it simple and just allow inserts.

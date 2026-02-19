@@ -57,7 +57,7 @@ export function SortableItem({ id, item, rank, category, onRemove, onDoubleClick
                             onPointerDown={(e) => e.stopPropagation()}
                             onMouseDown={(e) => e.stopPropagation()}
                         >
-                            TOP 10
+                            + TOP 10
                         </Button>
                     )}
                     <Button
