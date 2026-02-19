@@ -61,6 +61,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
     // While You Wait state
     const [isWaitingForComment, setIsWaitingForComment] = useState(false);
     const [waitingComment, setWaitingComment] = useState('');
+    const isCommentDirty = useRef(false);
     const [pendingListAfterCreate, setPendingListAfterCreate] = useState<any>(null);
     const [populatedCount, setPopulatedCount] = useState(0);
     const [isPopulating, setIsPopulating] = useState(false);
@@ -120,11 +121,14 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
     // FETCH COMMENTS FOR EXPANDED LIST
     useEffect(() => {
         if (!expandedListId || expandedListId === 'temp-pending') {
-            setWaitingComment('');
+            if (!isCommentDirty.current) setWaitingComment('');
             return;
         }
 
         const fetchComments = async () => {
+            // Don't overwrite if user is actively typing or has a dirty draft
+            if (isCommentDirty.current || waitingComment.trim()) return;
+
             try {
                 const results = await getComments(expandedListId);
                 // Look for the user's latest comment to show in the main area
@@ -141,6 +145,23 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
 
         fetchComments();
     }, [expandedListId, currentUserId]);
+
+    // DEBOUNCED COMMENT SAVING
+    useEffect(() => {
+        if (!waitingComment.trim() || !expandedListId || expandedListId === 'temp-pending') return;
+
+        const timer = setTimeout(async () => {
+            try {
+                await addComment(expandedListId, waitingComment.trim());
+                isCommentDirty.current = false;
+                console.log("[Dashboard] Debounced comment save successful");
+            } catch (err) {
+                console.error("[Dashboard] Debounced comment save failed:", err);
+            }
+        }, 2000); // 2 second debounce
+
+        return () => clearTimeout(timer);
+    }, [waitingComment, expandedListId]);
 
     // Search state
     const [searchQuery, setSearchQuery] = useState('');
@@ -1334,7 +1355,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                             {currentUserId === expandedList.user_id && (
                                                 <div className="mt-2 group">
                                                     <Textarea
-                                                        placeholder="Why is this list important to you?"
+                                                        placeholder={isPopulating ? "Building your list... add a comment about this topic- why should we care?" : "Why is this list important to you?"}
                                                         value={waitingComment}
                                                         onChange={(e) => setWaitingComment(e.target.value)}
                                                         onBlur={async () => {
@@ -1432,9 +1453,23 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                         {isPopulating && (
                                             <div className="mt-4 px-4 py-2 border border-slate-100 rounded-lg bg-slate-50/50 flex items-center justify-between animate-in fade-in slide-in-from-bottom-2 duration-500">
                                                 <div className="flex items-center gap-2">
-                                                    <Loader2 className="h-3 w-3 animate-spin text-slate-400" />
+                                                    <div className="w-8 h-1 bg-slate-200 rounded-full overflow-hidden relative shrink-0">
+                                                        <div
+                                                            className="absolute top-0 bottom-0 w-3 bg-slate-400 rounded-full"
+                                                            style={{
+                                                                animation: 'slide-puck-small 1.5s ease-in-out infinite alternate'
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <style dangerouslySetInnerHTML={{
+                                                        __html: `
+                                                        @keyframes slide-puck-small {
+                                                            0% { left: 0; }
+                                                            100% { left: calc(100% - 0.75rem); }
+                                                        }
+                                                    `}} />
                                                     <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">
-                                                        {populatedCount === 0 ? "Searching..." : `Found ${populatedCount} items`}
+                                                        {populatedCount > 0 ? `Found ${populatedCount} items` : ""}
                                                     </span>
                                                 </div>
                                                 {populatedCount > 0 && (

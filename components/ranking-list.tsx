@@ -233,10 +233,22 @@ export function RankingList({ initialItems, listId, category = 'items', title, o
     if (items.length === 0) {
         if (title && !readOnly) {
             return (
-                <div className="flex flex-col items-center justify-center py-20 px-4 text-center animate-in fade-in duration-700">
-                    <Loader2 className="h-8 w-8 animate-spin text-blue-500/20 mb-4" />
-                    <h3 className="text-lg font-black uppercase tracking-tighter text-slate-400">Searching for items...</h3>
-                    <p className="text-xs font-mono text-slate-300 mt-2 uppercase tracking-widest">Hold tight, we're building your list.</p>
+                <div className="flex flex-col items-center justify-center py-24 px-4 text-center animate-in fade-in duration-1000">
+                    <div className="w-[70%] h-1 bg-slate-50/50 rounded-full overflow-hidden relative">
+                        <div
+                            className="absolute top-0 bottom-0 w-[20%] bg-slate-300/40 rounded-full"
+                            style={{
+                                animation: 'slide-puck-wide 3s ease-in-out infinite alternate'
+                            }}
+                        />
+                    </div>
+                    <style dangerouslySetInnerHTML={{
+                        __html: `
+                        @keyframes slide-puck-wide {
+                            0% { left: 0%; }
+                            100% { left: 80%; }
+                        }
+                    `}} />
                 </div>
             );
         }
