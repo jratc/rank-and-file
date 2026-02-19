@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight, Share2, Copy, Check, Plus, MessageSquare, Search, Loader2, Link as LinkIcon, MapPin, Download, Music, MessageCircle, Twitter, Mail, X, Users, Film, Beer, Utensils, MoreHorizontal, Clock, Trash2, Pencil } from 'lucide-react';
 import { RankingList } from "./ranking-list";
-import { deleteList, createList, updateListTitle, getThread, findListByTitle, updateProfile, getFollowingLists, addComment, addItemsToList } from "@/app/actions";
+import { deleteList, createList, updateListTitle, getThread, findListByTitle, updateProfile, getFollowingLists, addComment, addItemsToList, getComments } from "@/app/actions";
 /* FEATURE: Places Map — to disable, comment out the PlacesMap import below */
 import { PlacesMap, itemsToPlaces } from './places-map';
 /* FEATURE: Music Playlist Export */
@@ -116,6 +116,31 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
             setIsSavingProfile(false);
         }
     };
+
+    // FETCH COMMENTS FOR EXPANDED LIST
+    useEffect(() => {
+        if (!expandedListId || expandedListId === 'temp-pending') {
+            setWaitingComment('');
+            return;
+        }
+
+        const fetchComments = async () => {
+            try {
+                const results = await getComments(expandedListId);
+                // Look for the user's latest comment to show in the main area
+                const userComment = results?.findLast((c: any) => c.user_id === currentUserId);
+                if (userComment) {
+                    setWaitingComment(userComment.content);
+                } else {
+                    setWaitingComment('');
+                }
+            } catch (err) {
+                console.error("[Dashboard] Failed to fetch comments:", err);
+            }
+        };
+
+        fetchComments();
+    }, [expandedListId, currentUserId]);
 
     // Search state
     const [searchQuery, setSearchQuery] = useState('');
@@ -438,19 +463,25 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
             }
             router.refresh();
         } catch (error) {
-            toast.error("Failed to finalize list");
+            console.error("[Dashboard] Comment submission failed:", error);
+            // We don't toast error here because it's non-critical, we want the list to show up.
         } finally {
             setIsUpdatingTitle(false);
             setIsWaitingForComment(false);
             setCreationStep(null);
+            const finalId = pendingListAfterCreate?.id;
+            const finalTitle = pendingListAfterCreate?.title;
             setPendingListAfterCreate(null);
-            // We DON'T clear waitingComment here if we want it to persist for the current session
-            // But we should clear it when the modal finally closes or list changes.
-            // setWaitingComment(''); 
             setPopulatedCount(0);
             setIsPopulating(false);
             setIsPopulatingComplete(false);
-            setEditSession({ id: null, title: null, isExpanded: false });
+
+            // Re-focus the newly created list in the edit session to keep the title editable if needed
+            if (finalId) {
+                setEditSession({ id: finalId, title: (finalTitle || '').toUpperCase(), isExpanded: true });
+            } else {
+                setEditSession({ id: null, title: null, isExpanded: false });
+            }
 
             setTimeout(() => {
                 searchInputRef.current?.focus();
@@ -614,31 +645,32 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
 
                 setPendingListAfterCreate(newList);
 
+                // CRITICAL: Update lists state immediately so expandedListId points to a list that EXISTS in state
+                // This prevents the modal from closing when expandedList becomes null due to ID switch.
+                setLists(prev => [newList, ...prev.filter(l => l.id !== 'temp-pending')]);
+                setExpandedListId(newList.id);
+                setIsUpdatingTitle(false);
+
                 // START EARLY POPULATION
-                if (newList.category !== 'other' || creationStep === 'waiting') {
+                if (newList.category !== 'other') {
                     startEarlyPopulation(newList);
                 }
 
                 // FOR 'MORE' CATEGORY, ASK AI VS MANUAL
                 if (newList.category === 'other') {
                     setCreationStep('choosing');
-                    setIsUpdatingTitle(false);
                     return;
                 }
 
-                // TRANSITION TO UNIFIED LIST VIEW
-                setIsWaitingForComment(false);
-                setCreationStep('ranking');
-                setExpandedListId(newList.id);
-                setIsUpdatingTitle(false);
-
-                // SAVE COMMENT IMMEDIATELY IF EXISTS
+                // SAVE INITIAL COMMENT (NON-BLOCKING/RESILIENT)
                 if (waitingComment.trim()) {
-                    addComment(newList.id, waitingComment.trim());
+                    console.log(`[Dashboard] Saving initial comment for ${newList.id}: ${waitingComment}`);
+                    addComment(newList.id, waitingComment.trim()).catch(err => {
+                        console.error("[Dashboard] Initial comment save failed:", err);
+                    });
                 }
 
                 console.log(`[Dashboard] Transitioned to ranking view for unified modal`);
-                // We keep the modal open, but the render logic will switch to the comment box
 
             } catch (error) {
                 toast.error("Failed to create list");

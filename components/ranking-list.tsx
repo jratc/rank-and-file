@@ -231,6 +231,15 @@ export function RankingList({ initialItems, listId, category = 'items', title, o
     };
 
     if (items.length === 0) {
+        if (title && !readOnly) {
+            return (
+                <div className="flex flex-col items-center justify-center py-20 px-4 text-center animate-in fade-in duration-700">
+                    <Loader2 className="h-8 w-8 animate-spin text-blue-500/20 mb-4" />
+                    <h3 className="text-lg font-black uppercase tracking-tighter text-slate-400">Searching for items...</h3>
+                    <p className="text-xs font-mono text-slate-300 mt-2 uppercase tracking-widest">Hold tight, we're building your list.</p>
+                </div>
+            );
+        }
         return null;
     }
 

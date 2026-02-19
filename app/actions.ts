@@ -8,17 +8,44 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 export async function createList(title: string = 'NEW LIST', category: string = 'music') {
+    const logPath = path.join(process.cwd(), 'action_debug.log');
+    const log = (msg: string) => {
+        const line = `${new Date().toISOString()}: ${msg}\n`;
+        fs.appendFileSync(logPath, line);
+        console.log(msg);
+    };
+
     const supabase = await createClient();
     const { data: authData } = await supabase.auth.getUser();
     const authUser = authData?.user;
     const user = IS_AUTH_DISABLED ? MOCK_USER : authUser;
 
-    // DEBUG AUTH
-    const { data: { user: verifiedUser } } = await supabase.auth.getUser();
-    console.log(`[Action] DEBUG - Session User ID: ${verifiedUser?.id}, Provided User ID: ${user?.id}`);
+    log(`[Action] Creating list: "${title}" | Category: ${category} | User: ${user?.id}`);
 
     if (!user) {
+        log(`[Action] Error: Not logged in`);
         throw new Error("Must be logged in");
+    }
+
+    // VERIFY PROFILE EXISTS (Foreign Key constraint)
+    const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+
+    if (profileError || !profile) {
+        log(`[Action] Profile missing for user ${user.id}. Attempting to fix...`);
+        // If profile is missing, try to create it (should have been done by trigger)
+        const { error: insertError } = await supabase
+            .from('profiles')
+            .insert({ id: user.id, username: `user_${user.id.substring(0, 5)}` });
+
+        if (insertError) {
+            log(`[Action] Error creating profile: ${insertError.message}`);
+            throw new Error(`Profile missing and creation failed: ${insertError.message}`);
+        }
+        log(`[Action] Profile fixed for user ${user.id}`);
     }
 
     const { data, error } = await supabase
@@ -32,9 +59,11 @@ export async function createList(title: string = 'NEW LIST', category: string = 
         .single();
 
     if (error) {
-        console.error('Create list error:', error);
+        log(`[Action] Create list DB error: ${error.message} | Code: ${error.code} | Hint: ${error.hint}`);
         throw new Error(error.message);
     }
+
+    log(`[Action] List created successfully: ${data.id}`);
 
     // Include empty list_items to match the UI expectation
     const newList = { ...data, list_items: [] };
