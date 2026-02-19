@@ -27,5 +27,8 @@ ON public.feedback FOR SELECT
 TO authenticated 
 USING (true);
 
--- Admin can view all feedback (assuming an admin role exists or just for superuser)
--- For now, we'll keep it simple and just allow inserts.
+-- Allow anonymous users to view feedback (for the public "Void" page)
+CREATE POLICY "Allow anonymous users to view feedback" 
+ON public.feedback FOR SELECT 
+TO anon 
+USING (true);

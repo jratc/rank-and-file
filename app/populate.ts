@@ -91,7 +91,10 @@ export async function detectAndPopulateList(listId: string, title: string, categ
                     type: 'custom'
                 }));
             } else if (category === 'movies') {
-                if (context.actor) {
+                if (context.actor && context.director) {
+                    // Hybrid mode for actor-directors like Mel Brooks
+                    items = await moviesProvider.search('', context);
+                } else if (context.actor) {
                     items = await moviesProvider.getActorFilmography(context.actor);
                 } else if (context.director) {
                     items = await moviesProvider.getDirectorFilmography(context.director);
@@ -218,7 +221,10 @@ export async function detectAndPopulateList(listId: string, title: string, categ
 
     // 5. Check if complete
     // We only consider it "complete" if less than our initial 15 items were found.
-    const isComplete = (populatedItems < 15);
+    // If we inserted zero or very few items, it might be incomplete (especially for books search)
+    // We only consider it "Complete" if we hit the maxItems or if we are sure there's nothing left.
+    // For now, let's be more lenient and allow background population if we have < 15.
+    const isComplete = (populatedItems < 5); // Only truly "complete" if we found almost nothing
 
     return { populated: true, count: populatedItems, items: insertedData, isComplete };
 }
@@ -232,10 +238,11 @@ export async function populateBackgroundItems(listId: string, title: string, cat
     // SPECIAL CASE: For curated bibliographies (Books + Author), we usually have the full set already.
     // If we have an author context, we should skip generic "more items" to avoid noise.
     const intentContext = await import('@/lib/utils').then(m => m.extractContext(title, category));
-    if (category === 'books' && intentContext.author) {
-        console.log(`[Populate] Curated book list detected, skipping background "more-items" generation.`);
-        return { count: 0, isComplete: true };
-    }
+    // NO SKIP: Even curated book lists should allow background population 
+    // if the user wants more than the top selection or if the selection was small.
+    // (Removed author skip here)
+
+    console.log(`[Populate] Background items check for: ${title} (${category}), Offset: ${offset}`);
 
     const moreItems = await generateMoreItemsFromLLM(title, offset, 38);
 

@@ -213,6 +213,28 @@ export const moviesProvider = {
                 }
 
                 // -----------------------------------------------------------
+                // COMBINED ACTOR/DIRECTOR FILMOGRAPHY (e.g. Mel Brooks)
+                // -----------------------------------------------------------
+                if (!query && context?.actor && context?.director) {
+                    console.log(`[TMDB] Combined actor/director search: ${context.actor} / ${context.director}`);
+                    const [actorMovies, directorMovies] = await Promise.all([
+                        moviesProvider.getActorFilmography(context.actor),
+                        moviesProvider.getDirectorFilmography(context.director)
+                    ]);
+
+                    // Merge and deduplicate
+                    const merged = new Map<string, RankedItem>();
+                    [...actorMovies, ...directorMovies].forEach(item => {
+                        const key = item.name.toLowerCase().trim();
+                        if (!merged.has(key)) {
+                            merged.set(key, item);
+                        }
+                    });
+
+                    return Array.from(merged.values());
+                }
+
+                // -----------------------------------------------------------
                 // FALLBACK: PERSON SEARCH
                 // If text search returned nothing, maybe the user searched a name 
                 // but context didn't catch it (e.g. "Almodovar" or "Almodovar movies" with weak context)
