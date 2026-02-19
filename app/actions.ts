@@ -4,15 +4,10 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { MOCK_USER, IS_AUTH_DISABLED } from '@/lib/auth-bypass';
-import * as fs from 'fs';
-import * as path from 'path';
 
 export async function createList(title: string = 'NEW LIST', category: string = 'music') {
-    const logPath = path.join(process.cwd(), 'action_debug.log');
     const log = (msg: string) => {
-        const line = `${new Date().toISOString()}: ${msg}\n`;
-        fs.appendFileSync(logPath, line);
-        console.log(msg);
+        console.log(`${new Date().toISOString()}: ${msg}`);
     };
 
     const supabase = await createClient();
