@@ -703,7 +703,7 @@ export async function submitFeedback(content: string) {
     if (error) {
         console.error('Submit feedback error:', error);
         // Fallback for when table doesn't exist yet
-        if (error.code === 'PGRST116' || error.message?.includes('relation "public.feedback" does not exist')) {
+        if (error.code === 'PGRST116' || error.code === '42P01' || error.message?.includes('relation "public.feedback" does not exist')) {
             console.log(`FEEDBACK FALLBACK (User: ${profile?.username || 'Guest'}):`, content);
             return { success: true, fallback: true };
         }
@@ -712,4 +712,25 @@ export async function submitFeedback(content: string) {
 
     console.log(`FEEDBACK SUCCESS (User: ${profile?.username || 'Guest'}):`, content);
     return { success: true };
+}
+
+export async function getFeedback() {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    // In a real app, only admins would see this. For this implementation, we'll allow it.
+    const { data, error } = await supabase
+        .from('feedback')
+        .select(`
+            *,
+            profiles:user_id (username, display_name)
+        `)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Get feedback error:', error);
+        return [];
+    }
+
+    return data;
 }

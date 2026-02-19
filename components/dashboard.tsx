@@ -13,6 +13,7 @@ import { PlacesMap, itemsToPlaces } from './places-map';
 /* FEATURE: Music Playlist Export */
 import { PlaylistExport } from './music-link';
 import { detectAndPopulateList, populateBackgroundItems } from '@/app/populate';
+import { FeedbackHole } from './feedback-hole';
 import { searchEntities, addToList } from "@/app/search/actions";
 import { RankedItem, Category } from "@/lib/types";
 import { toast } from 'sonner';
@@ -127,7 +128,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
 
         const fetchComments = async () => {
             // Don't overwrite if user is actively typing or has a dirty draft
-            if (isCommentDirty.current || waitingComment.trim()) return;
+            if (isCommentDirty.current || waitingComment.trim() || isPopulating) return;
 
             try {
                 const results = await getComments(expandedListId);
@@ -1355,8 +1356,9 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                             {currentUserId === expandedList.user_id && (
                                                 <div className="mt-2 group">
                                                     <Textarea
-                                                        placeholder={isPopulating ? "Building your list... add a comment about this topic- why should we care?" : "Why is this list important to you?"}
+                                                        placeholder={isPopulating ? "Building your list... why is this topic important?" : "Why is this list important to you?"}
                                                         value={waitingComment}
+                                                        autoFocus={isWaitingForComment}
                                                         onChange={(e) => {
                                                             setWaitingComment(e.target.value);
                                                             isCommentDirty.current = true;
@@ -1536,6 +1538,8 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                         thread={responseView.threadData}
                         initialDraftId={responseView.draftId}
                         currentUserId={currentUserId || ''}
+                        currentUsername={currentUsername}
+                        currentDisplayName={currentDisplayName}
                         onClose={() => {
                             setResponseView({ isOpen: false, threadData: null, draftId: null });
                             router.refresh();
@@ -1579,6 +1583,11 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                 listTitle={commentModal.listTitle}
                 currentUserId={currentUserId}
             />
+
+            {/* Conditional Feedback Hole */}
+            {!expandedListId && !responseView.isOpen && !showNameModal && !creationStep && (
+                <FeedbackHole />
+            )}
         </div >
     );
 }

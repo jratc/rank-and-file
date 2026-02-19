@@ -16,10 +16,12 @@ interface ResponseSplitViewProps {
     initialDraftId?: string | null; // null = browse mode, string = editing a response
     onClose: () => void;
     currentUserId: string;
+    currentUsername?: string | null;
+    currentDisplayName?: string | null;
     onStartResponse?: (parentListId: string) => void;
 }
 
-export function ResponseSplitView({ thread, initialDraftId, onClose, currentUserId, onStartResponse }: ResponseSplitViewProps) {
+export function ResponseSplitView({ thread, initialDraftId, onClose, currentUserId, currentUsername, currentDisplayName, onStartResponse }: ResponseSplitViewProps) {
     const [currentIndex, setCurrentIndex] = useState(() => {
         // If viewing thread (not editing) and there are responses, start at first response
         if (!initialDraftId && thread.length > 1) {
@@ -100,10 +102,10 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
                 <X className="h-8 w-8" />
             </button>
 
-            <div className={`w-full h-full max-h-[90vh] grid gap-4 md:gap-8 lg:gap-12 relative ${isEditing ? 'max-w-7xl grid-cols-1 lg:grid-cols-2' : 'max-w-3xl grid-cols-1'}`}>
+            <div className={`w-full h-full max-h-[85vh] flex flex-col lg:flex-row items-center justify-center gap-4 md:gap-8 lg:gap-8 relative ${isEditing ? 'max-w-6xl' : 'max-w-2xl'}`}>
 
                 {/* LEFT CARD: CAROUSEL (Thread) */}
-                <div className="relative h-full flex flex-col group/carousel">
+                <div className={`relative h-full flex flex-col group/carousel w-full ${isEditing ? 'lg:max-w-[480px]' : ''}`}>
 
                     {/* Nav: Previous */}
                     <div className="absolute top-1/2 -left-4 -translate-y-1/2 z-10 lg:-left-12">
@@ -121,8 +123,11 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
                         <div className="p-6 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] flex justify-between items-start gap-4">
                             <div className="flex flex-col flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-blue-500">
                                         {currentIndex === 0 ? "ORIGINAL LIST" : `RESPONSE #${currentIndex}`}
+                                    </span>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                        BY {currentThreadItem.profiles?.display_name || currentThreadItem.profiles?.username || 'GUEST'}
                                     </span>
                                     {matchPercentage !== null && (
                                         <span className="text-[10px] font-black uppercase tracking-widest text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded-full">
@@ -130,7 +135,7 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
                                         </span>
                                     )}
                                 </div>
-                                <h2 className="text-lg md:text-xl font-black uppercase tracking-tighter leading-[0.9] text-slate-800 dark:text-slate-100 line-clamp-2 break-words">
+                                <h2 className="text-xl font-black uppercase tracking-tighter leading-[0.9] text-slate-800 dark:text-slate-100 line-clamp-2 break-words">
                                     {currentThreadItem.title}
                                 </h2>
                             </div>
@@ -203,27 +208,15 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
                             />
                         </div>
 
-                        {/* User Footer */}
-                        <div className="p-4 bg-white dark:bg-white/5 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-white/10 flex items-center justify-center font-bold text-slate-500 text-xs">
+                        {/* User Footer - Minimized since info is in header */}
+                        <div className="p-3 bg-white dark:bg-white/5 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-white/10 flex items-center justify-center font-bold text-slate-500 text-[10px]">
                                     {currentThreadItem.profiles?.username?.[0]?.toUpperCase()}
                                 </div>
-                                <div className="flex flex-col">
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ranked By</span>
-                                    <div className="font-bold text-sm text-slate-900 dark:text-white leading-none">
-                                        {currentThreadItem.profiles?.display_name || `@${currentThreadItem.profiles?.username}` || 'unknown'}
-                                    </div>
-                                </div>
-                                {/* Follow Button (for other users' responses) */}
-                                {currentUserId && currentUserId !== currentThreadItem.user_id && (
-                                    <FollowButton
-                                        targetUserId={currentThreadItem.user_id}
-                                        targetDisplayName={currentThreadItem.profiles?.display_name || currentThreadItem.profiles?.username}
-                                        initialIsFollowing={false}
-                                        size="sm"
-                                    />
-                                )}
+                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                                    {currentThreadItem.category}
+                                </span>
                             </div>
                         </div>
                         {/* Respond button in browse mode - HIDE if user already has a response in thread */}
@@ -293,18 +286,23 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
 
 
             {/* RIGHT CARD: EDITOR — only when actively editing a response */}
-            {isEditing && initialDraftId && (
-                <div className="h-full flex flex-col relative w-full">
+            {isEditing && (
+                <div className="h-full flex flex-col relative w-full lg:max-w-[480px]">
                     <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border-4 border-yellow-400/50 dark:border-yellow-500/30 flex flex-col h-full w-full">
                         {/* Header */}
                         <div className="p-6 border-b border-slate-100 dark:border-white/5 bg-yellow-50/50 dark:bg-yellow-900/10">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">YOUR RESPONSE TO</span>
-                            <h2 className="text-xl md:text-2xl font-black uppercase tracking-tighter leading-[0.9] text-slate-800 dark:text-slate-100 line-clamp-2">
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-blue-500">YOUR RESPONSE</span>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                                    BY {currentDisplayName || currentUsername || 'GUEST'}
+                                </span>
+                            </div>
+                            <h2 className="text-xl font-black uppercase tracking-tighter leading-[0.9] text-slate-800 dark:text-slate-100 line-clamp-2">
                                 {thread[0]?.title || currentThreadItem.title}
                             </h2>
                         </div>
                         <ResponseEditor
-                            listId={initialDraftId}
+                            listId={initialDraftId!}
                             userId={currentUserId}
                             initialItems={thread.find(l => l.id === initialDraftId)?.list_items || []}
                             category={currentThreadItem.category}

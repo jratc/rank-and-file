@@ -255,7 +255,7 @@ export async function generateAuthorBibliography(author: string): Promise<any[]>
         2.  **NO BIOGRAPHIES**: Do not include biographies ABOUT the author.
         3.  **NO DUPLICATES**: Ensure each book is listed only once.
         4.  **ORDER**: Chronological order of publication (Oldest to Newest).
-        5.  **LIMIT**: Return all major works, up to a maximum of 30.
+        5.  **LIMIT**: Return all major works, up to a maximum of 60.
 
         Output format:
         [

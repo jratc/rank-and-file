@@ -48,7 +48,6 @@ export default async function Home() {
             respondedListIds={respondedListIds}
           />
         </div>
-        <FeedbackHole />
       </main>
     </>
   );

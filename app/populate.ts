@@ -182,7 +182,7 @@ export async function detectAndPopulateList(listId: string, title: string, categ
 
     if (items.length === 0) return { populated: false, count: 0, isComplete: false };
 
-    const maxItems = context.limit ? context.limit : 50;
+    const maxItems = 15; // User requested 15 initially
     const itemsToInsert = items.slice(0, maxItems);
     console.log(`[Populate] Inserting ${itemsToInsert.length} items for list: ${listId}...`);
 
@@ -217,8 +217,8 @@ export async function detectAndPopulateList(listId: string, title: string, categ
     }
 
     // 5. Check if complete
-    // Curated bibliographies are complete immediately.
-    const isComplete = (category === 'books' && context.author) || (populatedItems >= maxItems);
+    // We only consider it "complete" if less than our initial 15 items were found.
+    const isComplete = (populatedItems < 15);
 
     return { populated: true, count: populatedItems, items: insertedData, isComplete };
 }
