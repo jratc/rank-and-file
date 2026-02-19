@@ -259,24 +259,37 @@ export function RankingList({ initialItems, listId, category = 'items', title, o
     }
 
     // Read-Only View (No Drag and Drop)
-    // NOTE: Keep read-only view consistent with edit view colors? Yes.
     if (readOnly) {
         return (
-            <div className="space-y-4">
-                {items.map((item, index) => (
-                    <div key={item.id} className="flex gap-4 items-center animate-in fade-in slide-in-from-left-4 duration-300" style={{ animationDelay: `${index * 50}ms` }}>
-                        <span className={`font-mono font-black text-4xl w-14 text-right tabular-nums shrink-0 ${getRankColor(index)}`}>
-                            #{index + 1}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                            <RankedItemCard
-                                item={item}
-                                category={category}
-                                className="border-none shadow-none bg-transparent p-0"
-                            />
+            <div className="flex flex-col">
+                <div className="space-y-4">
+                    {items.slice(0, displayLimit).map((item, index) => (
+                        <div key={item.id} className="flex gap-4 items-center animate-in fade-in slide-in-from-left-4 duration-300" style={{ animationDelay: `${Math.min(index, 15) * 50}ms` }}>
+                            <span className={`font-mono font-black text-4xl w-14 text-right tabular-nums shrink-0 ${getRankColor(index)}`}>
+                                #{index + 1}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                                <RankedItemCard
+                                    item={item}
+                                    category={category}
+                                    className="border-none shadow-none bg-transparent p-0"
+                                />
+                            </div>
                         </div>
+                    ))}
+                </div>
+
+                {/* Load More Button (Pagination) */}
+                {items.length > displayLimit && (
+                    <div className="mt-8 flex justify-center">
+                        <button
+                            onClick={() => setDisplayLimit(prev => prev + 15)}
+                            className="px-6 py-2 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 font-black uppercase tracking-widest text-[10px] rounded-full transition-all"
+                        >
+                            Load More ({items.length - displayLimit} remaining)
+                        </button>
                     </div>
-                ))}
+                )}
             </div>
         );
     }
