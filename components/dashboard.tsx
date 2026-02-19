@@ -66,6 +66,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
     const [pendingListAfterCreate, setPendingListAfterCreate] = useState<any>(null);
     const [populatedCount, setPopulatedCount] = useState(0);
     const [isPopulating, setIsPopulating] = useState(false);
+    const [isBackgroundPopulating, setIsBackgroundPopulating] = useState(false);
     const [isPopulatingComplete, setIsPopulatingComplete] = useState(false);
 
     // FREE-FORM LIST STATE
@@ -471,16 +472,21 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
             setLists(prev => prev.map(l => l.id === 'temp-pending' || l.id === updatedList.id ? updatedList : l));
             setExpandedListId(updatedList.id);
 
-            // BACKGROUND POPULATION: Continue fetching up to 50 items
-            if (populatedResultCount < 50 && !isPopulatingComplete) {
+            // BACKGROUND POPULATION: Continue fetching up to 80 items
+            if (populatedResultCount < 80 && !isPopulatingComplete) {
                 console.log(`[Dashboard] Starting background population for list: ${updatedList.id}`);
+                setIsBackgroundPopulating(true);
                 populateBackgroundItems(updatedList.id, updatedList.title, updatedList.category, populatedResultCount).then((result: any) => {
+                    setIsBackgroundPopulating(false);
                     if (result.isComplete) {
                         setIsPopulatingComplete(true);
                     }
                     if ((result.count || 0) > 0) {
                         router.refresh();
                     }
+                }).catch(() => {
+                    console.error("[Dashboard] Background population failed");
+                    setIsBackgroundPopulating(false);
                 });
             }
             router.refresh();
@@ -1445,6 +1451,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                             initialItems={expandedList.list_items}
                                             listId={expandedList.id}
                                             category={expandedList.category}
+                                            isPopulating={isPopulating || isBackgroundPopulating}
                                             onChange={(newItems) => {
                                                 // Prevent updates to temp lists
                                                 if (expandedList.id === 'temp-pending') return;

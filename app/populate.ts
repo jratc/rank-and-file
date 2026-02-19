@@ -275,5 +275,5 @@ export async function populateBackgroundItems(listId: string, title: string, cat
     }
 
     const totalCount = offset + insertedData.length;
-    return { count: insertedData.length, isComplete: totalCount >= 50 };
+    return { count: insertedData.length, isComplete: totalCount >= 80 };
 }

@@ -36,13 +36,23 @@ interface RankingListProps {
     title?: string;
     onChange?: (newItems: any[]) => void;
     readOnly?: boolean;
+    isPopulating?: boolean;
 }
 
-export function RankingList({ initialItems, listId, category = 'items', title, onChange, readOnly = false }: RankingListProps) {
+export function RankingList({
+    initialItems,
+    listId,
+    category = 'items',
+    title,
+    onChange,
+    readOnly = false,
+    isPopulating = false
+}: RankingListProps) {
     const [items, setItems] = useState(initialItems);
     const [isSaving, setIsSaving] = useState(false);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [displayLimit, setDisplayLimit] = useState(15);
+    const [prevListId, setPrevListId] = useState(listId);
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -55,9 +65,19 @@ export function RankingList({ initialItems, listId, category = 'items', title, o
         })
     );
 
+    // Sync items from props, BUT only if the list ID has changed 
+    // or if we aren't currently streaming in new items in the background.
     useEffect(() => {
-        setItems(initialItems);
-    }, [initialItems]);
+        if (listId !== prevListId) {
+            setItems(initialItems);
+            setPrevListId(listId);
+            setDisplayLimit(15); // Reset limit for new list
+        } else if (!isPopulating && initialItems.length > items.length) {
+            // Only sync if more items arrived and we aren't actively populating 
+            // (realtime handles population updates)
+            setItems(initialItems);
+        }
+    }, [initialItems, listId, isPopulating, prevListId, items.length]);
 
     // REALTIME SUBSCRIPTION
     useEffect(() => {
@@ -263,7 +283,7 @@ export function RankingList({ initialItems, listId, category = 'items', title, o
         return (
             <div className="flex flex-col">
                 <div className="space-y-4">
-                    {items.slice(0, displayLimit).map((item, index) => (
+                    {items.slice(0, isPopulating ? items.length : displayLimit).map((item, index) => (
                         <div key={item.id} className="flex gap-4 items-center animate-in fade-in slide-in-from-left-4 duration-300" style={{ animationDelay: `${Math.min(index, 15) * 50}ms` }}>
                             <span className={`font-mono font-black text-4xl w-14 text-right tabular-nums shrink-0 ${getRankColor(index)}`}>
                                 #{index + 1}
@@ -279,8 +299,20 @@ export function RankingList({ initialItems, listId, category = 'items', title, o
                     ))}
                 </div>
 
+                {/* Populating Indicator */}
+                {isPopulating && (
+                    <div className="mt-6 flex flex-col items-center gap-3 animate-pulse">
+                        <div className="flex gap-4 items-center w-full">
+                            <div className="w-14 h-8 bg-slate-50 rounded-lg animate-pulse" />
+                            <div className="flex-1 h-32 bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-100 flex items-center justify-center">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">Searching for more relevant items...</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Load More Button (Pagination) */}
-                {items.length > displayLimit && (
+                {!isPopulating && items.length > displayLimit && (
                     <div className="mt-8 flex justify-center">
                         <button
                             onClick={() => setDisplayLimit(prev => prev + 15)}
@@ -305,7 +337,7 @@ export function RankingList({ initialItems, listId, category = 'items', title, o
                 strategy={verticalListSortingStrategy}
             >
                 <div className="space-y-0">
-                    {items.slice(0, displayLimit).map((item, index) => (
+                    {items.slice(0, isPopulating ? items.length : displayLimit).map((item, index) => (
                         <React.Fragment key={item.id}>
                             <div className="flex gap-4 items-center mb-2">
                                 <span className={`font-mono font-black text-4xl w-14 text-right tabular-nums ${getRankColor(index)}`}>#{index + 1}</span>
@@ -343,8 +375,23 @@ export function RankingList({ initialItems, listId, category = 'items', title, o
             </SortableContext>
             {isSaving && <div className="text-xs text-gray-400 text-center mt-2">Saving order...</div>}
 
+            {/* Populating Indicator */}
+            {isPopulating && (
+                <div className="mt-4 flex flex-col items-center gap-3 animate-pulse px-4">
+                    <div className="flex gap-4 items-center w-full">
+                        <div className="w-14 h-8 bg-slate-50 rounded-lg" />
+                        <div className="flex-1 h-24 bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-100 flex items-center justify-center">
+                            <div className="flex flex-col items-center gap-2">
+                                <Loader2 className="h-4 w-4 animate-spin text-slate-200" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">Finding more relevant items...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Load More Button (Pagination) */}
-            {items.length > displayLimit && (
+            {!isPopulating && items.length > displayLimit && (
                 <div className="mt-4 flex justify-center">
                     <button
                         onClick={() => setDisplayLimit(prev => prev + 15)}
