@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight, Share2, Copy, Check, Plus, MessageSquare, Search, Loader2, Link as LinkIcon, MapPin, Download, Music, MessageCircle, Twitter, Mail, X, Users, Film, Beer, Utensils, MoreHorizontal, Clock, Trash2, Pencil } from 'lucide-react';
 import { RankingList } from "./ranking-list";
-import { deleteList, createList, updateListTitle, getThread, findListByTitle, updateProfile, getFollowingLists, addComment, addItemsToList, getComments } from "@/app/actions";
+import { deleteList, createList, updateListTitle, getThread, findListByTitle, updateProfile, getFollowingLists, addComment, addItemsToList, getComments, upsertComment } from "@/app/actions";
 /* FEATURE: Places Map — to disable, comment out the PlacesMap import below */
 import { PlacesMap, itemsToPlaces } from './places-map';
 /* FEATURE: Music Playlist Export */
@@ -152,7 +152,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
 
         const timer = setTimeout(async () => {
             try {
-                await addComment(expandedListId, waitingComment.trim());
+                await upsertComment(expandedListId, waitingComment.trim());
                 isCommentDirty.current = false;
                 console.log("[Dashboard] Debounced comment save successful");
             } catch (err) {
@@ -432,7 +432,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
         try {
             // 1. Add comment if provided
             if (waitingComment.trim()) {
-                await addComment(pendingListAfterCreate.id, waitingComment.trim());
+                await upsertComment(pendingListAfterCreate.id, waitingComment.trim());
             }
 
             // 2. Population is already happening/happened in background via startEarlyPopulation
@@ -686,7 +686,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                 // SAVE INITIAL COMMENT (NON-BLOCKING/RESILIENT)
                 if (waitingComment.trim()) {
                     console.log(`[Dashboard] Saving initial comment for ${newList.id}: ${waitingComment}`);
-                    addComment(newList.id, waitingComment.trim()).catch(err => {
+                    upsertComment(newList.id, waitingComment.trim()).catch(err => {
                         console.error("[Dashboard] Initial comment save failed:", err);
                     });
                 }
@@ -1351,7 +1351,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                                 </div>
                                             </div>
 
-                                            {/* INTEGRATED COMMENT AREA */}
+                                            {/* INTEGRATED COMMENT AREA (Description) */}
                                             {currentUserId === expandedList.user_id && (
                                                 <div className="mt-2 group">
                                                     <Textarea
@@ -1363,7 +1363,8 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                                         }}
                                                         onBlur={async () => {
                                                             if (waitingComment.trim() && expandedList.id !== 'temp-pending') {
-                                                                await addComment(expandedList.id, waitingComment.trim());
+                                                                await upsertComment(expandedList.id, waitingComment.trim());
+                                                                isCommentDirty.current = false;
                                                             }
                                                         }}
                                                         className="min-h-[60px] max-h-[120px] font-bold text-sm resize-none border-none bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus-visible:ring-1 focus-visible:ring-slate-100 rounded-xl p-3 placeholder:opacity-40 transition-all overflow-y-auto"
@@ -1456,7 +1457,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                         {isPopulating && (
                                             <div className="mt-4 px-4 py-2 border border-slate-100 rounded-lg bg-slate-50/50 flex flex-col items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
                                                 <div className="w-full h-1 bg-slate-200/50 rounded-full overflow-hidden relative">
-                                                    <div 
+                                                    <div
                                                         className="absolute top-0 bottom-0 w-[40%] bg-slate-400/30 rounded-full"
                                                         style={{
                                                             animation: 'slide-puck-modal 2s ease-in-out infinite alternate'
@@ -1476,7 +1477,8 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                                         </button>
                                                     )}
                                                 </div>
-                                                <style dangerouslySetInnerHTML={{ __html: `
+                                                <style dangerouslySetInnerHTML={{
+                                                    __html: `
                                                     @keyframes slide-puck-modal {
                                                         0% { left: 0%; }
                                                         100% { left: 60%; }

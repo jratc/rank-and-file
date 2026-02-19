@@ -1,15 +1,14 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useDraggable, useDroppable, DndContext, DragOverlay } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { submitFeedback } from '@/app/actions';
 import { toast } from 'sonner';
-import { Send, Trash2, Ghost } from 'lucide-react';
+import { Ghost, Move, Send } from 'lucide-react';
 
 export function FeedbackHole() {
     const [feedback, setFeedback] = useState('');
-    const [isHovered, setIsHovered] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
 
     const handleDragEnd = async (event: any) => {
@@ -40,34 +39,33 @@ export function FeedbackHole() {
     return (
         <div className="fixed right-8 bottom-24 z-50 flex flex-col items-end gap-4 pointer-events-none">
             <DndContext onDragEnd={handleDragEnd}>
-                {/* Feedback Input / Scrap */}
-                {feedback && !isSubmitted && (
-                    <DraggableScrap text={feedback} onTextChange={setFeedback} />
-                )}
+                {/* STABLE INPUT CONTAINER */}
+                <div className={`pointer-events-auto bg-slate-900/5 dark:bg-white/5 backdrop-blur-xl border border-slate-200 dark:border-white/10 p-4 rounded-3xl shadow-2xl transition-all duration-500 w-64 ${isSubmitted ? 'scale-90 opacity-0 blur-lg' : 'scale-100 opacity-100'} group`}>
+                    <textarea
+                        placeholder="Feedback hole..."
+                        className="bg-transparent border-none outline-none text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-400 w-full h-32 resize-none font-medium custom-scrollbar"
+                        value={feedback}
+                        onChange={(e) => setFeedback(e.target.value)}
+                        disabled={isSubmitted}
+                    />
 
-                {!feedback && (
-                    <div className="pointer-events-auto bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-2xl shadow-2xl transition-all duration-500 hover:scale-105 group">
-                        <textarea
-                            placeholder="Feedback hole..."
-                            className="bg-transparent border-none outline-none text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-400 w-48 h-24 resize-none font-medium"
-                            value={feedback}
-                            onChange={(e) => setFeedback(e.target.value)}
-                        />
-                        <div className="text-[10px] uppercase tracking-widest font-black text-slate-400 mt-2 opacity-50 group-hover:opacity-100 transition-opacity">
-                            Drag the scrap to submit
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-200/50 dark:border-white/10">
+                        <div className="text-[10px] uppercase tracking-widest font-black text-slate-400">
+                            {feedback.length > 0 ? "Drag handle to toss" : "Feed the void"}
                         </div>
+                        {feedback.length > 0 && (
+                            <TossHandle />
+                        )}
                     </div>
-                )}
+                </div>
 
                 {/* The Hole */}
-                <DroppableHole isHovered={isHovered} onHover={setIsHovered} isActive={!!feedback} />
+                <DroppableHole isActive={!!feedback} />
 
                 <DragOverlay>
                     {feedback ? (
-                        <div className="p-4 bg-amber-50 shadow-xl border border-amber-200 -rotate-3 scale-110 opacity-90 cursor-grabbing">
-                            <p className="text-xs font-serif text-slate-700 leading-tight">
-                                {feedback.length > 100 ? feedback.substring(0, 100) + '...' : feedback}
-                            </p>
+                        <div className="w-12 h-12 bg-black dark:bg-white rounded-full flex items-center justify-center shadow-2xl scale-110 cursor-grabbing border-4 border-indigo-500">
+                            <Send className="w-5 h-5 text-indigo-500 animate-pulse" />
                         </div>
                     ) : null}
                 </DragOverlay>
@@ -76,14 +74,14 @@ export function FeedbackHole() {
     );
 }
 
-function DraggableScrap({ text, onTextChange }: { text: string; onTextChange: (s: string) => void }) {
+function TossHandle() {
     const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-        id: 'feedback-scrap',
+        id: 'feedback-handle',
     });
 
     const style = {
         transform: CSS.Translate.toString(transform),
-        opacity: isDragging ? 0 : 1,
+        opacity: isDragging ? 0.3 : 1,
     };
 
     return (
@@ -92,19 +90,15 @@ function DraggableScrap({ text, onTextChange }: { text: string; onTextChange: (s
             style={style}
             {...listeners}
             {...attributes}
-            className="pointer-events-auto p-4 bg-amber-50/90 shadow-lg border border-amber-200 -rotate-2 w-48 min-h-[100px] cursor-grab active:cursor-grabbing hover:scale-105 transition-transform"
+            className="p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-lg cursor-grab active:cursor-grabbing transition-colors"
+            title="Drag me to the hole"
         >
-            <textarea
-                className="bg-transparent border-none outline-none text-xs font-serif text-slate-700 w-full h-full resize-none pointer-events-auto"
-                value={text}
-                onChange={(e) => onTextChange(e.target.value)}
-                onClick={(e) => e.stopPropagation()}
-            />
+            <Move className="w-4 h-4" />
         </div>
     );
 }
 
-function DroppableHole({ isHovered, onHover, isActive }: { isHovered: boolean; onHover: (b: boolean) => void; isActive: boolean }) {
+function DroppableHole({ isActive }: { isActive: boolean }) {
     const { setNodeRef, isOver } = useDroppable({
         id: 'feedback-hole',
     });
@@ -113,18 +107,18 @@ function DroppableHole({ isHovered, onHover, isActive }: { isHovered: boolean; o
         <div
             ref={setNodeRef}
             className={`pointer-events-auto relative w-24 h-24 rounded-full flex items-center justify-center transition-all duration-700 overflow-hidden
-                ${isActive ? 'opacity-100 scale-100' : 'opacity-30 scale-75 grayscale blur-[1px] pointer-events-none'}
-                ${isOver ? 'bg-black scale-110 shadow-[0_0_40px_rgba(0,0,0,0.5)]' : 'bg-slate-900/10'}
+                ${isActive ? 'opacity-100 scale-100 rotate-0' : 'opacity-20 scale-75 grayscale blur-[2px] pointer-events-none rotate-45'}
+                ${isOver ? 'bg-black scale-110 shadow-[0_0_50px_rgba(79,70,229,0.4)]' : 'bg-slate-900/10'}
             `}
         >
             {/* The infinite void effect */}
             <div className={`absolute inset-0 rounded-full transition-all duration-1000
                 ${isOver ? 'bg-black shadow-inner' : 'bg-gradient-to-br from-slate-900 to-black'}
             `}>
-                <div className={`absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-from)_0%,_transparent_70%)] from-indigo-500/20 to-transparent transition-opacity duration-1000 ${isOver ? 'opacity-100' : 'opacity-0'}`} />
+                <div className={`absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-from)_0%,_transparent_70%)] from-indigo-500/40 to-transparent transition-opacity duration-1000 ${isOver ? 'opacity-100' : 'opacity-0'}`} />
             </div>
 
-            <div className={`relative flex flex-col items-center gap-1 transition-all duration-500 ${isOver ? 'scale-75 opacity-20 rotate-180' : 'scale-100'}`}>
+            <div className={`relative flex flex-col items-center gap-1 transition-all duration-500 ${isOver ? 'scale-50 opacity-10 rotate-180' : 'scale-100'}`}>
                 <div className="w-12 h-12 rounded-full border-2 border-dashed border-white/20 animate-spin-slow flex items-center justify-center">
                     <Ghost className="text-white/40 w-6 h-6" />
                 </div>
@@ -137,7 +131,7 @@ function DroppableHole({ isHovered, onHover, isActive }: { isHovered: boolean; o
                     to { transform: rotate(360deg); }
                 }
                 .animate-spin-slow {
-                    animation: spin-slow 10s linear infinite;
+                    animation: spin-slow 15s linear infinite;
                 }
             `}} />
         </div>

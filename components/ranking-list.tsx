@@ -4,6 +4,8 @@
 import { MusicPlayer } from './music-link';
 import { HydratedImage } from './hydrated-image';
 import { updateListOrder, deleteListItem, loadMoreItems } from '@/app/draft/actions';
+import { deleteListItems } from '@/app/actions';
+import { RankedItemCard } from './ranked-item-card';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
@@ -189,15 +191,15 @@ export function RankingList({ initialItems, listId, category = 'items', title, o
         // `updateListOrder` only updates order. `deleteListItem` deletes one.
         // We might need a bulk delete, but loop is okay for now as lists are small (10-20 items).
 
-        // Trigger a background delete
-        Promise.all(itemsToDelete.map(item => deleteListItem(item.id)))
+        // Trigger a background bulk delete
+        deleteListItems(itemsToDelete.map(item => item.id))
             .then(() => {
                 toast.success('List trimmed!');
                 if (onChange) onChange(itemsToKeep);
             })
-            .catch(() => {
+            .catch((err) => {
+                console.error("Trim failed:", err);
                 toast.error('Failed to trim list');
-                // Could revert here, but tricky with multiple deletes.
             });
     };
 
@@ -259,36 +261,18 @@ export function RankingList({ initialItems, listId, category = 'items', title, o
     // NOTE: Keep read-only view consistent with edit view colors? Yes.
     if (readOnly) {
         return (
-            <div className="space-y-2">
+            <div className="space-y-4">
                 {items.map((item, index) => (
-                    <div key={item.id} className="flex gap-4 items-center">
-                        <span className={`font-mono font-black text-4xl w-14 text-right tabular-nums ${getRankColor(index)}`}>#{index + 1}</span>
-                        <div className="flex-1">
-                            {/* Static Item Card */}
-                            <div className="mb-3">
-                                <div className="flex flex-row items-center p-2 border border-slate-200 bg-white shadow-sm rounded-lg gap-0">
-                                    <div className="flex-1 flex items-center gap-5 pl-4 min-w-0">
-                                        <div className="w-16 h-16 bg-slate-100 rounded-lg overflow-hidden shrink-0 shadow-sm border border-slate-200">
-                                            <HydratedImage
-                                                initialUrl={item.metadata.imageUrl}
-                                                itemId={item.id}
-                                                itemName={item.metadata.name}
-                                                category={category}
-                                                className="w-full h-full object-cover"
-                                            />
-                                        </div>
-
-                                        <div className="min-w-0 flex-1 py-1 w-full">
-                                            <h4 className="font-black text-xl tracking-tighter leading-tight break-words whitespace-pre-wrap text-slate-900 uppercase w-full">{item.metadata.name}</h4>
-                                            <p className="font-mono text-[10px] font-bold text-slate-400 tracking-widest uppercase mt-1">{item.metadata.subtitle}</p>
-                                            {/* FEATURE: Music Links */}
-                                            {item.metadata.category === 'music' && (
-                                                <MusicPlayer item={item} className="mt-1.5" />
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                    <div key={item.id} className="flex gap-4 items-center animate-in fade-in slide-in-from-left-4 duration-300" style={{ animationDelay: `${index * 50}ms` }}>
+                        <span className={`font-mono font-black text-4xl w-14 text-right tabular-nums shrink-0 ${getRankColor(index)}`}>
+                            #{index + 1}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                            <RankedItemCard
+                                item={item}
+                                category={category}
+                                className="border-none shadow-none bg-transparent p-0"
+                            />
                         </div>
                     </div>
                 ))}

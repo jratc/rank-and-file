@@ -145,6 +145,25 @@ export async function updateListTitle(listId: string, title: string) {
     return { success: true };
 }
 
+export async function deleteListItems(itemIds: string[]) {
+    const supabase = await createClient();
+    const { data: authData } = await supabase.auth.getUser();
+    if (!authData?.user) throw new Error("Must be logged in");
+
+    const { error } = await supabase
+        .from('list_items')
+        .delete()
+        .in('id', itemIds);
+
+    if (error) {
+        console.error('Delete items error:', error);
+        throw new Error(error.message);
+    }
+
+    revalidatePath('/');
+    return { success: true };
+}
+
 export async function getLists() {
     const supabase = await createClient();
 
@@ -607,10 +626,43 @@ export async function addComment(listId: string, content: string) {
         .single();
 
     if (error) throw error;
-
-    // Revalidate paths if necessary, or just return data for optimistic UI
-    // revalidatePath(`/list/${listId}`); 
     return data;
+}
+
+export async function upsertComment(listId: string, content: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) throw new Error("Must be logged in to comment");
+
+    // Check for existing comment by this user on this list
+    const { data: existing } = await supabase
+        .from('comments')
+        .select('id')
+        .eq('list_id', listId)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+    if (existing) {
+        const { data, error } = await supabase
+            .from('comments')
+            .update({ content })
+            .eq('id', existing.id)
+            .select(`*, profiles (username, display_name)`)
+            .single();
+        if (error) throw error;
+        return data;
+    } else {
+        const { data, error } = await supabase
+            .from('comments')
+            .insert({ list_id: listId, user_id: user.id, content })
+            .select(`*, profiles (username, display_name)`)
+            .single();
+        if (error) throw error;
+        return data;
+    }
 }
 
 export async function deleteComment(commentId: string) {
@@ -634,6 +686,13 @@ export async function submitFeedback(content: string) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
+    // Get profile if available to "link" it in the log
+    const { data: profile } = user ? await supabase
+        .from('profiles')
+        .select('username, display_name')
+        .eq('id', user.id)
+        .single() : { data: null };
+
     const { error } = await supabase
         .from('feedback')
         .insert({
@@ -645,11 +704,12 @@ export async function submitFeedback(content: string) {
         console.error('Submit feedback error:', error);
         // Fallback for when table doesn't exist yet
         if (error.code === 'PGRST116' || error.message?.includes('relation "public.feedback" does not exist')) {
-            console.log('FEEDBACK FALLBACK (Table missing):', content);
+            console.log(`FEEDBACK FALLBACK (User: ${profile?.username || 'Guest'}):`, content);
             return { success: true, fallback: true };
         }
         throw error;
     }
 
+    console.log(`FEEDBACK SUCCESS (User: ${profile?.username || 'Guest'}):`, content);
     return { success: true };
 }
