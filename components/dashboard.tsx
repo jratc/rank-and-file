@@ -672,8 +672,9 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
 
                 console.log(`[Dashboard] Transitioned to ranking view for unified modal`);
 
-            } catch (error) {
-                toast.error("Failed to create list");
+            } catch (error: any) {
+                console.error("[Dashboard] List creation failed:", error);
+                toast.error(error.message?.includes('DB_ERROR') ? `Database error: ${error.message}` : "Failed to create list");
                 setLists(prev => prev.filter(l => l.id !== 'temp-pending'));
                 setExpandedListId(null);
                 cleanup();
@@ -1192,7 +1193,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
 
                                                 <div className="flex items-center gap-1.5 relative shrink-0">
                                                     {/* Share / Respond controls */}
-                                                    {expandedList.id !== 'temp-pending' && (
+                                                    {expandedList.id !== 'temp-pending' && !isPopulating && (
                                                         <div className="relative">
                                                             <Button
                                                                 variant="default"
@@ -1347,9 +1348,9 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                             )}
                                         </div>
 
-                                        {/* Search Section Inside Header - Only for Owner, only after list is named */}
+                                        {/* Search Section Inside Header - Only for Owner, only after list is named, and not while populating */}
                                         {
-                                            currentUserId === expandedList.user_id && expandedList.id !== 'temp-pending' && (
+                                            currentUserId === expandedList.user_id && expandedList.id !== 'temp-pending' && !isPopulating && (
                                                 <div className="mt-4">
                                                     <form onSubmit={(e) => { e.preventDefault(); handleSearch(searchQuery); }} className="relative group">
                                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-300 group-focus-within:text-black transition-colors" />

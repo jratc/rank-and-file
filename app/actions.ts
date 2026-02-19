@@ -42,10 +42,11 @@ export async function createList(title: string = 'NEW LIST', category: string = 
             .insert({ id: user.id, username: `user_${user.id.substring(0, 5)}` });
 
         if (insertError) {
-            log(`[Action] Error creating profile: ${insertError.message}`);
-            throw new Error(`Profile missing and creation failed: ${insertError.message}`);
+            log(`[Action] Error creating profile: ${insertError.message} | Code: ${insertError.code}`);
+            // Don't throw yet, maybe the list insert works anyway (unlikely but possible if RLS is weird)
+        } else {
+            log(`[Action] Profile fixed for user ${user.id}`);
         }
-        log(`[Action] Profile fixed for user ${user.id}`);
     }
 
     const { data, error } = await supabase
@@ -60,7 +61,8 @@ export async function createList(title: string = 'NEW LIST', category: string = 
 
     if (error) {
         log(`[Action] Create list DB error: ${error.message} | Code: ${error.code} | Hint: ${error.hint}`);
-        throw new Error(error.message);
+        // Return a structured error so the UI can log it
+        throw new Error(`DB_ERROR: ${error.message} (${error.code})`);
     }
 
     log(`[Action] List created successfully: ${data.id}`);
