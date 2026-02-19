@@ -1357,7 +1357,10 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                                     <Textarea
                                                         placeholder={isPopulating ? "Building your list... add a comment about this topic- why should we care?" : "Why is this list important to you?"}
                                                         value={waitingComment}
-                                                        onChange={(e) => setWaitingComment(e.target.value)}
+                                                        onChange={(e) => {
+                                                            setWaitingComment(e.target.value);
+                                                            isCommentDirty.current = true;
+                                                        }}
                                                         onBlur={async () => {
                                                             if (waitingComment.trim() && expandedList.id !== 'temp-pending') {
                                                                 await addComment(expandedList.id, waitingComment.trim());
@@ -1451,35 +1454,34 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
 
                                         {/* POPULATION FEEDBACK - Subtle Indicator */}
                                         {isPopulating && (
-                                            <div className="mt-4 px-4 py-2 border border-slate-100 rounded-lg bg-slate-50/50 flex items-center justify-between animate-in fade-in slide-in-from-bottom-2 duration-500">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-8 h-1 bg-slate-200 rounded-full overflow-hidden relative shrink-0">
-                                                        <div
-                                                            className="absolute top-0 bottom-0 w-3 bg-slate-400 rounded-full"
-                                                            style={{
-                                                                animation: 'slide-puck-small 1.5s ease-in-out infinite alternate'
-                                                            }}
-                                                        />
-                                                    </div>
-                                                    <style dangerouslySetInnerHTML={{
-                                                        __html: `
-                                                        @keyframes slide-puck-small {
-                                                            0% { left: 0; }
-                                                            100% { left: calc(100% - 0.75rem); }
-                                                        }
-                                                    `}} />
+                                            <div className="mt-4 px-4 py-2 border border-slate-100 rounded-lg bg-slate-50/50 flex flex-col items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                                                <div className="w-full h-1 bg-slate-200/50 rounded-full overflow-hidden relative">
+                                                    <div 
+                                                        className="absolute top-0 bottom-0 w-[40%] bg-slate-400/30 rounded-full"
+                                                        style={{
+                                                            animation: 'slide-puck-modal 2s ease-in-out infinite alternate'
+                                                        }}
+                                                    />
+                                                </div>
+                                                <div className="flex items-center justify-between w-full">
                                                     <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">
                                                         {populatedCount > 0 ? `Found ${populatedCount} items` : ""}
                                                     </span>
+                                                    {populatedCount > 0 && (
+                                                        <button
+                                                            onClick={() => handleSubmitWaitingComment()}
+                                                            className="text-[9px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-700"
+                                                        >
+                                                            Done
+                                                        </button>
+                                                    )}
                                                 </div>
-                                                {populatedCount > 0 && (
-                                                    <button
-                                                        onClick={() => handleSubmitWaitingComment()}
-                                                        className="text-[9px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-700"
-                                                    >
-                                                        Done
-                                                    </button>
-                                                )}
+                                                <style dangerouslySetInnerHTML={{ __html: `
+                                                    @keyframes slide-puck-modal {
+                                                        0% { left: 0%; }
+                                                        100% { left: 60%; }
+                                                    }
+                                                `}} />
                                             </div>
                                         )}
                                         {/* FEATURE: Places Map — inline map toggle */}

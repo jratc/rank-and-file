@@ -1,6 +1,7 @@
 import { Dashboard } from "@/components/dashboard";
 import { Header } from "@/components/header";
 import { Tagline } from "@/components/tagline";
+import { FeedbackHole } from "@/components/feedback-hole";
 import { getLists, getUserResponseIds } from "./actions";
 import { createClient } from "@/lib/supabase/server";
 import { Outfit } from "next/font/google";
@@ -47,6 +48,7 @@ export default async function Home() {
             respondedListIds={respondedListIds}
           />
         </div>
+        <FeedbackHole />
       </main>
     </>
   );

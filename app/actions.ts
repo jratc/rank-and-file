@@ -629,3 +629,27 @@ export async function deleteComment(commentId: string) {
     if (error) throw error;
     return true;
 }
+
+export async function submitFeedback(content: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    const { error } = await supabase
+        .from('feedback')
+        .insert({
+            user_id: user?.id || null,
+            content: content
+        });
+
+    if (error) {
+        console.error('Submit feedback error:', error);
+        // Fallback for when table doesn't exist yet
+        if (error.code === 'PGRST116' || error.message?.includes('relation "public.feedback" does not exist')) {
+            console.log('FEEDBACK FALLBACK (Table missing):', content);
+            return { success: true, fallback: true };
+        }
+        throw error;
+    }
+
+    return { success: true };
+}
