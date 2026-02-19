@@ -93,6 +93,14 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
         }
     }, [currentUserId, currentDisplayName]);
 
+    // Auto-finalize creation when population completes
+    useEffect(() => {
+        if (isPopulatingComplete && creationStep === 'ranking') {
+            console.log(`[Dashboard] Auto-finalizing list creation...`);
+            handleSubmitWaitingComment();
+        }
+    }, [isPopulatingComplete, creationStep]);
+
     const handleSaveProfile = async () => {
         if (!displayName.trim()) return;
         setIsSavingProfile(true);
@@ -416,36 +424,29 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
             setLists(prev => prev.map(l => l.id === 'temp-pending' || l.id === updatedList.id ? updatedList : l));
             setExpandedListId(updatedList.id);
 
-            if (populatedResultCount > 0) {
-                toast.success(`List created & populated with ${populatedResultCount} items!`);
-
-                // BACKGROUND POPULATION: Continue fetching up to 50 items
-                if (populatedResultCount < 50 && !isPopulatingComplete) {
-                    console.log(`[Dashboard] Starting background population for list: ${updatedList.id}`);
-                    populateBackgroundItems(updatedList.id, updatedList.title, updatedList.category, populatedResultCount).then((result: any) => {
-                        const count = result.count || 0;
-                        if (result.isComplete) {
-                            setIsPopulatingComplete(true);
-                        }
-                        if (count > 0) {
-                            console.log(`[Dashboard] Background population finish: +${count} items.`);
-                            router.refresh();
-                        }
-                    });
-                }
-
-                router.refresh();
-            } else {
-                toast.success("List created!");
+            // BACKGROUND POPULATION: Continue fetching up to 50 items
+            if (populatedResultCount < 50 && !isPopulatingComplete) {
+                console.log(`[Dashboard] Starting background population for list: ${updatedList.id}`);
+                populateBackgroundItems(updatedList.id, updatedList.title, updatedList.category, populatedResultCount).then((result: any) => {
+                    if (result.isComplete) {
+                        setIsPopulatingComplete(true);
+                    }
+                    if ((result.count || 0) > 0) {
+                        router.refresh();
+                    }
+                });
             }
+            router.refresh();
         } catch (error) {
             toast.error("Failed to finalize list");
         } finally {
             setIsUpdatingTitle(false);
             setIsWaitingForComment(false);
-            setWaitingComment('');
             setCreationStep(null);
             setPendingListAfterCreate(null);
+            // We DON'T clear waitingComment here if we want it to persist for the current session
+            // But we should clear it when the modal finally closes or list changes.
+            // setWaitingComment(''); 
             setPopulatedCount(0);
             setIsPopulating(false);
             setIsPopulatingComplete(false);
@@ -453,7 +454,6 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
 
             setTimeout(() => {
                 searchInputRef.current?.focus();
-                handleSearch('', true);
             }, 100);
         }
     };
@@ -631,6 +631,12 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                 setCreationStep('ranking');
                 setExpandedListId(newList.id);
                 setIsUpdatingTitle(false);
+
+                // SAVE COMMENT IMMEDIATELY IF EXISTS
+                if (waitingComment.trim()) {
+                    addComment(newList.id, waitingComment.trim());
+                }
+
                 console.log(`[Dashboard] Transitioned to ranking view for unified modal`);
                 // We keep the modal open, but the render logic will switch to the comment box
 
@@ -980,13 +986,14 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                             setShowMap(false);
                             setCreationStep(null);
                             setFreeFormItems(Array(10).fill(''));
+                            setWaitingComment('');
                             // Clean up temp list if it was never saved
                             if (expandedList.id === 'temp-pending') {
                                 setLists(prev => prev.filter(l => l.id !== 'temp-pending'));
                             }
                         }}
                     />
-                    <Card className="relative w-full max-w-xl flex flex-col max-h-[85vh] overflow-hidden border-slate-200 bg-white shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] animate-in slide-in-from-bottom-4 duration-300">
+                    <Card className="relative w-full max-w-xl flex flex-col h-auto max-h-[90vh] border-slate-200 bg-white shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] animate-in slide-in-from-bottom-4 duration-300">
                         <button
                             onClick={() => {
                                 setExpandedListId(null);
@@ -994,6 +1001,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                 setSearchQuery('');
                                 setShowShareOptions(false);
                                 setShowMap(false);
+                                setWaitingComment('');
                                 // Clean up temp list if it was never saved
                                 if (expandedList.id === 'temp-pending') {
                                     setLists(prev => prev.filter(l => l.id !== 'temp-pending'));
@@ -1387,34 +1395,23 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                             }}
                                         />
 
-                                        {/* POPULATION FEEDBACK & READY ACTION */}
+                                        {/* POPULATION FEEDBACK - Subtle Indicator */}
                                         {isPopulating && (
-                                            <div className="mt-6 space-y-4 animate-in fade-in duration-500">
-                                                <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-100 rounded-2xl bg-slate-50/30">
-                                                    <Loader2 className="h-6 w-6 animate-spin text-slate-300 mb-2" />
-                                                    <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                                        {populatedCount === 0 ? "Searching for entries..." : `Found ${populatedCount} items so far...`}
-                                                    </div>
+                                            <div className="mt-4 px-4 py-2 border border-slate-100 rounded-lg bg-slate-50/50 flex items-center justify-between animate-in fade-in slide-in-from-bottom-2 duration-500">
+                                                <div className="flex items-center gap-2">
+                                                    <Loader2 className="h-3 w-3 animate-spin text-slate-400" />
+                                                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">
+                                                        {populatedCount === 0 ? "Searching..." : `Found ${populatedCount} items`}
+                                                    </span>
                                                 </div>
-
-                                                <Button
-                                                    onClick={handleSubmitWaitingComment}
-                                                    disabled={isUpdatingTitle || (!isPopulatingComplete && populatedCount < 12)}
-                                                    className="w-full h-14 bg-black hover:bg-slate-800 text-white font-black uppercase tracking-widest text-sm rounded-xl transition-all shadow-md active:scale-[0.98] flex flex-col items-center justify-center"
-                                                >
-                                                    {isUpdatingTitle ? (
-                                                        <Loader2 className="h-5 w-5 animate-spin" />
-                                                    ) : (
-                                                        <span>{isPopulatingComplete || populatedCount >= 12 ? "YOUR LIST IS READY!" : "FINDING MORE ITEMS..."}</span>
-                                                    )}
-                                                </Button>
-
-                                                <button
-                                                    onClick={() => handleSubmitWaitingComment()}
-                                                    className="w-full text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-slate-500 transition-colors py-2"
-                                                >
-                                                    Stop searching and keep current list
-                                                </button>
+                                                {populatedCount > 0 && (
+                                                    <button
+                                                        onClick={() => handleSubmitWaitingComment()}
+                                                        className="text-[9px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-700"
+                                                    >
+                                                        Done
+                                                    </button>
+                                                )}
                                             </div>
                                         )}
                                         {/* FEATURE: Places Map — inline map toggle */}
