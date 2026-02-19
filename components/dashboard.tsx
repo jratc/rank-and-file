@@ -502,6 +502,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
             setPendingListAfterCreate(null);
             setPopulatedCount(0);
             setIsPopulating(false);
+            setIsBackgroundPopulating(false);
             setIsPopulatingComplete(false);
 
             // Re-focus the newly created list in the edit session to keep the title editable if needed
