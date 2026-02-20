@@ -2,7 +2,17 @@
 -- Targets: "Failed to shift ranks" during upsert and "all categories" stability.
 -- Mock User ID: 00000000-0000-0000-0000-000000000000
 
--- 1. PROFILES: Ensure mock profile exists and is accessible
+-- 1. PROFILES: Ensure mock profile can exist without auth.users record
+-- Drop the FK constraint first if it exists
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'profiles_id_fkey') THEN
+        ALTER TABLE public.profiles DROP CONSTRAINT profiles_id_fkey;
+    ELSIF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'profiles_id_key') THEN
+        ALTER TABLE public.profiles DROP CONSTRAINT profiles_id_key;
+    END IF;
+END $$;
+
 INSERT INTO public.profiles (id, username, display_name)
 VALUES ('00000000-0000-0000-0000-000000000000', 'antigravity', 'Antigravity (Dev)')
 ON CONFLICT (id) DO UPDATE SET display_name = 'Antigravity (Dev)';
