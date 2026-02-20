@@ -541,6 +541,21 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                 }
                 // Update the local lists state so the count is reflected
                 setLists(prev => prev.map(l => l.id === targetList.id ? { ...l, list_items: popResult.items || [] } : l));
+
+                // BACKGROUND POPULATION: Trigger if not complete
+                if (popResult.count < 80 && !popResult.isComplete) {
+                    console.log(`[Dashboard] Starting background population for list: ${targetList.id}`);
+                    setIsBackgroundPopulating(true);
+                    populateBackgroundItems(targetList.id, targetList.title, targetList.category, popResult.count).then((result: any) => {
+                        setIsBackgroundPopulating(false);
+                        if (result.isComplete) {
+                            setIsPopulatingComplete(true);
+                        }
+                    }).catch((err) => {
+                        console.error("[Dashboard] Background population failed:", err);
+                        setIsBackgroundPopulating(false);
+                    });
+                }
             }
         } catch (error) {
             console.error("[Dashboard] Early population failed:", error);
@@ -1429,7 +1444,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                                     {/* Search Results Dropdown-style */}
                                                     {searchResults.length > 0 && (
                                                         <div
-                                                            className="absolute left-5 right-5 mt-1 bg-white border border-slate-100 rounded-xl shadow-2xl z-50 p-1 max-h-[300px] overflow-y-auto custom-scrollbar"
+                                                            className="absolute left-5 right-5 mt-1 bg-white border border-slate-100 rounded-xl shadow-2xl z-50 p-1 max-h-[300px] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in duration-200"
                                                             onScroll={(e) => {
                                                                 const target = e.currentTarget;
                                                                 if (target.scrollHeight - target.scrollTop <= target.clientHeight + 50 && !isSearching && hasMore) {
@@ -1439,6 +1454,15 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                                                 }
                                                             }}
                                                         >
+                                                            <div className="flex items-center justify-between px-3 py-2 border-b border-slate-50 mb-1">
+                                                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Search Results</span>
+                                                                <button
+                                                                    onClick={() => setSearchResults([])}
+                                                                    className="text-[9px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-700"
+                                                                >
+                                                                    Close
+                                                                </button>
+                                                            </div>
                                                             <div className="space-y-0.5">
                                                                 {searchResults.map((item) => (
                                                                     <div

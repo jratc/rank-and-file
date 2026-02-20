@@ -67,17 +67,17 @@ export function RankingList({
 
     // Sync items from props, BUT only if the list ID has changed 
     // or if we aren't currently streaming in new items in the background.
+    // Sync items from props
     useEffect(() => {
         if (listId !== prevListId) {
             setItems(initialItems);
             setPrevListId(listId);
             setDisplayLimit(15); // Reset limit for new list
-        } else if (!isPopulating && initialItems.length > items.length) {
-            // Only sync if more items arrived and we aren't actively populating 
-            // (realtime handles population updates)
+        } else if (initialItems.length !== items.length) {
+            // Always sync if count changed (e.g. background population finished or started)
             setItems(initialItems);
         }
-    }, [initialItems, listId, isPopulating, prevListId, items.length]);
+    }, [initialItems, listId, prevListId, items.length]);
 
     // REALTIME SUBSCRIPTION
     useEffect(() => {

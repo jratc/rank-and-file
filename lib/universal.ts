@@ -196,9 +196,8 @@ export const universalProvider = {
     async fetchThumbnail(query: string, category?: string): Promise<string | null> {
         if (!query) return null;
         try {
-            // 1. Clean the query: Remove "The", parentheticals, and extra whitespace
+            // 1. Clean the query: Remove parentheticals and extra whitespace
             let cleanedQuery = query
-                .replace(/^(The|A|An)\s+/i, '')
                 .replace(/\(.*\)/g, '')
                 .trim();
 

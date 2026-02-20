@@ -709,7 +709,7 @@ export async function submitFeedback(content: string) {
     const { error } = await supabase
         .from('feedback')
         .insert({
-            user_id: user?.id || null,
+            user_id: user?.id || null, // Mock user ID is fine now as we dropped the FK constraint
             content: content
         });
 
@@ -718,15 +718,12 @@ export async function submitFeedback(content: string) {
             code: error.code,
             message: error.message,
             details: error.details,
-            hint: error.hint,
             userId: user?.id
         });
-        // Fallback for when table doesn't exist yet
-        if (error.code === 'PGRST116' || error.code === '42P01' || error.message?.includes('relation "public.feedback" does not exist')) {
-            console.log(`FEEDBACK FALLBACK (User: ${profile?.username || 'Guest'}):`, content);
-            return { success: true, fallback: true };
-        }
-        throw error;
+
+        // Log to console as well so it's not totally lost
+        console.log(`FEEDBACK FAILED (User: ${profile?.username || 'Guest'}):`, content);
+        throw new Error(`Feedback submission failed: ${error.message}`);
     }
 
     console.log(`FEEDBACK SUCCESS (User: ${profile?.username || 'Guest'}):`, content);
