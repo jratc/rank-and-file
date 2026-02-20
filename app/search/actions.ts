@@ -112,7 +112,8 @@ export async function addToList(item: RankedItem, listId: string) {
     if (existingItemsData && existingItemsData.length > 0) {
         const updates = existingItemsData.map(item => ({
             id: item.id,
-            rank: item.rank + 1
+            rank: item.rank + 1,
+            list_id: listId
         }));
 
         const { error: updateError } = await supabase
