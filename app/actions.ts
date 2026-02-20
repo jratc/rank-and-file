@@ -706,10 +706,12 @@ export async function submitFeedback(content: string) {
         .eq('id', user.id)
         .single() : { data: null };
 
+    const isMockUser = user?.id === '00000000-0000-0000-0000-000000000001';
+
     const { error } = await supabase
         .from('feedback')
         .insert({
-            user_id: user?.id || null, // Mock user ID is fine now as we dropped the FK constraint
+            user_id: (user && !isMockUser) ? user.id : null,
             content: content
         });
 

@@ -157,9 +157,24 @@ export async function hydrateItemImage(itemId: string, query: string, category?:
             return item.metadata.imageUrl; // Already hydrated
         }
 
-        // 2. Fetch thumbnail from Universal Provider (Wikipedia)
-        const { universalProvider } = await import('@/lib/universal');
-        const imageUrl = await universalProvider.fetchThumbnail(query, category);
+        // 2. Fetch thumbnail
+        let imageUrl: string | null = null;
+
+        if (category === 'movies') {
+            const { moviesProvider } = await import('@/lib/movies');
+            const movieItems = await moviesProvider.search(query);
+            if (movieItems.length > 0) {
+                // Find best title match if possible, otherwise first result
+                const bestMatch = movieItems.find(m => m.name.toLowerCase() === query.toLowerCase()) || movieItems[0];
+                imageUrl = bestMatch.imageUrl;
+            }
+        }
+
+        if (!imageUrl) {
+            // Fallback to Universal Provider (Wikipedia)
+            const { universalProvider } = await import('@/lib/universal');
+            imageUrl = await universalProvider.fetchThumbnail(query, category);
+        }
 
         if (imageUrl) {
             // 3. Update DB

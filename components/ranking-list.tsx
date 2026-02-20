@@ -76,8 +76,13 @@ export function RankingList({
         } else if (initialItems.length !== items.length) {
             // Always sync if count changed (e.g. background population finished or started)
             setItems(initialItems);
+
+            // AUTO-EXPAND: If we are populating, keep the display limit synced with items count
+            if (isPopulating) {
+                setDisplayLimit(initialItems.length);
+            }
         }
-    }, [initialItems, listId, prevListId, items.length]);
+    }, [initialItems, listId, prevListId, items.length, isPopulating]);
 
     // REALTIME SUBSCRIPTION
     useEffect(() => {
