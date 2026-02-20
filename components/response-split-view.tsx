@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, X, Trash2, MessageSquare, Share2, Copy, Mail, Twitter, MessageCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Trash2, MessageSquare, Share2, Copy, Mail, Twitter, MessageCircle, Facebook, Cloud } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { FollowButton } from "./follow-button";
 import { RankingList } from "./ranking-list";
@@ -192,6 +192,30 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
                                                     <Twitter className="h-3 w-3" />
                                                     TWEET
                                                 </button>
+                                                <button
+                                                    onClick={() => {
+                                                        const url = encodeURIComponent(`${window.location.origin}?listId=${currentThreadItem.id}`);
+                                                        window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank');
+                                                        setShowShareOptions(false);
+                                                    }}
+                                                    className="w-full flex items-center gap-2 p-2 rounded hover:bg-slate-50 text-[10px] font-bold text-slate-700 transition-colors"
+                                                >
+                                                    <Facebook className="h-3 w-3" />
+                                                    FACEBOOK
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        const authorName = currentThreadItem.profiles?.display_name || currentThreadItem.profiles?.username || 'Someone';
+                                                        const text = encodeURIComponent(`${authorName} shared a list on Rank and File: "${currentThreadItem.title}"`);
+                                                        const url = encodeURIComponent(`${window.location.origin}?listId=${currentThreadItem.id}`);
+                                                        window.open(`https://bsky.app/intent/compose?text=${text}%20${url}`, '_blank');
+                                                        setShowShareOptions(false);
+                                                    }}
+                                                    className="w-full flex items-center gap-2 p-2 rounded hover:bg-slate-50 text-[10px] font-bold text-slate-700 transition-colors"
+                                                >
+                                                    <Cloud className="h-3 w-3" />
+                                                    BLUESKY
+                                                </button>
                                             </div>
                                         </>
                                     )}
@@ -202,6 +226,19 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
                                 </div>
                             </div>
                         </div>
+
+                        {/* List Note (Comment from Author) */}
+                        {(() => {
+                            const authorNote = currentThreadItem.comments?.find((c: any) => c.user_id === currentThreadItem.user_id);
+                            if (!authorNote) return null;
+                            return (
+                                <div className="px-6 py-3 bg-slate-50 dark:bg-white/[0.02] border-b border-slate-100 dark:border-white/5">
+                                    <p className="text-xs font-medium text-slate-600 dark:text-slate-400 italic">
+                                        "{authorNote.content}"
+                                    </p>
+                                </div>
+                            );
+                        })()}
 
                         {/* List Content */}
                         <div className="flex-1 overflow-y-auto p-2 md:p-4 scrollbar-hide bg-slate-50 dark:bg-black/20">
@@ -238,8 +275,8 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
                                         </button>
                                     )}
 
-                                {/* Add your thoughts (Comments) Button - For ALL users */}
-                                {(!isEditing || currentUserId !== currentThreadItem.user_id) && (
+                                {/* Add your thoughts (Comments) Button - ONLY for Original List */}
+                                {currentIndex === 0 && (!isEditing || currentUserId !== currentThreadItem.user_id) && (
                                     <button
                                         onClick={() => setCommentModal({
                                             isOpen: true,

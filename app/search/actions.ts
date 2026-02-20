@@ -102,7 +102,7 @@ export async function addToList(item: RankedItem, listId: string) {
 
     const { data: existingItemsData, error: fetchError } = await supabase
         .from('list_items')
-        .select('id, rank')
+        .select('id, rank, entity_id, metadata')
         .eq('list_id', listId);
 
     if (fetchError) {
@@ -113,7 +113,9 @@ export async function addToList(item: RankedItem, listId: string) {
         const updates = existingItemsData.map(item => ({
             id: item.id,
             rank: item.rank + 1,
-            list_id: listId
+            list_id: listId,
+            entity_id: item.entity_id,
+            metadata: item.metadata
         }));
 
         const { error: updateError } = await supabase

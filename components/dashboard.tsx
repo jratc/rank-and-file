@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, Share2, Copy, Check, Plus, MessageSquare, Search, Loader2, Link as LinkIcon, MapPin, Download, Music, MessageCircle, Twitter, Mail, X, Users, Film, Beer, Utensils, MoreHorizontal, Clock, Trash2, Pencil } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Share2, Copy, Check, Plus, MessageSquare, Search, Loader2, Link as LinkIcon, MapPin, Download, Music, MessageCircle, Twitter, Mail, X, Users, Film, Beer, Utensils, MoreHorizontal, Clock, Trash2, Pencil, Facebook, Cloud } from 'lucide-react';
 import { RankingList } from "./ranking-list";
 import { deleteList, createList, updateListTitle, getThread, findListByTitle, updateProfile, getFollowingLists, addComment, addItemsToList, getComments, upsertComment } from "@/app/actions";
 /* FEATURE: Places Map — to disable, comment out the PlacesMap import below */
@@ -1317,6 +1317,30 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                                                         >
                                                                             <Twitter className="h-3 w-3" />
                                                                             TWEET
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                const url = encodeURIComponent(`${window.location.origin}?listId=${expandedList.id}`);
+                                                                                window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank');
+                                                                                setShowShareOptions(false);
+                                                                            }}
+                                                                            className="w-full flex items-center gap-2 p-2 rounded hover:bg-slate-50 text-[10px] font-bold text-slate-700 transition-colors"
+                                                                        >
+                                                                            <Facebook className="h-3 w-3" />
+                                                                            FACEBOOK
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                const authorName = expandedList.profiles?.display_name || expandedList.profiles?.username || 'Someone';
+                                                                                const text = encodeURIComponent(`${authorName} made a list on Rank and File: "${expandedList.title}"`);
+                                                                                const url = encodeURIComponent(`${window.location.origin}?listId=${expandedList.id}`);
+                                                                                window.open(`https://bsky.app/intent/compose?text=${text}%20${url}`, '_blank');
+                                                                                setShowShareOptions(false);
+                                                                            }}
+                                                                            className="w-full flex items-center gap-2 p-2 rounded hover:bg-slate-50 text-[10px] font-bold text-slate-700 transition-colors"
+                                                                        >
+                                                                            <Cloud className="h-3 w-3" />
+                                                                            BLUESKY
                                                                         </button>
                                                                     </div>
                                                                 </>

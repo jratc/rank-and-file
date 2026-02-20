@@ -389,7 +389,7 @@ export async function getThread(listId: string) {
     // 1. Get the requested list to find its parent_id
     const { data: currentList, error: currentError } = await supabase
         .from('lists')
-        .select('*, list_items(*), profiles(username, display_name)')
+        .select('*, list_items(*), profiles(username, display_name), comments(*, profiles(username, display_name))')
         .eq('id', listId)
         .single();
 
@@ -404,7 +404,7 @@ export async function getThread(listId: string) {
     // 2. Fetch the root list
     const { data: rootList, error: rootError } = await supabase
         .from('lists')
-        .select('*, list_items(*), profiles(username, display_name)')
+        .select('*, list_items(*), profiles(username, display_name), comments(*, profiles(username, display_name))')
         .eq('id', rootListId)
         .single();
 
@@ -416,7 +416,7 @@ export async function getThread(listId: string) {
     // 3. Fetch all children of the root (responses)
     const { data: responses, error: responsesError } = await supabase
         .from('lists')
-        .select('*, list_items(*), profiles(username, display_name)')
+        .select('*, list_items(*), profiles(username, display_name), comments(*, profiles(username, display_name))')
         .eq('parent_id', rootListId)
         .order('created_at', { ascending: true });
 
@@ -760,6 +760,7 @@ export async function getFeedback() {
             return [];
         }
         data = simpleData;
+        error = null; // Clear the error so the next check passes
     }
 
     if (error) {
