@@ -739,8 +739,8 @@ export async function submitFeedback(content: string) {
 export async function getFeedback() {
     const supabase = await createClient();
 
-    // Ensure we're pulling fresh data (not using a cached client)
-    const { data, error } = await supabase
+    // We try to fetch with profiles, but if it fails (e.g. missing FK), we fallback to a simple fetch
+    let { data, error } = await supabase
         .from('feedback')
         .select(`
             *,
@@ -749,10 +749,24 @@ export async function getFeedback() {
         .order('created_at', { ascending: false });
 
     if (error) {
+        console.warn('[getFeedback] Join query failed, falling back to simple select. Error:', error.message);
+        const { data: simpleData, error: simpleError } = await supabase
+            .from('feedback')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (simpleError) {
+            console.error('Get feedback error (simple):', simpleError);
+            return [];
+        }
+        data = simpleData;
+    }
+
+    if (error) {
         console.error('Get feedback error:', error);
         return [];
     }
 
     console.log(`[getFeedback] Successfully fetched ${data?.length || 0} feedback items.`);
-    return data;
+    return data || [];
 }

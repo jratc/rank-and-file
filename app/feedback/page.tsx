@@ -3,6 +3,9 @@ import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Ghost, Calendar, User, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function FeedbackPage() {
     // Force dynamic rendering to ensure fresh feedback
     const feedbackList = await getFeedback();
