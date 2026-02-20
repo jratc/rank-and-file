@@ -30,7 +30,6 @@ const categoryConfig = {
     movies: { label: "MOVIES", color: "text-purple-600" },
     books: { label: "BOOKS & LETTERS", color: "text-amber-700" },
     food: { label: "FOOD & DRINK", color: "text-green-600" },
-    places: { label: "MORE...", color: "text-slate-600" },
     other: { label: "MORE...", color: "text-slate-600" },
 };
 
@@ -223,7 +222,8 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
 
     // Group lists by category
     const groupedLists = activeLists.reduce((acc, list) => {
-        const cat = list.category || 'other';
+        let cat = list.category || 'other';
+        if (cat === 'more' || cat === 'places') cat = 'other';
         if (!acc[cat]) acc[cat] = [];
         acc[cat].push(list);
         return acc;
@@ -916,7 +916,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                     /* No card count displayed */
                                 }
                                 {/* FEATURE: Places Map — Global map button for places categories */}
-                                {['places', 'bars', 'restaurants'].includes(catKey) && lists.length > 0 && (
+                                {['places', 'bars', 'restaurants', 'other'].includes(catKey) && lists.length > 0 && (
                                     <button
                                         onClick={async (e) => {
                                             e.stopPropagation();
