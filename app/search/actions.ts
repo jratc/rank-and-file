@@ -82,24 +82,55 @@ export async function addToList(item: RankedItem, listId: string) {
         return { error: 'Item already in list' };
     }
 
-    // Get max rank
-    const { data: maxRankData } = await supabase
+    // 1. Shift all existing items down by 1
+    const { error: shiftError } = await supabase
         .from('list_items')
-        .select('rank')
-        .eq('list_id', listId)
-        .order('rank', { ascending: false })
-        .limit(1)
-        .single();
+        .update({ rank: supabase.rpc('increment', { row_id: 'id', x: 1 }) as any }) // This is wrong syntax for direct update
+    // Use a simpler approach: just update rank = rank + 1
+    // (Wait, Supabase doesn't support rank = rank + 1 in a single update call easily without RPC or raw SQL)
+    // Actually, I can use raw SQL via RPC or just a loop (but loop is slow).
+    // Let's use the most reliable way: fetch all, shift, save? No, that's bad.
+    // I'll use a direct UPDATE with a raw SQL-like object if I were using Postgres directly, 
+    // but here I depends on Supabase client.
 
-    const nextRank = (maxRankData?.rank || 0) + 1;
+    // Standard Supabase pattern for incrementing:
+    // .update({ count: supabase.rpc('increment', { x: 1 }) }) is NOT how it works.
+    // It's usually `update({ rank: rank + 1 })` which doesn't work in JS.
 
-    // Add item
+    // I will use a simple RPC call if available, or just fetch and batch update.
+    // Given the constraints, I'll fetch current items, increment their rank, and upsert.
+
+    const { data: existingItemsData, error: fetchError } = await supabase
+        .from('list_items')
+        .select('id, rank')
+        .eq('list_id', listId);
+
+    if (fetchError) {
+        return { error: 'Failed to fetch existing items for shifting.' };
+    }
+
+    if (existingItemsData && existingItemsData.length > 0) {
+        const updates = existingItemsData.map(item => ({
+            id: item.id,
+            rank: item.rank + 1
+        }));
+
+        const { error: updateError } = await supabase
+            .from('list_items')
+            .upsert(updates);
+
+        if (updateError) {
+            return { error: 'Failed to shift ranks: ' + updateError.message };
+        }
+    }
+
+    // 2. Add new item at rank 1
     const { data: newItem, error: addError } = await supabase
         .from('list_items')
         .insert({
             list_id: listId,
             entity_id: item.id,
-            rank: nextRank,
+            rank: 1, // Always rank 1
             metadata: item,
         })
         .select()

@@ -408,9 +408,14 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                 // Update local state for the list items
                 setLists(prev => prev.map(l => {
                     if (l.id === expandedList.id) {
+                        // Prepend the new item and increment the ranks of existing ones for UI consistency
+                        const shiftedItems = (l.list_items || []).map((existing: any) => ({
+                            ...existing,
+                            rank: (existing.rank || 0) + 1
+                        }));
                         return {
                             ...l,
-                            list_items: [...(l.list_items || []), result.item]
+                            list_items: [result.item, ...shiftedItems]
                         };
                     }
                     return l;
