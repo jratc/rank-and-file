@@ -30,6 +30,7 @@ const categoryConfig = {
     movies: { label: "MOVIES", color: "text-purple-600" },
     books: { label: "BOOKS & LETTERS", color: "text-amber-700" },
     food: { label: "FOOD & DRINK", color: "text-green-600" },
+    places: { label: "PLACES", color: "text-red-600" },
     other: { label: "MORE...", color: "text-slate-600" },
 };
 
@@ -1046,7 +1047,13 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                             setSearchQuery('');
                             setShowShareOptions(false);
                             setShowMap(false);
+                            setIsWaitingForComment(false);
                             setCreationStep(null);
+                            setPendingListAfterCreate(null);
+                            setIsPopulating(false);
+                            setIsBackgroundPopulating(false);
+                            setIsPopulatingComplete(false);
+                            setPopulatedCount(0);
                             setFreeFormItems(Array(10).fill(''));
                             setWaitingComment('');
                             // Clean up temp list if it was never saved
@@ -1063,6 +1070,14 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                 setSearchQuery('');
                                 setShowShareOptions(false);
                                 setShowMap(false);
+                                setIsWaitingForComment(false);
+                                setCreationStep(null);
+                                setPendingListAfterCreate(null);
+                                setIsPopulating(false);
+                                setIsBackgroundPopulating(false);
+                                setIsPopulatingComplete(false);
+                                setPopulatedCount(0);
+                                setFreeFormItems(Array(10).fill(''));
                                 setWaitingComment('');
                                 // Clean up temp list if it was never saved
                                 if (expandedList.id === 'temp-pending') {
@@ -1086,8 +1101,12 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                 <CardContent className="p-6 pt-2 grid grid-cols-1 gap-3">
                                     <button
                                         onClick={() => {
-                                            setIsWaitingForComment(false);
-                                            setCreationStep('ranking' as any);
+                                            if (pendingListAfterCreate) {
+                                                setCreationStep('waiting');
+                                                startEarlyPopulation(pendingListAfterCreate);
+                                            } else {
+                                                setCreationStep('ranking' as any);
+                                            }
                                         }}
                                         className="group w-full p-4 border-2 border-slate-100 hover:border-black rounded-xl transition-all text-left flex items-start gap-4"
                                     >
