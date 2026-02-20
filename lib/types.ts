@@ -24,10 +24,12 @@ export interface Comment {
     list_id: string;
     content: string;
     created_at: string;
+    parent_id?: string | null;
     profiles?: {
         username: string;
         display_name: string;
     };
+    replies?: Comment[];
 }
 
 // Backward compatibility alias

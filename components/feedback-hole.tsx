@@ -5,7 +5,7 @@ import { useDraggable, useDroppable, DndContext, DragOverlay } from '@dnd-kit/co
 import { CSS } from '@dnd-kit/utilities';
 import { submitFeedback } from '@/app/actions';
 import { toast } from 'sonner';
-import { Ghost, Move, Send, X } from 'lucide-react';
+import { Sparkles, Move, Send, X } from 'lucide-react';
 
 export function FeedbackHole() {
     const [feedback, setFeedback] = useState('');
@@ -24,8 +24,8 @@ export function FeedbackHole() {
 
         try {
             await submitFeedback(feedback);
-            toast.success("Feedback tossed into the void!", {
-                icon: <Ghost className="w-4 h-4" />
+            toast.success("Tossed into the void!", {
+                icon: <Sparkles className="w-4 h-4 text-indigo-400" />
             });
             setIsSubmitted(true);
             setTimeout(() => {
@@ -39,7 +39,7 @@ export function FeedbackHole() {
 
     return (
         <div
-            className="fixed right-4 md:right-8 top-48 md:top-32 z-50 flex flex-col items-center pointer-events-none group"
+            className="fixed right-6 bottom-6 z-50 flex flex-col items-center pointer-events-none group"
             onMouseEnter={() => setIsVisible(true)}
             onMouseLeave={() => !feedback && setIsVisible(false)}
         >
@@ -57,9 +57,9 @@ export function FeedbackHole() {
                     <DroppableHole isActive={!!feedback || isVisible} />
                 </div>
 
-                {/* STABLE INPUT CONTAINER (Now Below) */}
+                {/* STABLE INPUT CONTAINER (Now ABOVE) */}
                 <div
-                    className={`pointer-events-auto bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl border border-slate-200 dark:border-white/10 p-4 rounded-3xl shadow-2xl transition-all duration-300 w-64 -mt-2 ${isSubmitted ? 'scale-90 opacity-0 blur-lg' : isVisible ? 'scale-100 opacity-100 translate-y-2' : 'scale-75 opacity-0 pointer-events-none -translate-y-4'} relative`}
+                    className={`pointer-events-auto bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl border border-slate-200 dark:border-white/10 p-4 rounded-3xl shadow-2xl transition-all duration-300 w-64 mb-4 ${isSubmitted ? 'scale-90 opacity-0 blur-lg' : isVisible ? 'scale-100 opacity-100 -translate-y-2' : 'scale-75 opacity-0 pointer-events-none translate-y-4'} relative`}
                     onClick={(e) => e.stopPropagation()}
                 >
                     <button
@@ -70,8 +70,8 @@ export function FeedbackHole() {
                     </button>
 
                     <textarea
-                        placeholder="Feedback hole..."
-                        className="bg-transparent border-none outline-none text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-400 w-full h-32 resize-none font-medium custom-scrollbar mt-4"
+                        placeholder="Speak to the void..."
+                        className="bg-transparent border-none outline-none text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-400 w-full h-32 resize-none font-medium custom-scrollbar mt-4 uppercase tracking-tighter"
                         value={feedback}
                         onChange={(e) => setFeedback(e.target.value)}
                         disabled={isSubmitted}
@@ -146,7 +146,7 @@ function DroppableHole({ isActive }: { isActive: boolean }) {
 
             <div className={`relative flex flex-col items-center gap-1 transition-all duration-500 ${isOver ? 'scale-50 opacity-10 rotate-180' : 'scale-100'}`}>
                 <div className="w-12 h-12 rounded-full border-2 border-dashed border-white/20 animate-spin-slow flex items-center justify-center">
-                    <Ghost className="text-white/40 w-6 h-6" />
+                    <Sparkles className="text-white/40 w-5 h-5" />
                 </div>
             </div>
 

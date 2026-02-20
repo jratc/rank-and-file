@@ -178,7 +178,7 @@ export const universalProvider = {
                     id: `ai_${Date.now()}_${index}`,
                     name: item.name,
                     subtitle: item.subtitle,
-                    imageUrl: null, // AI doesn't give images yet, maybe we fetch them later or use a generic placeholder icon in frontend
+                    imageUrl: 'https://images.unsplash.com/photo-1516979187457-637abb4f9353?w=400&h=400&fit=crop', // Generic book/info fallback
                     externalUrl: null,
                     provider: 'gemini' as const,
                     category: 'more' as Category,
@@ -257,9 +257,16 @@ export const universalProvider = {
                         // Return the first one that actually has a thumbnail
                         for (const page of sortedPages) {
                             if (page.thumbnail?.source) {
-                                // Filter out generic Wikipedia logos if they leak through
+                                // Filter out generic Wikipedia logos and small icons
                                 const src = page.thumbnail.source.toLowerCase();
-                                if (src.includes('wikipedia-logo') || src.includes('wiki-logo')) continue;
+                                const isGarbage = src.includes('wikipedia-logo') ||
+                                    src.includes('wiki-logo') ||
+                                    src.includes('padlock') ||
+                                    src.includes('icon_') ||
+                                    src.includes('increase_') ||
+                                    src.includes('symbol_') ||
+                                    src.includes('question_mark');
+                                if (isGarbage) continue;
                                 return page.thumbnail.source;
                             }
                         }

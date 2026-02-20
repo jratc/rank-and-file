@@ -602,6 +602,7 @@ export async function getComments(listId: string) {
             list_id,
             content,
             created_at,
+            parent_id,
             profiles (username, display_name)
         `)
         .eq('list_id', listId)
@@ -617,7 +618,7 @@ export async function getComments(listId: string) {
     return data;
 }
 
-export async function addComment(listId: string, content: string) {
+export async function addComment(listId: string, content: string, parentId?: string | null) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -628,7 +629,8 @@ export async function addComment(listId: string, content: string) {
         .insert({
             list_id: listId,
             user_id: user.id,
-            content: content
+            content: content,
+            parent_id: parentId
         })
         .select(`
             *,

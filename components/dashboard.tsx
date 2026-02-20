@@ -1232,7 +1232,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                                                         setEditSession({ id: null, title: null, isExpanded: false });
                                                                     }
                                                                 }}
-                                                                className={`text-3xl font-black tracking-tighter leading-[0.9] min-h-[1em] h-auto p-0 border-none bg-transparent focus-visible:ring-0 uppercase resize-none overflow-hidden placeholder:text-slate-300 placeholder:font-black placeholder:uppercase ${expandedList.id === 'temp-pending' && !editSession.title?.trim() ? 'text-slate-300' : 'text-slate-900'}`}
+                                                                className={`text-3xl font-black tracking-tighter leading-tight min-h-[1.2em] h-auto p-0 border-none bg-transparent focus-visible:ring-0 uppercase resize-none placeholder:text-slate-300 placeholder:font-black placeholder:uppercase ${expandedList.id === 'temp-pending' && !editSession.title?.trim() ? 'text-slate-300' : 'text-slate-900'}`}
                                                                 rows={1}
                                                             />
                                                             {isUpdatingTitle && <span className="text-[8px] font-mono text-slate-400">FETCHING LIST...</span>}
@@ -1243,7 +1243,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                                                 if (currentUserId !== expandedList.user_id) return;
                                                                 setEditSession({ id: expandedList.id, title: expandedList.title.toUpperCase(), isExpanded: true });
                                                             }}
-                                                            className={`text-3xl font-black tracking-tighter text-slate-900 leading-[0.9] py-0.5 rounded break-words whitespace-pre-wrap ${currentUserId === expandedList.user_id ? 'cursor-text hover:text-slate-500 transition-colors' : 'cursor-default'}`}
+                                                            className={`text-3xl font-black tracking-tighter text-slate-900 leading-tight py-0.5 rounded break-words whitespace-pre-wrap ${currentUserId === expandedList.user_id ? 'cursor-text hover:text-slate-500 transition-colors' : 'cursor-default'}`}
                                                         >
                                                             {expandedList.title.toUpperCase()}
                                                         </CardTitle>
@@ -1265,9 +1265,9 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                                                     e.stopPropagation();
                                                                     setShowShareOptions(!showShareOptions);
                                                                 }}
-                                                                className="h-7 px-3 text-[9px] font-black tracking-widest uppercase bg-slate-900 hover:bg-black text-white rounded-md flex items-center gap-1.5"
+                                                                className="h-8 px-4 text-[10px] font-black tracking-widest uppercase bg-slate-900 hover:bg-black text-white rounded-md flex items-center gap-2 shadow-sm transition-all"
                                                             >
-                                                                <Share2 className="h-2.5 w-2.5" />
+                                                                <Share2 className="h-3 w-3" />
                                                                 SHARE
                                                             </Button>
 
@@ -1418,7 +1418,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                             </div>
 
                                             {/* INTEGRATED COMMENT AREA (Description) */}
-                                            {currentUserId === expandedList.user_id && (
+                                            {currentUserId === expandedList.user_id ? (
                                                 <div className="mt-2 group">
                                                     <Textarea
                                                         placeholder={isPopulating ? "Building your list... jot down some notes?" : "Jot down some notes-what should people know about your list?"}
@@ -1436,6 +1436,12 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                                         }}
                                                         className="min-h-[60px] max-h-[120px] font-bold text-sm resize-none border-none bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus-visible:ring-1 focus-visible:ring-slate-100 rounded-xl p-3 placeholder:opacity-40 transition-all overflow-y-auto"
                                                     />
+                                                </div>
+                                            ) : waitingComment && (
+                                                <div className="mt-2 px-3 py-2 bg-slate-50/50 rounded-xl border border-slate-100/50">
+                                                    <p className="text-xs font-medium text-slate-600 italic leading-relaxed">
+                                                        "{waitingComment}"
+                                                    </p>
                                                 </div>
                                             )}
                                         </div>
@@ -1480,12 +1486,23 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                                         >
                                                             <div className="flex items-center justify-between px-3 py-2 border-b border-slate-50 mb-1">
                                                                 <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Search Results</span>
-                                                                <button
-                                                                    onClick={() => setSearchResults([])}
-                                                                    className="text-[9px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-700"
-                                                                >
-                                                                    Close
-                                                                </button>
+                                                                <div className="flex items-center gap-3">
+                                                                    {(expandedList.category === 'places' || expandedList.category === 'food') && searchResults.length > 0 && (
+                                                                        <button
+                                                                            onClick={() => setShowMap(!showMap)}
+                                                                            className="text-[9px] font-black uppercase tracking-widest text-green-600 hover:text-green-700 flex items-center gap-1"
+                                                                        >
+                                                                            <MapPin className="h-2.5 w-2.5" />
+                                                                            {showMap ? 'Hide Map' : 'View on Map'}
+                                                                        </button>
+                                                                    )}
+                                                                    <button
+                                                                        onClick={() => setSearchResults([])}
+                                                                        className="text-[9px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-700"
+                                                                    >
+                                                                        Close
+                                                                    </button>
+                                                                </div>
                                                             </div>
                                                             <div className="space-y-0.5">
                                                                 {searchResults.map((item) => (

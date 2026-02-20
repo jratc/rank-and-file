@@ -25,13 +25,8 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
     const [editListId, setEditListId] = useState<string | null>(initialDraftId || null);
     const [currentIndex, setCurrentIndex] = useState(() => {
         // If editing, start at the root (0) to compare, or find the response index?
-        // Usually we want to compare with the root.
         if (initialDraftId) return 0;
-
-        // If viewing thread (not editing) and there are responses, start at first response
-        if (thread.length > 1) {
-            return 1;
-        }
+        if (thread.length > 1) return 1;
         return 0;
     });
 
@@ -42,7 +37,6 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
         userId: string | null;
     }>({ isOpen: false, listId: null, listTitle: "", userId: null });
 
-    // Share state
     const [showShareOptions, setShowShareOptions] = useState(false);
 
     const handleCopyLink = (listId: string) => {
@@ -71,13 +65,11 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
     // Keyboard navigation
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            // Ignore if user is typing in an input
             if (document.activeElement?.tagName === 'INPUT' ||
                 document.activeElement?.tagName === 'TEXTAREA' ||
                 (document.activeElement as HTMLElement)?.isContentEditable) {
                 return;
             }
-
             if (e.key === 'ArrowLeft') prevItem();
             if (e.key === 'ArrowRight') nextItem();
             if (e.key === 'Escape') onClose();
@@ -117,7 +109,7 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
                         <button
                             onClick={prevItem}
                             disabled={currentIndex === 0}
-                            className="p-2 bg-white/10 text-white rounded-full hover:bg-white/20 disabled:opacity-0 transition-all shadow-xl backdrop-blur-md"
+                            className={`p-2 bg-white/10 text-white rounded-full hover:bg-white/20 transition-all shadow-xl backdrop-blur-md ${thread.length <= 2 ? 'invisible' : 'disabled:opacity-0'}`}
                         >
                             <ChevronLeft className="h-8 w-8" />
                         </button>
@@ -227,7 +219,7 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
                             </div>
                         </div>
 
-                        {/* List Note (Comment from Author) */}
+                        {/* List Note (Comment from Author) - TOP POSITION */}
                         {(() => {
                             const authorNote = currentThreadItem.comments?.find((c: any) => c.user_id === currentThreadItem.user_id);
                             if (!authorNote) return null;
@@ -262,7 +254,7 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
                             </div>
 
                             <div className="flex items-center gap-2">
-                                {/* Respond button in browse mode - HIDE if user already has a response in thread */}
+                                {/* Respond button in browse mode */}
                                 {!isEditing &&
                                     currentUserId !== currentThreadItem.user_id &&
                                     onStartResponse &&
@@ -275,7 +267,7 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
                                         </button>
                                     )}
 
-                                {/* Add your thoughts (Comments) Button - ONLY for Original List */}
+                                {/* Thoughts Button */}
                                 {currentIndex === 0 && (!isEditing || currentUserId !== currentThreadItem.user_id) && (
                                     <button
                                         onClick={() => setCommentModal({
@@ -292,7 +284,7 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
                                     </button>
                                 )}
 
-                                {/* Owner Actions (Edit/Delete) */}
+                                {/* Owner Actions */}
                                 {currentUserId === currentThreadItem.user_id && (
                                     <div className="flex items-center gap-1">
                                         <button
@@ -307,7 +299,7 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
                                                     await deleteList(currentThreadItem.id);
                                                     toast.success('Response deleted');
                                                     onClose();
-                                                    window.location.reload(); // Refresh to update list
+                                                    window.location.reload();
                                                 }
                                             }}
                                             className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-lg transition-colors"
@@ -327,13 +319,13 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
                     <button
                         onClick={nextItem}
                         disabled={currentIndex === thread.length - 1}
-                        className="p-2 bg-white/10 text-white rounded-full hover:bg-white/20 disabled:opacity-0 transition-all shadow-xl backdrop-blur-md"
+                        className={`p-2 bg-white/10 text-white rounded-full hover:bg-white/20 transition-all shadow-xl backdrop-blur-md ${thread.length <= 2 ? 'invisible' : 'disabled:opacity-0'}`}
                     >
                         <ChevronRight className="h-8 w-8" />
                     </button>
                 </div>
 
-                {/* RIGHT CARD: EDITOR — only when actively editing a response */}
+                {/* RIGHT CARD: EDITOR */}
                 {isEditing && (
                     <div className="flex flex-col relative w-full h-full lg:flex-1">
                         <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border-2 border-yellow-400 dark:border-yellow-500/50 flex flex-col h-full w-full">
@@ -357,7 +349,7 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
                                 contextTitle={thread[0]?.title || currentThreadItem.title}
                                 onClose={() => {
                                     setEditListId(null);
-                                    if (initialDraftId) onClose(); // If it was the initial reason for the modal, close it all
+                                    if (initialDraftId) onClose();
                                 }}
                             />
                         </div>

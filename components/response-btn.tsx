@@ -11,9 +11,10 @@ interface ResponseBtnProps {
     parentListId: string;
     parentTitle: string;
     onResponseCreated?: (newList: any) => void;
+    className?: string;
 }
 
-export function ResponseBtn({ parentListId, parentTitle, onResponseCreated, existingResponseId }: ResponseBtnProps & { existingResponseId?: string | null }) {
+export function ResponseBtn({ parentListId, parentTitle, onResponseCreated, existingResponseId, className }: ResponseBtnProps & { existingResponseId?: string | null }) {
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
 
@@ -60,9 +61,9 @@ export function ResponseBtn({ parentListId, parentTitle, onResponseCreated, exis
             disabled={isLoading}
             variant={existingResponseId ? "default" : "outline"}
             size="sm"
-            className={`gap-2 ${existingResponseId ? 'bg-yellow-400 hover:bg-yellow-500 text-black border-yellow-400' : ''}`}
+            className={`h-8 px-4 text-[10px] font-black tracking-widest uppercase rounded-md flex items-center gap-2 shadow-sm transition-all ${existingResponseId ? 'bg-yellow-400 hover:bg-yellow-500 text-black border-yellow-400' : ''} ${className || ''}`}
         >
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquarePlus className="h-4 w-4" />}
+            {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <MessageSquarePlus className="h-3 w-3" />}
             {existingResponseId ? "YOUR RESPONSE" : "RESPOND"}
         </Button>
     );

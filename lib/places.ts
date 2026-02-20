@@ -239,7 +239,19 @@ export async function searchPlaces(query: string, category: Category, context?: 
                     }
 
                     return validPlaces.map((place: any) => {
-                        let imageUrl = 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=400&fit=crop';
+                        // Better category-based fallback
+                        const fallbackUnsplash = category === 'bars' ? 'bar' :
+                            category === 'restaurants' || category === 'food' ? 'restaurant' :
+                                'place';
+                        let imageUrl = `https://images.unsplash.com/photo-category-${fallbackUnsplash}?w=400&h=400&fit=crop`;
+                        // Real Unsplash generic fallback for restaurants, bars, etc
+                        if (category === 'bars') {
+                            imageUrl = 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=400&h=400&fit=crop'; // Cocktail/Bar
+                        } else if (category === 'restaurants' || category === 'food') {
+                            imageUrl = 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=400&fit=crop'; // Restaurant
+                        } else {
+                            imageUrl = 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=400&h=400&fit=crop'; // Travel/Place
+                        }
 
                         if (place.photos && place.photos.length > 0) {
                             imageUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${place.photos[0].photo_reference}&key=${apiKey}`;
