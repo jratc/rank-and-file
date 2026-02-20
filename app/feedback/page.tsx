@@ -1,8 +1,10 @@
 import { getFeedback } from '@/app/actions';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
-import { Ghost, Calendar, User } from 'lucide-react';
+import { Ghost, Calendar, User, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 export default async function FeedbackPage() {
+    // Force dynamic rendering to ensure fresh feedback
     const feedbackList = await getFeedback();
 
     return (
@@ -13,6 +15,13 @@ export default async function FeedbackPage() {
                         <Ghost className="w-8 h-8 text-white dark:text-black" />
                     </div>
                     <div>
+                        <Link
+                            href="/"
+                            className="inline-flex items-center gap-2 mb-6 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors group"
+                        >
+                            <ArrowLeft className="w-3 h-3 transition-transform group-hover:-translate-x-1" />
+                            Back to Lists
+                        </Link>
                         <h1 className="text-4xl font-black uppercase tracking-tighter text-slate-900 dark:text-white">
                             The Feedback Void
                         </h1>

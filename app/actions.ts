@@ -695,7 +695,9 @@ export async function deleteComment(commentId: string) {
 
 export async function submitFeedback(content: string) {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: authData } = await supabase.auth.getUser();
+    const authUser = authData?.user;
+    const user = IS_AUTH_DISABLED ? MOCK_USER : authUser;
 
     // Get profile if available to "link" it in the log
     const { data: profile } = user ? await supabase
@@ -704,15 +706,18 @@ export async function submitFeedback(content: string) {
         .eq('id', user.id)
         .single() : { data: null };
 
-    const isMockUser = user?.id === '00000000-0000-0000-0000-000000000000';
-    console.log(`[submitFeedback] Submitting feedback. User: ${user?.id}, Is Mock: ${isMockUser}`);
+    console.log(`[submitFeedback] Submitting feedback. User: ${user?.id}, Is Mock: ${IS_AUTH_DISABLED}`);
 
     const { error } = await supabase
         .from('feedback')
         .insert({
-            user_id: user?.id || null, // Allow fallback but preferably use the UID
+            user_id: user?.id || null,
             content: content
         });
+
+    if (!error) {
+        revalidatePath('/feedback');
+    }
 
     if (error) {
         console.error('Submit feedback DATABASE ERROR:', {
@@ -733,9 +738,8 @@ export async function submitFeedback(content: string) {
 
 export async function getFeedback() {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
 
-    // In a real app, only admins would see this. For this implementation, we'll allow it.
+    // Ensure we're pulling fresh data (not using a cached client)
     const { data, error } = await supabase
         .from('feedback')
         .select(`
