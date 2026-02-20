@@ -888,7 +888,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
 
             {/* CATEGORY GRID / SWIPE VIEW */}
             <div className={`
-                flex flex-row overflow-x-auto snap-x snap-mandatory gap-4 pb-8 -mx-4 px-4 
+                flex flex-col gap-8 pb-8
                 md:grid md:grid-cols-2 md:gap-6 md:overflow-visible md:pb-0 md:mx-0 md:px-0
                 lg:grid-cols-3 xl:grid-cols-5 
                 transition-all duration-500 
@@ -901,8 +901,8 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
 
                     return (
                         <div key={catKey} className="
-                            min-w-[85vw] snap-center 
-                            md:min-w-0 md:w-auto md:snap-align-none
+                            w-full
+                            md:min-w-0 md:w-auto
                             flex flex-col gap-4 group/cat
                         ">
                             <div

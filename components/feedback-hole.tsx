@@ -39,7 +39,7 @@ export function FeedbackHole() {
 
     return (
         <div
-            className="fixed right-8 top-32 z-50 flex flex-col items-center pointer-events-none group"
+            className="fixed right-4 md:right-8 top-48 md:top-32 z-50 flex flex-col items-center pointer-events-none group"
             onMouseEnter={() => setIsVisible(true)}
             onMouseLeave={() => !feedback && setIsVisible(false)}
         >
