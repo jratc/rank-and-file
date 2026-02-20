@@ -260,8 +260,6 @@ export function RankingList({
             setItems(newItems);
             saveOrder(newItems);
             if (onChange) onChange(newItems);
-
-            toast.success('Moved to #1!');
         } else {
             console.log('Item is already at #1, ignoring.');
         }

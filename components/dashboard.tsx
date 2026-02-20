@@ -1540,7 +1540,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                             </div>
                                         )}
                                         {/* FEATURE: Places Map — inline map toggle */}
-                                        {['places', 'bars', 'restaurants'].includes(expandedList.category) && expandedList.list_items.length > 0 && (
+                                        {['places', 'bars', 'restaurants', 'other', 'more'].includes(expandedList.category) && itemsToPlaces(expandedList.list_items).length > 0 && (
                                             <div className="mt-4 pt-3 border-t border-slate-100">
                                                 <button
                                                     onClick={() => {

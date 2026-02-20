@@ -226,6 +226,13 @@ export const universalProvider = {
                 }
             }
 
+            // 3. SPECIAL CONTEXT: Handle Peloton / Fitness Instructors
+            if (/peloton|peleton|instructor|fitness/i.test(query)) {
+                const pQuery = cleanedQuery.replace(/peleton/i, 'Peloton');
+                if (!searchQueries.includes(pQuery)) searchQueries.push(pQuery);
+                searchQueries.push(`${pQuery} instructor`);
+            }
+
             // Final fallback for Wikipedia search
             searchQueries.push(`${cleanedQuery} wiki`);
 

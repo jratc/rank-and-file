@@ -39,22 +39,27 @@ export function FeedbackHole() {
 
     return (
         <div
-            className="fixed right-8 top-32 z-50 flex flex-col items-center gap-4 group pointer-events-none"
+            className="fixed right-8 top-32 z-50 flex flex-col items-center pointer-events-none group"
             onMouseEnter={() => setIsVisible(true)}
             onMouseLeave={() => !feedback && setIsVisible(false)}
         >
             <DndContext onDragEnd={handleDragEnd}>
+                {/* 
+                    The Parent Container (className above) wraps both Hole and Window.
+                    We move the window closer to the hole to ensure no "dead air" gap.
+                */}
+
                 {/* The Hole (Now on Top) */}
                 <div
                     onClick={() => setIsVisible(!isVisible)}
-                    className="pointer-events-auto cursor-pointer relative z-10"
+                    className="pointer-events-auto cursor-pointer relative z-10 p-2"
                 >
                     <DroppableHole isActive={!!feedback || isVisible} />
                 </div>
 
                 {/* STABLE INPUT CONTAINER (Now Below) */}
                 <div
-                    className={`pointer-events-auto bg-slate-900/5 dark:bg-white/5 backdrop-blur-xl border border-slate-200 dark:border-white/10 p-4 rounded-3xl shadow-2xl transition-all duration-500 w-64 ${isSubmitted ? 'scale-90 opacity-0 blur-lg' : isVisible ? 'scale-100 opacity-100 translate-y-0' : 'scale-75 opacity-0 pointer-events-none -translate-y-8'} relative`}
+                    className={`pointer-events-auto bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl border border-slate-200 dark:border-white/10 p-4 rounded-3xl shadow-2xl transition-all duration-300 w-64 -mt-2 ${isSubmitted ? 'scale-90 opacity-0 blur-lg' : isVisible ? 'scale-100 opacity-100 translate-y-2' : 'scale-75 opacity-0 pointer-events-none -translate-y-4'} relative`}
                     onClick={(e) => e.stopPropagation()}
                 >
                     <button
@@ -70,6 +75,7 @@ export function FeedbackHole() {
                         value={feedback}
                         onChange={(e) => setFeedback(e.target.value)}
                         disabled={isSubmitted}
+                        autoFocus={isVisible}
                     />
 
                     <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-200/50 dark:border-white/10">
