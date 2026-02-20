@@ -706,7 +706,7 @@ export async function submitFeedback(content: string) {
         .eq('id', user.id)
         .single() : { data: null };
 
-    const isMockUser = user?.id === '00000000-0000-0000-0000-000000000001';
+    const isMockUser = user?.id === '00000000-0000-0000-0000-000000000000';
 
     const { error } = await supabase
         .from('feedback')

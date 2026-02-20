@@ -185,16 +185,28 @@ export function RankingList({
 
     const handleRemove = async (itemId: string) => {
         if (readOnly) return;
-        const newItems = items.filter(i => i.id !== itemId);
-        setItems(newItems); // Optimistic update
 
-        const result = await deleteListItem(itemId);
-        if (result.error) {
+        // 1. Snapshot for rollback
+        const previousItems = [...items];
+
+        // 2. Optimistic update
+        const newItems = items.filter(i => i.id !== itemId);
+        setItems(newItems);
+        if (onChange) onChange(newItems);
+
+        try {
+            const result = await deleteListItem(itemId);
+            if (result.error) {
+                toast.error(result.error || 'Failed to delete item');
+                setItems(previousItems); // Rollback
+                if (onChange) onChange(previousItems);
+            } else {
+                toast.success('Item removed');
+            }
+        } catch (e) {
             toast.error('Failed to delete item');
-            setItems(items); // Revert
-        } else {
-            toast.success('Item removed');
-            if (onChange) onChange(newItems);
+            setItems(previousItems); // Rollback
+            if (onChange) onChange(previousItems);
         }
     };
 
@@ -408,7 +420,7 @@ export function RankingList({
             )}
 
             {/* Load More Ideas Button (Fetch) */}
-            {!readOnly && title && items.length <= displayLimit && (
+            {!readOnly && title && items.length <= displayLimit && !isPopulating && (
                 <div className="mt-8 flex justify-center">
                     <button
                         onClick={async () => {

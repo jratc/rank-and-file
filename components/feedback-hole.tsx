@@ -5,11 +5,12 @@ import { useDraggable, useDroppable, DndContext, DragOverlay } from '@dnd-kit/co
 import { CSS } from '@dnd-kit/utilities';
 import { submitFeedback } from '@/app/actions';
 import { toast } from 'sonner';
-import { Ghost, Move, Send } from 'lucide-react';
+import { Ghost, Move, Send, X } from 'lucide-react';
 
 export function FeedbackHole() {
     const [feedback, setFeedback] = useState('');
     const [isSubmitted, setIsSubmitted] = useState(false);
+    const [isVisible, setIsVisible] = useState(false);
 
     const handleDragEnd = async (event: any) => {
         const { over } = event;
@@ -37,13 +38,27 @@ export function FeedbackHole() {
     };
 
     return (
-        <div className="fixed right-8 bottom-24 z-50 flex flex-col items-end gap-4 pointer-events-none">
+        <div
+            className="fixed right-8 top-24 z-50 flex flex-col items-end gap-4 pointer-events-none"
+            onMouseEnter={() => setIsVisible(true)}
+            onMouseLeave={() => !feedback && setIsVisible(false)}
+        >
             <DndContext onDragEnd={handleDragEnd}>
                 {/* STABLE INPUT CONTAINER */}
-                <div className={`pointer-events-auto bg-slate-900/5 dark:bg-white/5 backdrop-blur-xl border border-slate-200 dark:border-white/10 p-4 rounded-3xl shadow-2xl transition-all duration-500 w-64 ${isSubmitted ? 'scale-90 opacity-0 blur-lg' : 'scale-100 opacity-100'} group`}>
+                <div
+                    className={`pointer-events-auto bg-slate-900/5 dark:bg-white/5 backdrop-blur-xl border border-slate-200 dark:border-white/10 p-4 rounded-3xl shadow-2xl transition-all duration-500 w-64 ${isSubmitted ? 'scale-90 opacity-0 blur-lg' : isVisible ? 'scale-100 opacity-100 translate-y-0' : 'scale-75 opacity-0 pointer-events-none -translate-y-8'} group relative`}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <button
+                        onClick={() => { setIsVisible(false); setFeedback(''); }}
+                        className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
+
                     <textarea
                         placeholder="Feedback hole..."
-                        className="bg-transparent border-none outline-none text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-400 w-full h-32 resize-none font-medium custom-scrollbar"
+                        className="bg-transparent border-none outline-none text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-400 w-full h-32 resize-none font-medium custom-scrollbar mt-4"
                         value={feedback}
                         onChange={(e) => setFeedback(e.target.value)}
                         disabled={isSubmitted}
@@ -60,7 +75,9 @@ export function FeedbackHole() {
                 </div>
 
                 {/* The Hole */}
-                <DroppableHole isActive={!!feedback} />
+                <div onClick={() => setIsVisible(!isVisible)} className="pointer-events-auto cursor-pointer">
+                    <DroppableHole isActive={!!feedback || isVisible} />
+                </div>
 
                 <DragOverlay>
                     {feedback ? (

@@ -30,7 +30,7 @@ const categoryConfig = {
     movies: { label: "MOVIES", color: "text-purple-600" },
     books: { label: "BOOKS & LETTERS", color: "text-amber-700" },
     food: { label: "FOOD & DRINK", color: "text-green-600" },
-    places: { label: "PLACES", color: "text-red-600" },
+    places: { label: "MORE...", color: "text-slate-600" },
     other: { label: "MORE...", color: "text-slate-600" },
 };
 
