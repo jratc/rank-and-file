@@ -1,7 +1,18 @@
--- Migration: Fix RLS policies to allow the mock/bypass user
+-- Consolidated Migration: Create Feedback Table and Fix RLS for Mock User
 -- Mock User ID: 00000000-0000-0000-0000-000000000000
 
--- 1. Update LISTS policies
+-- 1. Create feedback table if it doesn't exist
+CREATE TABLE IF NOT EXISTS public.feedback (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID, -- No FK constraint to auth.users for mock mode flexibility
+    content TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Ensure RLS is enabled
+ALTER TABLE public.feedback ENABLE ROW LEVEL SECURITY;
+
+-- 2. Update LISTS policies
 DROP POLICY IF EXISTS "Users can insert own lists" ON public.lists;
 CREATE POLICY "Users can insert own lists" ON public.lists
 FOR INSERT WITH CHECK (
@@ -20,7 +31,7 @@ FOR DELETE USING (
   auth.uid() = user_id OR user_id = '00000000-0000-0000-0000-000000000000'
 );
 
--- 2. Update LIST_ITEMS policies
+-- 3. Update LIST_ITEMS policies
 DROP POLICY IF EXISTS "Users can insert own list items" ON public.list_items;
 CREATE POLICY "Users can insert own list items" ON public.list_items
 FOR INSERT WITH CHECK (
@@ -51,15 +62,21 @@ FOR DELETE USING (
   )
 );
 
--- 3. Feedback table robust access (Final fix)
+-- 4. Feedback table robust access (Final fix)
+DROP POLICY IF EXISTS "Allow authenticated users to insert feedback" ON public.feedback;
+DROP POLICY IF EXISTS "Allow anonymous users to insert feedback" ON public.feedback;
 DROP POLICY IF EXISTS "Allow anyone to insert feedback" ON public.feedback;
 CREATE POLICY "Allow anyone to insert feedback" 
 ON public.feedback FOR INSERT 
 TO authenticated, anon
 WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Allow authenticated users to view feedback" ON public.feedback;
+DROP POLICY IF EXISTS "Allow anonymous users to view feedback" ON public.feedback;
 DROP POLICY IF EXISTS "Allow anyone to view feedback" ON public.feedback;
 CREATE POLICY "Allow anyone to view feedback" 
 ON public.feedback FOR SELECT 
 TO authenticated, anon
 USING (true);
+
+SELECT 'Consolidated migration complete!' AS status;

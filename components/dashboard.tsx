@@ -584,22 +584,17 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                 await updateListTitle(pendingListAfterCreate.id, editSession.title.trim().toUpperCase());
             }
 
-            await addItemsToList(pendingListAfterCreate.id, validItems);
+            const result = await addItemsToList(pendingListAfterCreate.id, validItems);
 
-            // Update local state so it shows up immediately
+            // Update local state so it shows up immediately with STABLE IDs
             const newListWithItems = {
                 ...pendingListAfterCreate,
                 title: editSession.title?.trim().toUpperCase() || pendingListAfterCreate.title,
-                list_items: validItems.map((name, idx) => ({
-                    id: `temp-${idx}`,
-                    name,
-                    rank_position: idx + 1,
-                    metadata: {
-                        name,
-                        subtitle: 'Manual Entry',
-                        imageUrl: null,
-                        provider: 'manual'
-                    }
+                list_items: (result.items || []).map((row: any) => ({
+                    id: row.id || row.entity_id,
+                    name: row.metadata?.name,
+                    rank_position: row.rank,
+                    metadata: row.metadata
                 }))
             };
 
@@ -702,12 +697,12 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                 setIsUpdatingTitle(false);
 
                 // START EARLY POPULATION
-                if (newList.category !== 'other') {
+                if (newList.category !== 'other' && newList.category !== 'places') {
                     startEarlyPopulation(newList);
                 }
 
-                // FOR 'MORE' CATEGORY, ASK AI VS MANUAL
-                if (newList.category === 'other') {
+                // FOR 'MORE' CATEGORIES, ASK AI VS MANUAL
+                if (newList.category === 'other' || newList.category === 'places') {
                     setCreationStep('choosing');
                     return;
                 }
@@ -1402,7 +1397,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                             {currentUserId === expandedList.user_id && (
                                                 <div className="mt-2 group">
                                                     <Textarea
-                                                        placeholder={isPopulating ? "Building your list... why is this topic important?" : "Why is this list important to you?"}
+                                                        placeholder={isPopulating ? "Building your list... jot down some notes?" : "Jot down some notes-what should people know about your list?"}
                                                         value={waitingComment}
                                                         autoFocus={isWaitingForComment}
                                                         onChange={(e) => {

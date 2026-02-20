@@ -107,17 +107,15 @@ export async function addItemsToList(listId: string, items: string[]) {
         }
     }));
 
-    const { error } = await supabase
+    const { data: insertedData, error } = await supabase
         .from('list_items')
-        .insert(insertData);
+        .insert(insertData)
+        .select();
 
-    if (error) {
-        console.error('Add items error:', error);
-        throw new Error(error.message);
-    }
+    if (error) throw error;
 
     revalidatePath('/');
-    return { success: true, count: filteredItems.length };
+    return { success: true, count: finalItems.length, items: insertedData };
 }
 
 export async function findListByTitle(title: string) {
@@ -707,11 +705,12 @@ export async function submitFeedback(content: string) {
         .single() : { data: null };
 
     const isMockUser = user?.id === '00000000-0000-0000-0000-000000000000';
+    console.log(`[submitFeedback] Submitting feedback. User: ${user?.id}, Is Mock: ${isMockUser}`);
 
     const { error } = await supabase
         .from('feedback')
         .insert({
-            user_id: (user && !isMockUser) ? user.id : null,
+            user_id: user?.id || null, // Allow fallback but preferably use the UID
             content: content
         });
 
@@ -750,5 +749,6 @@ export async function getFeedback() {
         return [];
     }
 
+    console.log(`[getFeedback] Successfully fetched ${data?.length || 0} feedback items.`);
     return data;
 }

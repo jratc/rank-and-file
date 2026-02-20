@@ -39,14 +39,22 @@ export function FeedbackHole() {
 
     return (
         <div
-            className="fixed right-8 top-24 z-50 flex flex-col items-end gap-4 pointer-events-none"
+            className="fixed right-8 top-32 z-50 flex flex-col items-center gap-4 group pointer-events-none"
             onMouseEnter={() => setIsVisible(true)}
             onMouseLeave={() => !feedback && setIsVisible(false)}
         >
             <DndContext onDragEnd={handleDragEnd}>
-                {/* STABLE INPUT CONTAINER */}
+                {/* The Hole (Now on Top) */}
                 <div
-                    className={`pointer-events-auto bg-slate-900/5 dark:bg-white/5 backdrop-blur-xl border border-slate-200 dark:border-white/10 p-4 rounded-3xl shadow-2xl transition-all duration-500 w-64 ${isSubmitted ? 'scale-90 opacity-0 blur-lg' : isVisible ? 'scale-100 opacity-100 translate-y-0' : 'scale-75 opacity-0 pointer-events-none -translate-y-8'} group relative`}
+                    onClick={() => setIsVisible(!isVisible)}
+                    className="pointer-events-auto cursor-pointer relative z-10"
+                >
+                    <DroppableHole isActive={!!feedback || isVisible} />
+                </div>
+
+                {/* STABLE INPUT CONTAINER (Now Below) */}
+                <div
+                    className={`pointer-events-auto bg-slate-900/5 dark:bg-white/5 backdrop-blur-xl border border-slate-200 dark:border-white/10 p-4 rounded-3xl shadow-2xl transition-all duration-500 w-64 ${isSubmitted ? 'scale-90 opacity-0 blur-lg' : isVisible ? 'scale-100 opacity-100 translate-y-0' : 'scale-75 opacity-0 pointer-events-none -translate-y-8'} relative`}
                     onClick={(e) => e.stopPropagation()}
                 >
                     <button
@@ -72,11 +80,6 @@ export function FeedbackHole() {
                             <TossHandle />
                         )}
                     </div>
-                </div>
-
-                {/* The Hole */}
-                <div onClick={() => setIsVisible(!isVisible)} className="pointer-events-auto cursor-pointer">
-                    <DroppableHole isActive={!!feedback || isVisible} />
                 </div>
 
                 <DragOverlay>

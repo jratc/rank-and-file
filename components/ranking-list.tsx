@@ -9,7 +9,7 @@ import { RankedItemCard } from './ranked-item-card';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     DndContext,
     closestCenter,
@@ -64,25 +64,29 @@ export function RankingList({
             coordinateGetter: sortableKeyboardCoordinates,
         })
     );
+    const prevInitialItemsLength = useRef(initialItems.length);
 
     // Sync items from props, BUT only if the list ID has changed 
-    // or if we aren't currently streaming in new items in the background.
-    // Sync items from props
+    // or if the initialItems prop has actually changed from the outside.
     useEffect(() => {
-        if (listId !== prevListId) {
+        const idChanged = listId !== prevListId;
+        const propLengthChanged = initialItems.length !== prevInitialItemsLength.current;
+
+        if (idChanged) {
             setItems(initialItems);
             setPrevListId(listId);
-            setDisplayLimit(15); // Reset limit for new list
-        } else if (initialItems.length !== items.length) {
-            // Always sync if count changed (e.g. background population finished or started)
+            setDisplayLimit(15);
+            prevInitialItemsLength.current = initialItems.length;
+        } else if (propLengthChanged || isPopulating) {
+            // Only sync if the prop actually changed or we are populating
             setItems(initialItems);
+            prevInitialItemsLength.current = initialItems.length;
 
-            // AUTO-EXPAND: If we are populating, keep the display limit synced with items count
             if (isPopulating) {
-                setDisplayLimit(initialItems.length);
+                setDisplayLimit(Math.max(15, initialItems.length));
             }
         }
-    }, [initialItems, listId, prevListId, items.length, isPopulating]);
+    }, [initialItems, listId, prevListId, isPopulating]);
 
     // REALTIME SUBSCRIPTION
     useEffect(() => {
@@ -248,18 +252,18 @@ export function RankingList({
         const oldIndex = items.findIndex((item) => item.id === itemId);
         console.log('Item Index:', oldIndex);
 
-        // Only promote if item is below rank 10 (index > 9)
-        if (oldIndex > 9) {
-            const newIndex = 9; // Rank 10
+        // Promote to rank 1 (index 0)
+        if (oldIndex > 0) {
+            const newIndex = 0; // Rank 1
             const newItems = arrayMove(items, oldIndex, newIndex);
 
             setItems(newItems);
             saveOrder(newItems);
             if (onChange) onChange(newItems);
 
-            toast.success('Moved to Top 10!');
+            toast.success('Moved to #1!');
         } else {
-            console.log('Item is already in Top 10, ignoring.');
+            console.log('Item is already at #1, ignoring.');
         }
     };
 
