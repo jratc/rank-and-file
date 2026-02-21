@@ -39,12 +39,12 @@ export function RankedItemCard({
                     />
                 </div>
 
-                <div className="min-w-0 flex-1 py-0.5 w-full text-left pr-10">
-                    <h4 className="font-black text-base tracking-tighter leading-tight break-words whitespace-pre-wrap text-slate-900 uppercase w-full">
+                <div className="min-w-0 flex-1 py-0.5 w-full text-left pr-8">
+                    <h4 className="font-black text-sm tracking-tighter leading-tight text-slate-900 uppercase w-full line-clamp-1 break-all">
                         {item.metadata.name}
                     </h4>
-                    <div className="flex items-center gap-2 mt-1">
-                        <p className="font-mono text-[10px] font-bold text-slate-400 tracking-widest uppercase truncate">
+                    <div className="flex items-center gap-2 mt-0.5 min-w-0">
+                        <p className="font-mono text-[9px] font-bold text-slate-400 tracking-widest uppercase truncate flex-1 min-w-0">
                             {item.metadata.subtitle}
                         </p>
                         {(item.metadata.lat || item.metadata.rawMetadata?.geometry?.location || item.metadata.rawMetadata?.geometry?.coordinates) && (

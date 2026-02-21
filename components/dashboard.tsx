@@ -257,7 +257,8 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
     }, [isGlobalSearchExpanded]);
 
     const handleDelete = async (id: string, force: boolean = false) => {
-        if (!force && !confirm('Are you sure you want to delete this list?')) return;
+        // Remove confirmation dialog as per user request
+        // if (!force && !confirm('Are you sure you want to delete this list?')) return;
 
         const listToDelete = lists.find(l => l.id === id);
         setIsDeleting(true);
@@ -1268,7 +1269,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                                                 if (currentUserId !== expandedList.user_id) return;
                                                                 setEditSession({ id: expandedList.id, title: expandedList.title.toUpperCase(), isExpanded: true });
                                                             }}
-                                                            className={`text-3xl font-black tracking-tighter text-slate-900 leading-tight py-0.5 rounded break-words whitespace-pre-wrap ${currentUserId === expandedList.user_id ? 'cursor-text hover:text-slate-500 transition-colors' : 'cursor-default'}`}
+                                                            className={`text-3xl font-black tracking-tighter text-slate-900 leading-[0.9] py-0.5 rounded break-words line-clamp-2 ${currentUserId === expandedList.user_id ? 'cursor-text hover:text-slate-500 transition-colors' : 'cursor-default'}`}
                                                         >
                                                             {expandedList.title.toUpperCase()}
                                                         </CardTitle>
@@ -1443,30 +1444,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
 
                                             {/* INTEGRATED COMMENT AREA (Description) */}
                                             {currentUserId === expandedList.user_id ? (
-                                                <div
-                                                    className="mt-2 group"
-                                                    onMouseLeave={async () => {
-                                                        if (isCommentDirty.current && waitingComment.trim() && expandedList.id !== 'temp-pending') {
-                                                            const newComment = {
-                                                                id: `temp-${Date.now()}`,
-                                                                user_id: currentUserId,
-                                                                list_id: expandedList.id,
-                                                                content: waitingComment.trim(),
-                                                                created_at: new Date().toISOString(),
-                                                                profiles: { username: currentUsername, display_name: currentDisplayName }
-                                                            };
-
-                                                            // Optimistic update
-                                                            setLists(prev => prev.map(l => l.id === expandedList.id ? {
-                                                                ...l,
-                                                                comments: [...(l.comments || []).filter((c: any) => c.user_id !== currentUserId), newComment]
-                                                            } : l));
-
-                                                            await upsertComment(expandedList.id, waitingComment.trim());
-                                                            isCommentDirty.current = false;
-                                                        }
-                                                    }}
-                                                >
+                                                <div className="mt-2 group">
                                                     <Textarea
                                                         placeholder={isPopulating ? "Building your list... jot down some notes?" : "Jot down some notes-what should people know about your list?"}
                                                         value={waitingComment}
@@ -1478,6 +1456,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                                         }}
                                                         onBlur={async () => {
                                                             const commentToSave = commentValueRef.current.trim();
+                                                            console.log(`[Dashboard] Textarea Blur: Dirty=${isCommentDirty.current}, Content="${commentToSave.substring(0, 15)}..."`);
                                                             if (isCommentDirty.current && commentToSave && expandedList.id !== 'temp-pending') {
                                                                 const newComment = {
                                                                     id: `temp-${Date.now()}`,

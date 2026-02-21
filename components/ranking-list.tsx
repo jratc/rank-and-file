@@ -358,9 +358,9 @@ export function RankingList({
                 <div className="space-y-0">
                     {items.slice(0, isPopulating ? items.length : displayLimit).map((item, index) => (
                         <React.Fragment key={item.id}>
-                            <div className="flex gap-2 items-center mb-1.5">
-                                <span className={`font-mono font-black text-3xl w-14 text-right tabular-nums ${getRankColor(index)}`}>#{index + 1}</span>
-                                <div className="flex-1">
+                            <div className="flex gap-2 items-center mb-1.5 flex-1 min-w-0">
+                                <span className={`font-mono font-black text-3xl w-14 text-right tabular-nums shrink-0 ${getRankColor(index)}`}>#{index + 1}</span>
+                                <div className="flex-1 min-w-0">
                                     <SortableItem
                                         id={item.id}
                                         item={item}

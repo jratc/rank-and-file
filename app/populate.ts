@@ -206,16 +206,48 @@ export async function detectAndPopulateList(listId: string, title: string, categ
     revalidatePath('/');
     const populatedItems = insertedData.length;
 
-    // 4. PARALLEL HYDRATION (PRE-FETCH IMAGES)
+    // 4. PARALLEL HYDRATION (PRE-FETCH IMAGES & PLACE DATA)
     // We kick this off in the background so by the time the user clicks "See List", many images are ready.
     if (populatedItems > 0) {
         const { hydrateItemImage } = await import('./draft/actions');
+        const { searchPlaces } = await import('@/lib/places');
+
         // We don't await the entire thing to avoid blocking the initial response, 
         // but it will run concurrently in the background on the server.
         Promise.allSettled(
-            insertedData.map(item => hydrateItemImage(item.id, item.metadata.name, category))
+            insertedData.map(async (item) => {
+                // Background hydration for images
+                hydrateItemImage(item.id, item.metadata.name, category);
+
+                // Specific enrichment for food/drink/places
+                if (['food', 'bars', 'restaurants', 'places'].includes(category)) {
+                    console.log(`[Populate] Enriching place data for: ${item.metadata.name}`);
+                    try {
+                        const places = await searchPlaces(item.metadata.name, category as any, { location: context.subject || context.location });
+                        if (places && places.length > 0) {
+                            const match = places[0]; // Take the first best match
+                            const { data: updated, error } = await supabase
+                                .from('list_items')
+                                .update({
+                                    metadata: {
+                                        ...item.metadata,
+                                        ...match,
+                                        id: item.metadata.id, // Preserve original ID
+                                        imageUrl: item.metadata.imageUrl || match.imageUrl // Keep original image if exists
+                                    }
+                                })
+                                .eq('id', item.id);
+
+                            if (error) console.error(`[Populate] Failed to enrich ${item.id}:`, error);
+                            else console.log(`[Populate] Enriched ${item.id} with place data.`);
+                        }
+                    } catch (e) {
+                        console.error(`[Populate] Enrichment failed for ${item.id}:`, e);
+                    }
+                }
+            })
         ).then(() => {
-            console.log(`[Populate] Hydration complete for ${populatedItems} items.`);
+            console.log(`[Populate] Hydration/Enrichment complete for ${populatedItems} items.`);
         });
     }
 
@@ -274,10 +306,37 @@ export async function populateBackgroundItems(listId: string, title: string, cat
     console.log(`[Populate] Successfully added ${insertedData.length} background items.`);
     if (insertedData && insertedData.length > 0) {
         const { hydrateItemImage } = await import('./draft/actions');
+        const { searchPlaces } = await import('@/lib/places');
+
         Promise.allSettled(
-            insertedData.map(item => hydrateItemImage(item.id, item.metadata.name, category))
+            insertedData.map(async (item) => {
+                hydrateItemImage(item.id, item.metadata.name, category);
+
+                if (['food', 'bars', 'restaurants', 'places'].includes(category)) {
+                    try {
+                        const enrichmentContext = await import('@/lib/utils').then(m => m.extractContext(title, category));
+                        const places = await searchPlaces(item.metadata.name, category as any, { location: enrichmentContext.subject || enrichmentContext.location });
+                        if (places && places.length > 0) {
+                            const match = places[0];
+                            await supabase
+                                .from('list_items')
+                                .update({
+                                    metadata: {
+                                        ...item.metadata,
+                                        ...match,
+                                        id: item.metadata.id,
+                                        imageUrl: item.metadata.imageUrl || match.imageUrl
+                                    }
+                                })
+                                .eq('id', item.id);
+                        }
+                    } catch (e) {
+                        // Silent failure for background enrichment
+                    }
+                }
+            })
         ).then(() => {
-            console.log(`[Populate] Background hydration complete for ${insertedData.length} items.`);
+            console.log(`[Populate] Background hydration/enrichment complete for ${insertedData.length} items.`);
         });
     }
 

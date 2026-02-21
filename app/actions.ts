@@ -686,11 +686,15 @@ export async function upsertComment(listId: string, content: string) {
             });
     }
 
-    if (result.error) console.error(`[upsertComment] Save error:`, result.error);
-    else console.log(`[upsertComment] Save successful`);
+    if (result.error) {
+        console.error(`[upsertComment] Save error for list ${listId}:`, result.error);
+        throw result.error;
+    }
+
+    console.log(`[upsertComment] Save successful for list ${listId}`);
 
     revalidatePath(`/list/${listId}`);
-    revalidatePath('/');
+    revalidatePath(`/`);
     return { success: true };
 }
 
