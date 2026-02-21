@@ -185,6 +185,15 @@ export async function detectAndPopulateList(listId: string, title: string, categ
 
     if (items.length === 0) return { populated: false, count: 0, isComplete: false };
 
+    // 3.5 INTERNAL DEDUPLICATION (Safeguard against repetitive LLM results)
+    const seenNames = new Set<string>();
+    items = items.filter(item => {
+        const normalized = item.name.toLowerCase().trim();
+        if (seenNames.has(normalized)) return false;
+        seenNames.add(normalized);
+        return true;
+    });
+
     // 4. Determine starting rank to avoid disturbing top items
     const { data: existing } = await supabase.from('list_items').select('rank').eq('list_id', listId);
     const startRank = (existing && existing.length > 0) ? Math.max(...existing.map(e => e.rank || 0)) : 0;
@@ -283,19 +292,43 @@ export async function populateBackgroundItems(listId: string, title: string, cat
 
     console.log(`[Populate] Background items check for: ${title} (${category}), Offset: ${offset}`);
 
-    const moreItems = await generateMoreItemsFromLLM(title, offset, 38);
+    // 1. Fetch existing names for deduplication
+    const { data: existingItems } = await supabase
+        .from('list_items')
+        .select('metadata')
+        .eq('list_id', listId);
+
+    const existingNames = (existingItems || []).map(i => i.metadata.name.toLowerCase().trim());
+
+    // 2. Generate more items using LLM
+    const moreItems = await generateMoreItemsFromLLM(title, offset, 45, existingNames);
 
     if (!moreItems || moreItems.length === 0) {
         console.log(`[Populate] No more items found for "${title}"`);
         return { count: 0, isComplete: true };
     }
 
-    // 2. Insert into database, ensuring we start after the actual current count
+    // 3. Filter out duplicates
+    const uniqueMoreItems = moreItems.filter(item => {
+        const normalized = item.name.toLowerCase().trim();
+        if (existingNames.includes(normalized)) {
+            console.log(`[Populate] Filtering out duplicate item: ${item.name}`);
+            return false;
+        }
+        existingNames.push(normalized);
+        return true;
+    });
+
+    if (uniqueMoreItems.length === 0) {
+        return { count: 0, isComplete: true };
+    }
+
+    // 4. Insert into database, ensuring we start after the actual current count
     const { data: currentItems } = await supabase.from('list_items').select('rank').eq('list_id', listId);
     const currentMaxRank = (currentItems && currentItems.length > 0) ? Math.max(...currentItems.map(c => c.rank || 0)) : offset;
 
     const { data: insertedData, error: insertError } = await supabase.from('list_items').insert(
-        moreItems.map((item, index) => ({
+        uniqueMoreItems.map((item, index) => ({
             list_id: listId,
             entity_id: `llm-bg-${Date.now()}-${index}`,
             rank: currentMaxRank + index + 1,

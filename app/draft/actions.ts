@@ -221,14 +221,32 @@ export async function loadMoreItems(listId: string, topic: string, currentCount:
 
         if (!user) return null;
 
-        // 1. Generate items
+        // 1. Fetch existing names for deduplication
+        const { data: existingItems } = await supabase
+            .from('list_items')
+            .select('metadata')
+            .eq('list_id', listId);
+
+        const existingNames = (existingItems || []).map(i => i.metadata.name.toLowerCase().trim());
+
+        // 2. Generate items
         const { generateMoreItemsFromLLM } = await import('@/lib/ai');
-        const newItems = await generateMoreItemsFromLLM(topic, currentCount, 10);
+        const generatedItems = await generateMoreItemsFromLLM(topic, currentCount, 35, existingNames);
 
-        if (!newItems || newItems.length === 0) return [];
+        if (!generatedItems || generatedItems.length === 0) return [];
 
-        // 2. Format for DB
-        const itemsToInsert = newItems.map((item, index) => ({
+        // 3. Filter out duplicates (double-check after LLM)
+        const uniqueItems = generatedItems.filter(item => {
+            const normalized = item.name.toLowerCase().trim();
+            if (existingNames.includes(normalized)) return false;
+            existingNames.push(normalized);
+            return true;
+        });
+
+        if (uniqueItems.length === 0) return [];
+
+        // 4. Format for DB
+        const itemsToInsert = uniqueItems.map((item, index) => ({
             list_id: listId,
             entity_id: `llm-more-${Date.now()}-${index}`,
             rank: currentCount + 1 + index,

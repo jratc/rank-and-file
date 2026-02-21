@@ -175,7 +175,7 @@ export async function generateListFromLLM(topic: string, count: number = 20): Pr
     }
 }
 
-export async function generateMoreItemsFromLLM(topic: string, offset: number, count: number = 10): Promise<any[]> {
+export async function generateMoreItemsFromLLM(topic: string, offset: number, count: number = 10, existingNames: string[] = []): Promise<any[]> {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return [];
 
@@ -185,11 +185,13 @@ export async function generateMoreItemsFromLLM(topic: string, offset: number, co
         const prompt = `
         You are an expert curator for a ranking app.
         The user wants MORE items for the list: "${topic}".
-        They already have the top ${offset} items.
+        They already have ${offset} items.
         
         CRITICAL REQUIREMENT: If the topic contains a location, EVERY SINGLE item MUST be strictly within that specific city's legal borders. 
         - DO NOT include items from neighboring cities or the broader metro area.
         - If the topic is "San Francisco", only include items in the city itself.
+        
+        ${existingNames.length > 0 ? `DO NOT repeat any of the following items: ${existingNames.join(', ')}.` : ''}
         
         Generate the NEXT ${count} items (ranked #${offset + 1} to #${offset + count}).
         Do NOT repeat items already found.
