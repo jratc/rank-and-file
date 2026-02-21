@@ -44,13 +44,9 @@ export function RankedItemCard({
                         {item.metadata.name}
                     </h4>
                     <div className="flex items-center gap-2 mt-0.5 min-w-0">
-                        <p className="font-mono text-[9px] font-bold text-slate-400 tracking-widest uppercase flex-1 min-w-0 break-words whitespace-normal">
-                            {item.metadata.subtitle}
-                        </p>
-                        {(item.metadata.lat || item.metadata.rawMetadata?.geometry?.location || item.metadata.rawMetadata?.geometry?.coordinates) && (
-                            <div className="flex items-center gap-0.5 text-red-500 animate-in fade-in duration-500">
-                                <MapPin className="w-2.5 h-2.5" />
-                                <span className="text-[8px] font-black uppercase tracking-tighter">Loc</span>
+                        {item.metadata?.subtitle && (
+                            <div className="text-[10px] font-bold text-slate-400 truncate uppercase mt-0.5 tracking-tight">
+                                {item.metadata.subtitle}
                             </div>
                         )}
                     </div>

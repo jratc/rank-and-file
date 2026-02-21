@@ -7,7 +7,7 @@ import { updateListOrder, deleteListItem, loadMoreItems } from '@/app/draft/acti
 import { deleteListItems } from '@/app/actions';
 import { RankedItemCard } from './ranked-item-card';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, MapPin, Plus } from 'lucide-react';
 
 import React, { useState, useEffect, useRef } from 'react';
 import {
@@ -393,12 +393,35 @@ export function RankingList({
                                         <div className="w-14 text-right"></div> {/* Spacer for num */}
                                         <div className="flex-1 flex items-center gap-4">
                                             <div className="h-px border-b-2 border-dashed border-slate-200 dark:border-white/10 flex-1"></div>
-                                            <button
-                                                onClick={() => handleDeleteBelow(index)}
-                                                className="text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-red-500 bg-slate-50 hover:bg-red-50 px-3 py-1 rounded-full transition-colors whitespace-nowrap"
-                                            >
-                                                Delete Below
-                                            </button>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() => handleDeleteBelow(index)}
+                                                    className="text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-red-500 bg-slate-50 hover:bg-red-50 px-3 py-1 rounded-full transition-colors whitespace-nowrap"
+                                                >
+                                                    Delete Below
+                                                </button>
+                                                {index === 9 && (['places', 'food', 'restaurants', 'bars'].includes(category?.toLowerCase() || '')) && !showMap && (
+                                                    <button
+                                                        onClick={() => {
+                                                            if (onChange) {
+                                                                // This triggers showMap in the parent ExpandedListOverlay
+                                                                // We need to make sure the parent handles this if we can't do it here
+                                                                // For now, we'll try to find a way to communicate this.
+                                                                // Actually, the easiest way is to let the user know they can toggle it.
+                                                                // BUT the user specifically asked for a button HERE.
+                                                                // Since showMap is a prop, we need the parent to update it.
+                                                                // We'll use a hack or assume the parent has a way to listen.
+                                                                const event = new CustomEvent('toggle-map', { detail: { show: true } });
+                                                                window.dispatchEvent(event);
+                                                            }
+                                                        }}
+                                                        className="text-[10px] font-black uppercase tracking-widest text-green-600 hover:text-green-700 bg-green-50 hover:bg-green-100 px-3 py-1 rounded-full transition-colors whitespace-nowrap flex items-center gap-1.5"
+                                                    >
+                                                        <MapPin className="h-2.5 w-2.5" />
+                                                        View Top 10 on Map
+                                                    </button>
+                                                )}
+                                            </div>
                                             <div className="h-px border-b-2 border-dashed border-slate-200 dark:border-white/10 flex-1"></div>
                                         </div>
                                     </div>
@@ -441,26 +464,31 @@ export function RankingList({
             {!isPopulating && items.length > displayLimit && (
                 <div className="mt-4 flex justify-center">
                     <button
-                        onClick={() => setDisplayLimit(prev => prev + 15)}
-                        className="px-6 py-2 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 font-black uppercase tracking-widest text-[10px] rounded-full transition-all"
+                        onClick={() => setDisplayLimit(prev => Math.min(prev + 35, 50))}
+                        className="px-6 py-2 bg-slate-900 hover:bg-black text-white font-black uppercase tracking-widest text-[10px] rounded-full transition-all shadow-md active:scale-95"
                     >
-                        Load More ({items.length - displayLimit} remaining)
+                        Load More ({Math.min(items.length, 50) - displayLimit} remaining)
                     </button>
                 </div>
             )}
 
             {/* Load More Ideas Button (Fetch) */}
-            {!readOnly && title && items.length <= displayLimit && !isPopulating && (
+            {!readOnly && title && items.length < 50 && !isPopulating && (
                 <div className="mt-8 flex justify-center">
                     <button
                         onClick={async () => {
+                            if (items.length >= 50) return;
                             setIsLoadingMore(true);
                             try {
-                                const newItems = await loadMoreItems(listId, title, items.length);
+                                const currentCount = items.length;
+                                // Requested logic: 15 initially, then up to 50.
+                                // If we are at 15, we want 35 more.
+                                const limit = 50 - currentCount;
+                                const newItems = await loadMoreItems(listId, title, currentCount);
                                 if (newItems && newItems.length > 0) {
-                                    const updatedList = [...items, ...newItems];
+                                    const updatedList = [...items, ...newItems].slice(0, 50);
                                     setItems(updatedList);
-                                    toast.success(`Added ${newItems.length} more items!`);
+                                    // Removed notification as requested
                                     if (onChange) onChange(updatedList);
                                 } else {
                                     toast.info("No more items found.");
@@ -472,10 +500,10 @@ export function RankingList({
                             }
                         }}
                         disabled={isLoadingMore}
-                        className="flex items-center gap-2 px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-full transition-all disabled:opacity-50"
+                        className="flex items-center gap-2 px-6 py-3 bg-black hover:bg-slate-800 text-white font-black uppercase tracking-widest text-[11px] rounded-full transition-all shadow-lg active:scale-95 disabled:opacity-50"
                     >
-                        {isLoadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                        {isLoadingMore ? 'Loading...' : 'Load More Ideas'}
+                        {isLoadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                        {isLoadingMore ? 'Loading...' : 'Load more ideas'}
                     </button>
                 </div>
             )}

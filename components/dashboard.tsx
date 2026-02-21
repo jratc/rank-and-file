@@ -357,6 +357,12 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
     }, [expandedListId, lists]);
 
     const closeExpandedView = useCallback(async () => {
+        // SAVE TITLE IF DIRTY BEFORE CLOSING
+        if (editSession.title && editSession.title.trim() && expandedListId) {
+            console.log(`[Dashboard] closeExpandedView: Saving dirty title for ${expandedListId}`);
+            await handleUpdateTitle(expandedListId);
+        }
+
         // SAVE COMMENT IF DIRTY BEFORE CLOSING
         if (isCommentDirty.current && expandedListId && expandedListId !== 'temp-pending') {
             const commentToSave = commentValueRef.current.trim();

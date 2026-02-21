@@ -134,6 +134,16 @@ export function ExpandedListOverlay({
         }
     };
 
+    React.useEffect(() => {
+        const handleToggleMap = (e: any) => {
+            if (e.detail?.show !== undefined) {
+                setShowMap(e.detail.show);
+            }
+        };
+        window.addEventListener('toggle-map', handleToggleMap);
+        return () => window.removeEventListener('toggle-map', handleToggleMap);
+    }, [setShowMap]);
+
     if (!expandedListId || !expandedList) return null;
 
     return (
@@ -151,8 +161,8 @@ export function ExpandedListOverlay({
                 </button>
 
                 {creationStep === 'naming' || creationStep === 'choosing' || creationStep === 'drafting' ? (
-                    <>
-                        <CardHeader className="p-5 pb-2 text-center pt-8">
+                    <div className="flex-1 flex flex-col min-h-0 relative">
+                        <CardHeader className="p-5 pb-2 text-center pt-8 shrink-0">
                             <Plus className="h-8 w-8 text-slate-200 mx-auto mb-4" />
                             <CardTitle className="text-xl font-black uppercase tracking-tighter">Name your list</CardTitle>
                             <div className="mt-4 px-6">
@@ -173,7 +183,7 @@ export function ExpandedListOverlay({
                         </CardHeader>
 
                         {creationStep === 'choosing' && (
-                            <CardContent className="p-6 pt-2 grid grid-cols-1 gap-3">
+                            <CardContent className="p-6 pt-2 grid grid-cols-1 gap-3 shrink-0">
                                 <button
                                     onClick={() => {
                                         if (!editSession.title || !editSession.title.trim()) {
@@ -189,7 +199,7 @@ export function ExpandedListOverlay({
                                         });
                                     }}
                                     disabled={!editSession.title?.trim()}
-                                    className="group w-full p-4 border-2 border-slate-100 disabled:opacity-50 disabled:cursor-not-allowed hover:border-black rounded-xl transition-all text-left flex items-start gap-4"
+                                    className="group w-full p-4 border-2 border-slate-100 disabled:opacity-50 disabled:cursor-not-allowed hover:border-black rounded-xl transition-all text-left flex items-start gap-4 bg-white"
                                 >
                                     <div className="p-2 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
                                         <Sparkles className="h-5 w-5 text-blue-600" />
@@ -210,7 +220,7 @@ export function ExpandedListOverlay({
                                         setCreationStep('drafting');
                                     }}
                                     disabled={!editSession.title?.trim()}
-                                    className="group w-full p-4 border-2 border-slate-100 disabled:opacity-50 disabled:cursor-not-allowed hover:border-black rounded-xl transition-all text-left flex items-start gap-4"
+                                    className="group w-full p-4 border-2 border-slate-100 disabled:opacity-50 disabled:cursor-not-allowed hover:border-black rounded-xl transition-all text-left flex items-start gap-4 bg-white"
                                 >
                                     <div className="p-2 bg-purple-50 rounded-lg group-hover:bg-purple-100 transition-colors">
                                         <Pencil className="h-5 w-5 text-purple-600" />
@@ -224,7 +234,7 @@ export function ExpandedListOverlay({
                         )}
 
                         {creationStep === 'drafting' && (
-                            <CardContent className="p-5 pt-2 space-y-2 overflow-y-auto max-h-[50vh]">
+                            <CardContent className="p-5 pt-2 space-y-2 overflow-y-auto min-h-0 flex-1 custom-scrollbar">
                                 {freeFormItems.map((item, idx) => (
                                     <div key={idx} className="flex items-center gap-3">
                                         <span className="w-6 text-[10px] font-black text-slate-300">#{idx + 1}</span>
@@ -241,7 +251,7 @@ export function ExpandedListOverlay({
                                         />
                                     </div>
                                 ))}
-                                <div className="pt-4 space-y-3">
+                                <div className="pt-4 pb-4 space-y-3">
                                     <Button
                                         onClick={handleCreateFreeForm}
                                         disabled={isUpdatingTitle || !freeFormItems.some(i => i.trim())}
@@ -253,11 +263,12 @@ export function ExpandedListOverlay({
                                         onClick={() => setCreationStep('choosing')}
                                         className="w-full text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-slate-500 transition-colors py-2"
                                     >
+                                        Go Back
                                     </button>
                                 </div>
                             </CardContent>
                         )}
-                    </>
+                    </div>
                 ) : (
                     <div className="flex-1 flex flex-col min-h-0 relative">
                         {/* WHILE YOU WAIT VIEW - Hidden but keeps RankingList mounted if we want, 
@@ -660,6 +671,12 @@ export function ExpandedListOverlay({
                                                     </div>
                                                 </div>
                                             )}
+                                            {/* Feature: Music Playlist Export - Moved to Header */}
+                                            {expandedList.category === 'music' && expandedList.list_items.length > 0 && (
+                                                <div className="mt-3 bg-slate-50/50 rounded-xl p-2 border border-slate-100/50">
+                                                    <PlaylistExport items={expandedList.list_items} listTitle={expandedList.title} />
+                                                </div>
+                                            )}
                                         </div>
                                     )}
 
@@ -828,12 +845,7 @@ export function ExpandedListOverlay({
                                     </div>
                                 )}
 
-                                {/* FEATURE: Music Playlist Export */}
-                                {expandedList.category === 'music' && expandedList.list_items.length > 0 && (
-                                    <div className="mt-4 pt-3 border-t border-slate-100 flex justify-center">
-                                        <PlaylistExport items={expandedList.list_items} listTitle={expandedList.title} />
-                                    </div>
-                                )}
+                                {/* FEATURE: Music Playlist Export - Removed from bottom */}
                             </CardContent>
                         </div>
                     </div >
