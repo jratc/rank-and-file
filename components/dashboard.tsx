@@ -781,17 +781,20 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                         .catch(e => console.error("Failed to save pending comment", e));
                 }
 
-                // START EARLY POPULATION
-                if (newList.category !== 'other' && newList.category !== 'places') {
-                    startEarlyPopulation(newList);
-                }
-
-                // FOR 'MORE' CATEGORIES, DON'T JUMP IMMEDIATELY - STAY IN NAMING/DRAFTING
+                // FOR 'MORE' CATEGORIES, SIMPLIFY: Skip choices, go straight to drafting
                 if (newList.category === 'other' || newList.category === 'places') {
-                    // We stay in the modal, let the user trigger AI if they want
+                    setCreationStep(null);
+                    setEditSession({ id: null, title: null, isExpanded: false });
                     setIsUpdatingTitle(false);
                     return;
                 }
+
+                // FOR OTHER CATEGORIES (Music, Movies, Books):
+                // Go to 'choosing' step so user can decide between AI and Manual.
+                // This prevents AI from auto-filling the top 10 while they are drafting.
+                setCreationStep('choosing');
+                setIsUpdatingTitle(false);
+                return;
 
                 // SAVE INITIAL COMMENT (NON-BLOCKING/RESILIENT)
                 if (waitingComment.trim()) {

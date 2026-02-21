@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MapPin, X, Plus } from 'lucide-react';
+import { MapPin, X, Plus, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { getThread } from "@/app/actions";
 import { categoryConfig, CategoryKey, EditSession, ResponseView } from './shared';
@@ -43,6 +43,8 @@ export function ListGrid({
     handleCreateList,
     showNameModal
 }: ListGridProps) {
+    const [expandedCommentsId, setExpandedCommentsId] = useState<string | null>(null);
+
     return (
         <div className={`
             flex flex-col gap-8 pb-8
@@ -176,7 +178,35 @@ export function ListGrid({
                                                 >
                                                     {list.profiles?.display_name || list.profiles?.username || 'unknown'}
                                                 </Link>
-                                                <span>{list.list_items?.length || 0} ITEMS</span>
+                                                <div className="flex items-center gap-2">
+                                                    {(list.comments?.length || 0) > 0 && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setExpandedCommentsId((prev: string | null) => prev === list.id ? null : list.id);
+                                                            }}
+                                                            className="flex items-center gap-1 text-slate-400 hover:text-black transition-colors p-1 -m-1"
+                                                            title="Toggle Comments"
+                                                        >
+                                                            <MessageCircle className="h-3 w-3" />
+                                                            <span>{list.comments.length}</span>
+                                                        </button>
+                                                    )}
+                                                    {['places', 'bars', 'restaurants', 'food', 'other', 'more'].includes(catKey.toLowerCase()) && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setExpandedListId(list.id);
+                                                                setShowMap(true);
+                                                            }}
+                                                            className="text-slate-300 hover:text-red-500 transition-colors p-1 -m-1"
+                                                            title="View on Map"
+                                                        >
+                                                            <MapPin className="h-3 w-3" />
+                                                        </button>
+                                                    )}
+                                                    <span>{list.list_items?.length || 0} ITEMS</span>
+                                                </div>
                                                 {list.response_count > 0 && (
                                                     <span className="text-blue-500 dark:text-blue-400">
                                                         {list.response_count} {list.response_count === 1 ? 'RESPONSE' : 'RESPONSES'}
@@ -184,6 +214,26 @@ export function ListGrid({
                                                 )}
                                             </div>
                                         </CardContent>
+
+                                        {/* INLINE COMMENT THREAD */}
+                                        {expandedCommentsId === list.id && list.comments?.length > 0 && (
+                                            <div
+                                                className="bg-slate-50 dark:bg-white/[0.02] border-t border-slate-100 dark:border-white/5 p-3 flex flex-col gap-2 cursor-auto"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                {list.comments.map((comment: any) => (
+                                                    <div key={comment.id} className="flex flex-col gap-0.5">
+                                                        <span className={`text-[9px] font-bold uppercase tracking-widest ${comment.user_id === list.user_id ? 'text-blue-500' : 'text-slate-400'}`}>
+                                                            {comment.profiles?.display_name || comment.profiles?.username || 'Unknown'}
+                                                            {comment.user_id === list.user_id && ' (Author)'}
+                                                        </span>
+                                                        <p className="text-xs text-slate-600 dark:text-slate-300 font-medium break-words">
+                                                            "{comment.content}"
+                                                        </p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </Card>
                                 ))
                             ) : (

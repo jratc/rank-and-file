@@ -185,15 +185,19 @@ export async function detectAndPopulateList(listId: string, title: string, categ
 
     if (items.length === 0) return { populated: false, count: 0, isComplete: false };
 
-    const maxItems = 15; // User requested 15 initially
+    // 4. Determine starting rank to avoid disturbing top items
+    const { data: existing } = await supabase.from('list_items').select('rank').eq('list_id', listId);
+    const startRank = (existing && existing.length > 0) ? Math.max(...existing.map(e => e.rank || 0)) : 0;
+
+    const maxItems = 15;
     const itemsToInsert = items.slice(0, maxItems);
-    console.log(`[Populate] Inserting ${itemsToInsert.length} items for list: ${listId}...`);
+    console.log(`[Populate] Inserting ${itemsToInsert.length} items for list: ${listId} (Start Rank: ${startRank + 1})...`);
 
     const { data: insertedData, error: insertError } = await supabase.from('list_items').insert(
         itemsToInsert.map((item, index) => ({
             list_id: listId,
             entity_id: item.id,
-            rank: index + 1,
+            rank: startRank + index + 1,
             metadata: item
         }))
     ).select();
@@ -283,12 +287,15 @@ export async function populateBackgroundItems(listId: string, title: string, cat
         return { count: 0, isComplete: true };
     }
 
-    // 2. Insert into database
+    // 2. Insert into database, ensuring we start after the actual current count
+    const { data: currentItems } = await supabase.from('list_items').select('rank').eq('list_id', listId);
+    const currentMaxRank = (currentItems && currentItems.length > 0) ? Math.max(...currentItems.map(c => c.rank || 0)) : offset;
+
     const { data: insertedData, error: insertError } = await supabase.from('list_items').insert(
         moreItems.map((item, index) => ({
             list_id: listId,
             entity_id: `llm-bg-${Date.now()}-${index}`,
-            rank: offset + index + 1,
+            rank: currentMaxRank + index + 1,
             metadata: {
                 ...item,
                 id: `llm-bg-${Date.now()}-${index}`,

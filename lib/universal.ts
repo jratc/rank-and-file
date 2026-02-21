@@ -246,7 +246,9 @@ export const universalProvider = {
             // Before falling back to Wikipedia, try TMDB's person API which is excellent for public figures,
             // including athletes, instructors, politicians, and media personalities.
             const tmbdApiKey = process.env.TMDB_API_KEY;
-            if (tmbdApiKey) {
+            const isPersonCategory = !category || ['more', 'other', 'music', 'movies'].includes(category);
+
+            if (tmbdApiKey && isPersonCategory) {
                 try {
                     const personResp = await fetch(
                         `https://api.themoviedb.org/3/search/person?api_key=${tmbdApiKey}&query=${encodeURIComponent(cleanedQuery)}`,
@@ -271,68 +273,70 @@ export const universalProvider = {
             searchQueries.push(`${cleanedQuery} wiki`);
 
             for (const q of searchQueries) {
-                // Quick search for the page and its main image
-                const url = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(q)}&gsrnamespace=0&gsrlimit=20&prop=pageimages|extracts&piprop=thumbnail&pithumbsize=400&format=json&origin=*`;
+                try {
+                    // Quick search for the page and its main image
+                    const url = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(q)}&gsrnamespace=0&gsrlimit=20&prop=pageimages|extracts&piprop=thumbnail&pithumbsize=400&format=json&origin=*`;
 
-                // Set a strict timeout to avoid slowing down the main list generation
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 2000); // 2s max per query
+                    // Set a strict timeout to avoid slowing down the main list generation
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2s max per query
 
-                const response = await fetch(url, { signal: controller.signal });
-                clearTimeout(timeoutId);
+                    const response = await fetch(url, { signal: controller.signal });
+                    clearTimeout(timeoutId);
 
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.query && data.query.pages) {
-                        const pages = Object.values(data.query.pages) as any[];
-                        // Sort by index to maintain relevance
-                        const sortedPages = pages.sort((a, b) => (a.index || 0) - (b.index || 0));
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.query && data.query.pages) {
+                            const pages = Object.values(data.query.pages) as any[];
+                            // Sort by index to maintain relevance
+                            const sortedPages = pages.sort((a, b) => (a.index || 0) - (b.index || 0));
 
-                        // Pick the BEST match
-                        const bestMatch = sortedPages.find(p => {
-                            const title = p.title.toLowerCase();
-                            const extract = p.extract?.toLowerCase() || '';
-                            const searchTerms = cleanedQuery.toLowerCase().split(' ').filter(t => t.length > 2);
+                            // Pick the BEST match
+                            const bestMatch = sortedPages.find(p => {
+                                const title = p.title.toLowerCase();
+                                const extract = p.extract?.toLowerCase() || '';
+                                const searchTerms = cleanedQuery.toLowerCase().split(' ').filter(t => t.length > 2);
 
-                            // It MUST contain at least one significant name term in the title
-                            const nameInTitle = searchTerms.some(term => title.includes(term));
+                                // It MUST contain at least one significant name term in the title
+                                const nameInTitle = searchTerms.some(term => title.includes(term));
 
-                            // It's a "good" match if title matches name or it's context-rich
-                            // Relaxed check: don't block based on 'logo' in the URL here, do it in isGarbage
-                            const hasThumbnail = !!p.thumbnail;
+                                // It's a "good" match if title matches name or it's context-rich
+                                // Relaxed check: don't block based on 'logo' in the URL here, do it in isGarbage
+                                const hasThumbnail = !!p.thumbnail;
 
-                            return nameInTitle && hasThumbnail;
-                        });
+                                return nameInTitle && hasThumbnail;
+                            });
 
-                        const finalChoice = bestMatch;
+                            const finalChoice = bestMatch;
 
-                        if (finalChoice && finalChoice.thumbnail) {
-                            const src = finalChoice.thumbnail.source.toLowerCase();
-                            // Refined garbage filter: allow names that might have 'logo' or 'official' in metadata
-                            // but still block actual Wikipedia/UI logos
-                            const isGarbage = src.includes('wikipedia-logo') ||
-                                src.includes('wiki-logo') ||
-                                src.includes('padlock') ||
-                                src.includes('icon_') ||
-                                src.includes('increase_') ||
-                                src.includes('symbol_') ||
-                                src.includes('question_mark') ||
-                                // src.includes('logo') || // REMOVED: Too aggressive for some brand-associated persons
-                                src.includes('mattel') ||
-                                src.includes('barbie') ||
-                                // src.includes('official') || // REMOVED: Too aggressive
-                                src.includes('flag_') ||
-                                src.includes('placeholder');
+                            if (finalChoice && finalChoice.thumbnail) {
+                                const src = finalChoice.thumbnail.source.toLowerCase();
+                                // Refined garbage filter: allow names that might have 'logo' or 'official' in metadata
+                                // but still block actual Wikipedia/UI logos
+                                const isGarbage = src.includes('wikipedia-logo') ||
+                                    src.includes('wiki-logo') ||
+                                    src.includes('padlock') ||
+                                    src.includes('icon_') ||
+                                    src.includes('increase_') ||
+                                    src.includes('symbol_') ||
+                                    src.includes('question_mark') ||
+                                    src.includes('mattel') ||
+                                    src.includes('barbie') ||
+                                    src.includes('flag_') ||
+                                    src.includes('placeholder');
 
-                            // Re-add a more specific 'logo' check if needed, but for Peloton instructors it might be okay.
-                            // Ensure it's not the generic Wikipedia logo
-                            if (!isGarbage && !src.includes('wikimedia-logo')) return finalChoice.thumbnail.source;
+                                // Re-add a more specific 'logo' check if needed, but for Peloton instructors it might be okay.
+                                // Ensure it's not the generic Wikipedia logo
+                                if (!isGarbage && !src.includes('wikimedia-logo')) return finalChoice.thumbnail.source;
+                            }
                         }
                     }
+                } catch (e) {
+                    // Ignore abort errors or network blips, just move to next query
                 }
             }
         } catch (e) {
-            // Ignore abort errors or network blips, just return null
+            console.error('[Universal] fetchThumbnail failed globally', e);
         }
         return null;
     }

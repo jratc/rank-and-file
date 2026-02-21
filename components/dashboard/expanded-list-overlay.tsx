@@ -492,6 +492,10 @@ export function ExpandedListOverlay({
                                                         size="sm"
                                                         variant="outline"
                                                         className="h-6 text-[9px] px-2 uppercase tracking-widest font-black text-slate-400 hover:text-green-600 hover:border-green-600 hover:bg-green-50 transition-colors"
+                                                        onMouseDown={(e) => {
+                                                            // Prevent blur event on Textarea so onClick can fire synchronously
+                                                            e.preventDefault();
+                                                        }}
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             const commentToSave = commentValueRef.current.trim();
