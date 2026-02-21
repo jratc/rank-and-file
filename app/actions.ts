@@ -620,7 +620,9 @@ export async function getComments(listId: string) {
 
 export async function addComment(listId: string, content: string, parentId?: string | null) {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: authData } = await supabase.auth.getUser();
+    const authUser = authData?.user;
+    const user = IS_AUTH_DISABLED ? MOCK_USER : authUser;
 
     if (!user) throw new Error("Must be logged in to comment");
 
@@ -639,12 +641,15 @@ export async function addComment(listId: string, content: string, parentId?: str
         .single();
 
     if (error) throw error;
+    revalidatePath(`/list/${listId}`);
     return data;
 }
 
 export async function upsertComment(listId: string, content: string) {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: authData } = await supabase.auth.getUser();
+    const authUser = authData?.user;
+    const user = IS_AUTH_DISABLED ? MOCK_USER : authUser;
 
     if (!user) throw new Error("Must be logged in to comment");
 
@@ -674,13 +679,16 @@ export async function upsertComment(listId: string, content: string) {
             .select(`*, profiles (username, display_name)`)
             .single();
         if (error) throw error;
+        revalidatePath(`/list/${listId}`);
         return data;
     }
 }
 
 export async function deleteComment(commentId: string) {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: authData } = await supabase.auth.getUser();
+    const authUser = authData?.user;
+    const user = IS_AUTH_DISABLED ? MOCK_USER : authUser;
 
     if (!user) throw new Error("Must be logged in");
 
@@ -692,6 +700,7 @@ export async function deleteComment(commentId: string) {
     // .eq('user_id', user.id); // Redundant if RLS covers it, but safe.
 
     if (error) throw error;
+    revalidatePath(`/`);
     return true;
 }
 
@@ -752,7 +761,10 @@ export async function synthesizeFeedback() {
             .select('content, created_at')
             .order('created_at', { ascending: false });
 
-        if (!feedbackList || feedbackList.length === 0) return;
+        if (!feedbackList || feedbackList.length === 0) {
+            console.log('[Synthesis] No feedback found');
+            return;
+        }
 
         // 2. Prepare content for Gemini
         const feedbackText = feedbackList.map(f => `- [${f.created_at}] ${f.content}`).join('\n');
@@ -814,7 +826,12 @@ export async function synthesizeFeedback() {
 
                 console.log('[AI] Feedback synthesis updated.');
                 revalidatePath('/feedback');
+            } else {
+                console.error('[AI] Gemini returned empty response.');
             }
+        } else {
+            const errorText = await response.text();
+            console.error('[AI] Gemini API error:', response.status, errorText);
         }
     } catch (error) {
         console.error('[AI] Feedback synthesis failed:', error);

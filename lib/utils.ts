@@ -318,21 +318,19 @@ export function calculateSimilarity(itemsA: any[], itemsB: any[]): number {
   const keysA = itemsA.map(getComparableKey);
   const keysB = itemsB.map(getComparableKey);
 
-  let exactMatches = 0;
-  // We compare relative to the original list length (A)
-  const originalCount = keysA.length;
+  const setA = new Set(keysA.filter(Boolean));
+  const setB = new Set(keysB.filter(Boolean));
 
-  // Position-based matching: Item at rank I must match item at rank I
-  for (let i = 0; i < originalCount; i++) {
-    const keyA = keysA[i];
-    const keyB = keysB[i];
+  if (setA.size === 0) return 0;
 
-    if (keyA && keyB && keyA === keyB) {
-      exactMatches++;
+  let commonCount = 0;
+  setA.forEach(key => {
+    if (setB.has(key)) {
+      commonCount++;
     }
-  }
+  });
 
-  return Math.round((exactMatches / originalCount) * 100);
+  return Math.round((commonCount / setA.size) * 100);
 }
 
 function normalizeLocation(loc: string): string {

@@ -245,8 +245,8 @@ export const universalProvider = {
             // 3. SPECIAL CONTEXT: Handle Peloton / Fitness Instructors
             if (/peloton|peleton|instructor|fitness/i.test(query)) {
                 const pQuery = cleanedQuery.replace(/peleton/i, 'Peloton');
-                // Force "Peloton instructor" for better disambiguation
-                searchQueries.unshift(`${pQuery} Peloton instructor`);
+                // Use "[Name] Peloton" as the most reliable search term
+                searchQueries.unshift(`${pQuery} Peloton`);
                 searchQueries.push(`${pQuery} instructor`);
             }
 

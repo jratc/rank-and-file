@@ -31,7 +31,7 @@ export default async function Home() {
       <main className="container px-4 mx-auto max-w-7xl pb-24 min-h-[calc(100vh-4rem)]">
         <div className="flex flex-col gap-12 py-8 px-4 max-w-[1600px] mx-auto">
           <section className="flex flex-col items-center text-center gap-6 max-w-4xl mx-auto mb-16 group relative">
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-12">
               <h1 className="text-7xl font-black tracking-tighter sm:text-8xl text-black dark:text-white opacity-20 group-hover:opacity-100 transition-opacity duration-[3000ms] ease-in-out uppercase leading-[0.8] cursor-default">
                 Rank and File
               </h1>
