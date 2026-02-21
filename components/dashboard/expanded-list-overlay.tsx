@@ -595,7 +595,7 @@ export function ExpandedListOverlay({
                                             {waitingComment ? (
                                                 <div className="px-3 py-2 bg-slate-50/50 rounded-xl border border-slate-100/50">
                                                     <p className="text-xs font-medium text-slate-600 italic leading-relaxed">
-                                                        "{waitingComment}"
+                                                        &quot;{waitingComment}&quot;
                                                     </p>
                                                 </div>
                                             ) : (
@@ -663,91 +663,92 @@ export function ExpandedListOverlay({
                                         </div>
                                     )}
 
-                                {/* Search Section Inside Header - Only for Owner, only after list is named, and not while populating */}
-                                {
-                                    currentUserId === expandedList.user_id && expandedList.id !== 'temp-pending' && !isPopulating && (
-                                        <div className="mt-4">
-                                            <form onSubmit={(e) => { e.preventDefault(); handleSearch(searchQuery); }} className="relative group">
-                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-300 group-focus-within:text-black transition-colors" />
-                                                <Input
-                                                    ref={searchInputRef}
-                                                    placeholder={`Add to list...`}
-                                                    value={searchQuery}
-                                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                                    className="h-8 pl-9 pr-20 bg-slate-50 border-none rounded-lg text-xs font-bold focus:bg-white focus:ring-1 focus:ring-slate-200 transition-all"
-                                                />
-                                                <div className="absolute right-1 top-1 bottom-1">
-                                                    <Button
-                                                        type="submit"
-                                                        size="sm"
-                                                        disabled={isSearching || !searchQuery.trim()}
-                                                        className="h-full px-3 rounded-md font-black text-[9px] tracking-widest uppercase bg-white border border-slate-200 text-slate-900 hover:bg-slate-50"
-                                                    >
-                                                        {isSearching ? <Loader2 className="h-3 w-3 animate-spin text-slate-400" /> : 'SEARCH'}
-                                                    </Button>
-                                                </div>
-                                            </form>
+                                    {/* Search Section Inside Header - Only for Owner, only after list is named, and not while populating */}
+                                    {
+                                        currentUserId === expandedList.user_id && expandedList.id !== 'temp-pending' && !isPopulating && (
+                                            <div className="mt-4">
+                                                <form onSubmit={(e) => { e.preventDefault(); handleSearch(searchQuery); }} className="relative group">
+                                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-300 group-focus-within:text-black transition-colors" />
+                                                    <Input
+                                                        ref={searchInputRef}
+                                                        placeholder={`Add to list...`}
+                                                        value={searchQuery}
+                                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                                        className="h-8 pl-9 pr-20 bg-slate-50 border-none rounded-lg text-xs font-bold focus:bg-white focus:ring-1 focus:ring-slate-200 transition-all"
+                                                    />
+                                                    <div className="absolute right-1 top-1 bottom-1">
+                                                        <Button
+                                                            type="submit"
+                                                            size="sm"
+                                                            disabled={isSearching || !searchQuery.trim()}
+                                                            className="h-full px-3 rounded-md font-black text-[9px] tracking-widest uppercase bg-white border border-slate-200 text-slate-900 hover:bg-slate-50"
+                                                        >
+                                                            {isSearching ? <Loader2 className="h-3 w-3 animate-spin text-slate-400" /> : 'SEARCH'}
+                                                        </Button>
+                                                    </div>
+                                                </form>
 
-                                            {/* Search Results Dropdown-style */}
-                                            {searchResults.length > 0 && (
-                                                <div
-                                                    ref={searchResultsRef}
-                                                    className="absolute left-5 right-5 mt-1 bg-white border border-slate-100 rounded-xl shadow-2xl z-50 p-1 max-h-[300px] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in duration-200"
-                                                    onScroll={(e) => {
-                                                        const target = e.currentTarget;
-                                                        if (target.scrollHeight - target.scrollTop <= target.clientHeight + 50 && !isSearching && hasMore) {
-                                                            const nextPage = page + 1;
-                                                            setPage(nextPage);
-                                                            handleSearch(searchQuery, true, nextPage);
-                                                        }
-                                                    }}
-                                                >
-                                                    <div className="flex items-center justify-between px-3 py-2 border-b border-slate-50 mb-1">
-                                                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Search Results</span>
-                                                        <div className="flex items-center gap-3">
-                                                            {searchResults.length > 0 && itemsToPlaces(searchResults).length > 0 && (
+                                                {/* Search Results Dropdown-style */}
+                                                {searchResults.length > 0 && (
+                                                    <div
+                                                        ref={searchResultsRef}
+                                                        className="absolute left-5 right-5 mt-1 bg-white border border-slate-100 rounded-xl shadow-2xl z-50 p-1 max-h-[300px] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in duration-200"
+                                                        onScroll={(e) => {
+                                                            const target = e.currentTarget;
+                                                            if (target.scrollHeight - target.scrollTop <= target.clientHeight + 50 && !isSearching && hasMore) {
+                                                                const nextPage = page + 1;
+                                                                setPage(nextPage);
+                                                                handleSearch(searchQuery, true, nextPage);
+                                                            }
+                                                        }}
+                                                    >
+                                                        <div className="flex items-center justify-between px-3 py-2 border-b border-slate-50 mb-1">
+                                                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Search Results</span>
+                                                            <div className="flex items-center gap-3">
+                                                                {searchResults.length > 0 && itemsToPlaces(searchResults).length > 0 && (
+                                                                    <button
+                                                                        onClick={() => setShowMap(!showMap)}
+                                                                        className="text-[9px] font-black uppercase tracking-widest text-green-600 hover:text-green-700 flex items-center gap-1"
+                                                                    >
+                                                                        <MapPin className="h-2.5 w-2.5" />
+                                                                        {showMap ? 'Hide Map' : 'View on Map'}
+                                                                    </button>
+                                                                )}
                                                                 <button
-                                                                    onClick={() => setShowMap(!showMap)}
-                                                                    className="text-[9px] font-black uppercase tracking-widest text-green-600 hover:text-green-700 flex items-center gap-1"
+                                                                    onClick={() => setSearchResults([])}
+                                                                    className="text-[9px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-700"
                                                                 >
-                                                                    <MapPin className="h-2.5 w-2.5" />
-                                                                    {showMap ? 'Hide Map' : 'View on Map'}
+                                                                    Close
                                                                 </button>
+                                                            </div>
+                                                        </div>
+                                                        <div className="space-y-0.5">
+                                                            {searchResults.map((item) => (
+                                                                <div
+                                                                    key={item.id}
+                                                                    onClick={() => handleAddItem(item)}
+                                                                    className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer group border border-transparent"
+                                                                >
+                                                                    <div className="w-7 h-7 rounded bg-slate-100 overflow-hidden shrink-0">
+                                                                        {item.imageUrl && <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />}
+                                                                    </div>
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <div className="font-bold text-[11px] text-slate-900 truncate group-hover:text-black">{item.name}</div>
+                                                                        <div className="text-[9px] text-slate-400 truncate uppercase font-mono">{item.subtitle}</div>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                            {isSearching && page > 1 && (
+                                                                <div className="p-2 text-center text-[10px] text-slate-400">Loading more...</div>
                                                             )}
-                                                            <button
-                                                                onClick={() => setSearchResults([])}
-                                                                className="text-[9px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-700"
-                                                            >
-                                                                Close
-                                                            </button>
                                                         </div>
                                                     </div>
-                                                    <div className="space-y-0.5">
-                                                        {searchResults.map((item) => (
-                                                            <div
-                                                                key={item.id}
-                                                                onClick={() => handleAddItem(item)}
-                                                                className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer group border border-transparent"
-                                                            >
-                                                                <div className="w-7 h-7 rounded bg-slate-100 overflow-hidden shrink-0">
-                                                                    {item.imageUrl && <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />}
-                                                                </div>
-                                                                <div className="flex-1 min-w-0">
-                                                                    <div className="font-bold text-[11px] text-slate-900 truncate group-hover:text-black">{item.name}</div>
-                                                                    <div className="text-[9px] text-slate-400 truncate uppercase font-mono">{item.subtitle}</div>
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                        {isSearching && page > 1 && (
-                                                            <div className="p-2 text-center text-[10px] text-slate-400">Loading more...</div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )
-                                }
-                            </CardHeader >
+                                                )}
+                                            </div>
+                                        )
+                                    }
+                                </div>
+                            </CardHeader>
 
                             <CardContent className="p-5 pt-0 flex-1 overflow-y-auto min-h-0 custom-scrollbar">
                                 {/* INLINE AI NUDGE - Only for Owner, only for More/Places category, only when empty and not populating */}
@@ -771,7 +772,7 @@ export function ExpandedListOverlay({
                                                 onClick={() => searchInputRef.current?.focus()}
                                                 className="text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors py-2"
                                             >
-                                                I'll add items manually
+                                                I&apos;ll add items manually
                                             </button>
                                         </div>
                                     </div>
