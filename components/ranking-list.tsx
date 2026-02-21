@@ -393,11 +393,29 @@ export function RankingList({
                                 </div>
                             </div>
 
-                            {/* Ranking Separators */}
-                            {((index === 4 && items.length > 5) || (index === 9 && items.length > 10)) && (
+                            {/* Ranking Separators & Map */}
+                            {index === 4 && items.length > 5 && (
+                                <div className="flex items-center gap-4 py-4 mb-2 group/separator">
+                                    <div className="w-14 text-right"></div> {/* Spacer for num */}
+                                    <div className="flex-1 flex items-center gap-4">
+                                        <div className="h-px border-b-2 border-dashed border-slate-200 dark:border-white/10 flex-1"></div>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => handleDeleteBelow(index)}
+                                                className="text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-red-500 bg-slate-50 hover:bg-red-50 px-3 py-1 rounded-full transition-colors whitespace-nowrap"
+                                            >
+                                                Delete Below
+                                            </button>
+                                        </div>
+                                        <div className="h-px border-b-2 border-dashed border-slate-200 dark:border-white/10 flex-1"></div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {index === 9 && items.length >= 10 && (
                                 <>
-                                    {/* Inline Map Placement - moved ABOVE the separator */}
-                                    {index === 9 && showMap && mapItems.length > 0 && (
+                                    {/* Inline Map Placement - only after rank 10 */}
+                                    {showMap && mapItems.length > 0 && (
                                         <div className="my-4 px-4 pl-16 animate-in fade-in slide-in-from-top-4 duration-500">
                                             <div className="p-4 bg-slate-50 border-2 border-dashed border-slate-100 rounded-3xl">
                                                 <PlacesMap
@@ -408,21 +426,24 @@ export function RankingList({
                                         </div>
                                     )}
 
-                                    <div className="flex items-center gap-4 py-4 mb-2 group/separator">
-                                        <div className="w-14 text-right"></div> {/* Spacer for num */}
-                                        <div className="flex-1 flex items-center gap-4">
-                                            <div className="h-px border-b-2 border-dashed border-slate-200 dark:border-white/10 flex-1"></div>
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={() => handleDeleteBelow(index)}
-                                                    className="text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-red-500 bg-slate-50 hover:bg-red-50 px-3 py-1 rounded-full transition-colors whitespace-nowrap"
-                                                >
-                                                    Delete Below
-                                                </button>
+                                    {/* Separator only shows if there are more than 10 items */}
+                                    {items.length > 10 && (
+                                        <div className="flex items-center gap-4 py-4 mb-2 group/separator">
+                                            <div className="w-14 text-right"></div> {/* Spacer for num */}
+                                            <div className="flex-1 flex items-center gap-4">
+                                                <div className="h-px border-b-2 border-dashed border-slate-200 dark:border-white/10 flex-1"></div>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => handleDeleteBelow(index)}
+                                                        className="text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-red-500 bg-slate-50 hover:bg-red-50 px-3 py-1 rounded-full transition-colors whitespace-nowrap"
+                                                    >
+                                                        Delete Below
+                                                    </button>
+                                                </div>
+                                                <div className="h-px border-b-2 border-dashed border-slate-200 dark:border-white/10 flex-1"></div>
                                             </div>
-                                            <div className="h-px border-b-2 border-dashed border-slate-200 dark:border-white/10 flex-1"></div>
                                         </div>
-                                    </div>
+                                    )}
                                 </>
                             )}
                         </React.Fragment>
