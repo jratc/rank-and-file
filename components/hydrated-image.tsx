@@ -51,9 +51,25 @@ export function HydratedImage({ initialUrl, itemId, itemName, category, classNam
     if (!imageUrl || hasError) {
         return (
             <div className={`bg-slate-50 border border-slate-100/50 flex items-center justify-center relative overflow-hidden group ${className}`}>
-                <div className={`transition-all duration-1000 ${isLoading ? 'opacity-40 scale-100' : 'opacity-20 scale-90 grayscale'}`}>
-                    <Ghost className={`w-1/2 h-1/2 max-w-[24px] text-slate-400 ${isLoading ? 'animate-pulse' : ''}`} />
+                <div className={`transition-all duration-1000 flex items-center justify-center w-full h-full ${isLoading ? 'opacity-80 scale-110' : 'opacity-40 scale-100 grayscale'}`}>
+                    <Ghost
+                        className={`w-12 h-12 text-slate-400/80 ${isLoading ? 'animate-float-ghost' : ''}`}
+                        strokeWidth={1.5}
+                    />
                 </div>
+                <style dangerouslySetInnerHTML={{
+                    __html: `
+                    @keyframes float-ghost {
+                        0% { transform: translate(0, 0) rotate(0deg); }
+                        25% { transform: translate(4px, -6px) rotate(2deg); }
+                        50% { transform: translate(-2px, -8px) rotate(-1deg); }
+                        75% { transform: translate(-6px, -4px) rotate(1deg); }
+                        100% { transform: translate(0, 0) rotate(0deg); }
+                    }
+                    .animate-float-ghost {
+                        animation: float-ghost 6s ease-in-out infinite;
+                    }
+                `}} />
             </div>
         );
     }
@@ -67,10 +83,26 @@ export function HydratedImage({ initialUrl, itemId, itemName, category, classNam
                 className={`w-full h-full object-cover transition-opacity duration-700 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
             />
             {isLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-slate-50">
-                    <Ghost className="w-1/2 h-1/2 max-w-[24px] text-slate-200 animate-pulse" />
+                <div className="absolute inset-0 flex items-center justify-center bg-slate-50/80 backdrop-blur-sm">
+                    <Ghost
+                        className="w-10 h-10 text-slate-400 animate-float-ghost"
+                        strokeWidth={1.5}
+                    />
                 </div>
             )}
+            <style dangerouslySetInnerHTML={{
+                __html: `
+                @keyframes float-ghost {
+                    0% { transform: translate(0, 0) rotate(0deg); }
+                    25% { transform: translate(4px, -6px) rotate(2deg); }
+                    50% { transform: translate(-2px, -8px) rotate(-1deg); }
+                    75% { transform: translate(-6px, -4px) rotate(1deg); }
+                    100% { transform: translate(0, 0) rotate(0deg); }
+                }
+                .animate-float-ghost {
+                    animation: float-ghost 6s ease-in-out infinite;
+                }
+            `}} />
         </div>
     );
 }
