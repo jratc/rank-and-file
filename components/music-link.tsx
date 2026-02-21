@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { ExternalLink, X, Play, Square, Loader2 } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { ExternalLink, X, Play, Square, Loader2, Disc } from 'lucide-react';
 
 interface MusicPlayerProps {
     item: any; // The full list_item with metadata
@@ -53,93 +53,75 @@ function getAppleMusicEmbedUrl(item: any): string | null {
  * Parent container now expands/collapses when opened.
  */
 export function MusicPlayer({ item, className = '' }: MusicPlayerProps) {
-    const [isOpen, setIsOpen] = useState(false);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
     const provider = item?.metadata?.provider;
     const externalUrl = item?.metadata?.externalUrl;
 
-    const embedUrl = provider === 'spotify'
-        ? getSpotifyEmbedUrl(item)
-        : getAppleMusicEmbedUrl(item);
+    const previewUrl = provider === 'spotify'
+        ? item?.metadata?.rawMetadata?.preview_url
+        : item?.metadata?.rawMetadata?.previewUrl;
 
-    if (!embedUrl) return null;
+    useEffect(() => {
+        return () => {
+            if (audioRef.current) {
+                audioRef.current.pause();
+            }
+        };
+    }, []);
 
-    const isSpotify = provider === 'spotify';
+    if (!previewUrl) return null;
+
+    const togglePlay = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        e.preventDefault();
+
+        if (isPlaying) {
+            audioRef.current?.pause();
+            setIsPlaying(false);
+        } else {
+            // Stop any other audio elements if we want, but for now just this one
+            if (audioRef.current) {
+                audioRef.current.play().catch(err => console.error("Playback failed", err));
+                setIsPlaying(true);
+            }
+        }
+    };
 
     return (
         <div className={className}>
+            <audio
+                ref={audioRef}
+                src={previewUrl}
+                onEnded={() => setIsPlaying(false)}
+                onPause={() => setIsPlaying(false)}
+                onPlay={() => setIsPlaying(true)}
+            />
             <button
-                onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    setIsOpen(!isOpen);
-                }}
+                onClick={togglePlay}
                 className={`
                     inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full
                     text-[9px] font-black uppercase tracking-widest
                     transition-all duration-200 shrink-0
-                    ${isOpen
-                        ? 'bg-black text-white shadow-md'
+                    ${isPlaying
+                        ? 'bg-blue-500 text-white shadow-md animate-pulse'
                         : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700'
                     }
                 `}
-                title={isOpen ? 'Hide player' : 'Play'}
+                title={isPlaying ? 'Stop' : 'Play Preview'}
             >
-                {isOpen ? (
+                {isPlaying ? (
                     <>
                         <Square className="w-2.5 h-2.5 fill-current" />
-                        Close
+                        STOP
                     </>
                 ) : (
                     <>
                         <Play className="w-2.5 h-2.5 fill-current" />
-                        {isSpotify ? 'Spotify' : 'Play'}
+                        PLAY
                     </>
                 )}
             </button>
-
-            {isOpen && (
-                <div
-                    className="mt-3 w-full bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden ring-1 ring-black/5 animate-in fade-in slide-in-from-top-2 duration-300"
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-100">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Preview</span>
-                        <div className="flex items-center gap-2">
-                            {externalUrl && (
-                                <a
-                                    href={externalUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-[9px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-700 flex items-center gap-1 bg-white px-2 py-1 rounded-md border border-slate-200 shadow-sm transition-all hover:scale-105"
-                                >
-                                    <ExternalLink className="h-2.5 w-2.5" />
-                                    Open
-                                </a>
-                            )}
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setIsOpen(false);
-                                }}
-                                className="p-1 hover:bg-slate-200 rounded-md transition-colors text-slate-400 hover:text-slate-600"
-                            >
-                                <X className="h-3 w-3" />
-                            </button>
-                        </div>
-                    </div>
-                    <div className="w-full bg-black min-h-[80px]">
-                        <iframe
-                            src={embedUrl}
-                            width="100%"
-                            height={provider === 'apple' ? "175" : "80"}
-                            frameBorder="0"
-                            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                            loading="lazy"
-                            className="rounded-b-xl"
-                        />
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

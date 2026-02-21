@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Ghost, Loader2 } from 'lucide-react';
+import { Ghost, Loader2, Music, BookOpen, Martini } from 'lucide-react';
 import { hydrateItemImage } from '@/app/draft/actions';
 
 interface HydratedImageProps {
@@ -48,14 +48,19 @@ export function HydratedImage({ initialUrl, itemId, itemName, category, classNam
         return () => { mounted = false; };
     }, [itemId, itemName, imageUrl]);
 
+    const getPlaceholderIcon = () => {
+        const cat = category?.toLowerCase() || '';
+        if (cat === 'music' || cat === 'songs' || cat === 'albums' || cat === 'artists') return <Music className={`w-12 h-12 text-slate-400/80 ${isLoading ? 'animate-float-ghost' : ''}`} strokeWidth={1.5} />;
+        if (cat === 'books' || cat === 'reading' || cat === 'authors') return <BookOpen className={`w-12 h-12 text-slate-400/80 ${isLoading ? 'animate-float-ghost' : ''}`} strokeWidth={1.5} />;
+        if (cat === 'food' || cat === 'drink' || cat === 'martini' || cat === 'bars' || cat === 'restaurants' || cat === 'places') return <Martini className={`w-12 h-12 text-slate-400/80 ${isLoading ? 'animate-float-ghost' : ''}`} strokeWidth={1.5} />;
+        return <Ghost className={`w-12 h-12 text-slate-400/80 ${isLoading ? 'animate-float-ghost' : ''}`} strokeWidth={1.5} />;
+    };
+
     if (!imageUrl || hasError) {
         return (
             <div className={`bg-slate-50 border border-slate-100/50 flex items-center justify-center relative overflow-hidden group ${className}`}>
                 <div className={`transition-all duration-1000 flex items-center justify-center w-full h-full ${isLoading ? 'opacity-80 scale-110' : 'opacity-40 scale-100 grayscale'}`}>
-                    <Ghost
-                        className={`w-12 h-12 text-slate-400/80 ${isLoading ? 'animate-float-ghost' : ''}`}
-                        strokeWidth={1.5}
-                    />
+                    {getPlaceholderIcon()}
                 </div>
                 <style dangerouslySetInnerHTML={{
                     __html: `
@@ -74,6 +79,14 @@ export function HydratedImage({ initialUrl, itemId, itemName, category, classNam
         );
     }
 
+    const getLoadingIcon = () => {
+        const cat = category?.toLowerCase() || '';
+        if (cat === 'music' || cat === 'songs' || cat === 'albums') return <Music className="w-10 h-10 text-slate-400 animate-float-ghost" strokeWidth={1.5} />;
+        if (cat === 'books') return <BookOpen className="w-10 h-10 text-slate-400 animate-float-ghost" strokeWidth={1.5} />;
+        if (cat === 'food' || cat === 'drink' || cat === 'places') return <Martini className="w-10 h-10 text-slate-400 animate-float-ghost" strokeWidth={1.5} />;
+        return <Ghost className="w-10 h-10 text-slate-400 animate-float-ghost" strokeWidth={1.5} />;
+    };
+
     return (
         <div className={`relative overflow-hidden ${className}`}>
             <img
@@ -84,10 +97,7 @@ export function HydratedImage({ initialUrl, itemId, itemName, category, classNam
             />
             {isLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-slate-50/80 backdrop-blur-sm">
-                    <Ghost
-                        className="w-10 h-10 text-slate-400 animate-float-ghost"
-                        strokeWidth={1.5}
-                    />
+                    {getLoadingIcon()}
                 </div>
             )}
             <style dangerouslySetInnerHTML={{

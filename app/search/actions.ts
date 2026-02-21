@@ -71,15 +71,32 @@ export async function addToList(item: RankedItem, listId: string) {
     }
 
     // CHECK FOR DUPLICATES
-    const { data: existingItem } = await supabase
+    // 1. By entity_id (strict)
+    const { data: existingById } = await supabase
         .from('list_items')
         .select('id')
         .eq('list_id', listId)
         .eq('entity_id', item.id)
         .maybeSingle();
 
-    if (existingItem) {
+    if (existingById) {
         return { error: 'Item already in list' };
+    }
+
+    // 2. By Name (Normalized fallback for places/food where IDs might vary slightly)
+    const normalizedNewName = item.name.toLowerCase().trim();
+    const { data: existingItemsForNameCheck } = await supabase
+        .from('list_items')
+        .select('metadata')
+        .eq('list_id', listId);
+
+    if (existingItemsForNameCheck) {
+        const isDuplicateName = existingItemsForNameCheck.some(row =>
+            row.metadata?.name?.toLowerCase().trim() === normalizedNewName
+        );
+        if (isDuplicateName) {
+            return { error: 'Item with this name already in list' };
+        }
     }
 
     // 1. Shift all existing items down by 1

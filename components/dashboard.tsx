@@ -51,8 +51,6 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
     const [isBackgroundPopulating, setIsBackgroundPopulating] = useState(false);
     const [isPopulatingComplete, setIsPopulatingComplete] = useState(false);
 
-    // FREE-FORM LIST STATE
-    const [creationStep, setCreationStep] = useState<'naming' | 'choosing' | 'drafting' | 'waiting' | 'ranking' | null>(null);
     const [allComments, setAllComments] = useState<any[]>([]);
     const [freeFormItems, setFreeFormItems] = useState<string[]>(Array(10).fill(''));
 
@@ -79,20 +77,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
         }
     }, [currentUserId, currentDisplayName]);
 
-    // Reset creation state when closing or switching lists
-    useEffect(() => {
-        if (!expandedListId || expandedListId !== 'temp-pending') {
-            setCreationStep(null);
-        }
-    }, [expandedListId]);
 
-    // Auto-finalize creation when population completes
-    useEffect(() => {
-        if (isPopulatingComplete && creationStep === 'ranking') {
-            console.log(`[Dashboard] Auto-finalizing list creation...`);
-            handleSubmitWaitingComment();
-        }
-    }, [isPopulatingComplete, creationStep]);
 
     const handleSaveProfile = async () => {
         if (!displayName.trim()) return;
@@ -396,7 +381,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
         setShowShareOptions(false);
         setShowMap(false);
         setIsWaitingForComment(false);
-        setCreationStep(null);
+
         setPendingListAfterCreate(null);
         setIsPopulating(false);
         setIsBackgroundPopulating(false);
@@ -562,7 +547,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
         } finally {
             setIsUpdatingTitle(false);
             setIsWaitingForComment(false);
-            setCreationStep(null);
+
             const finalId = pendingListAfterCreate?.id;
             const finalTitle = pendingListAfterCreate?.title;
             setPendingListAfterCreate(null);
@@ -680,7 +665,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
 
             setLists(prev => prev.map(l => l.id === 'temp-pending' || l.id === pendingListAfterCreate.id ? newListWithItems : l));
             setExpandedListId(pendingListAfterCreate.id);
-            setCreationStep(null);
+
             setFreeFormItems(Array(10).fill(''));
             setEditSession({ id: null, title: null, isExpanded: false });
             router.refresh();
@@ -719,7 +704,6 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
 
         setLists(prev => [tempList, ...prev]);
         setExpandedListId('temp-pending');
-        setCreationStep('naming');
         setEditSession({
             id: 'temp-pending',
             title: '',
@@ -796,32 +780,12 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                         .catch(e => console.error("Failed to save pending comment", e));
                 }
 
-                // FOR 'MORE' CATEGORIES (Other, Places):
-                // These get the "AI vs Manual" choice step as requested.
-                if (newList.category === 'other' || newList.category === 'places' || newList.category === 'more') {
-                    setCreationStep('choosing');
-                    setIsUpdatingTitle(false);
-                    return;
-                }
-
-                // FOR PRIMARY CATEGORIES (Music, Movies, Books):
-                // These auto-populate and skip the choice step.
+                // FOR ALL CATEGORIES:
+                // We now go straight to the list view.
+                // Primary categories auto-populate, others show the "Need a starting point?" nudge.
                 startEarlyPopulation(newList);
-                setCreationStep(null);
                 setEditSession({ id: null, title: null, isExpanded: false });
                 setIsUpdatingTitle(false);
-                return;
-
-                // SAVE INITIAL COMMENT (NON-BLOCKING/RESILIENT)
-                if (waitingComment.trim()) {
-                    console.log(`[Dashboard] Saving initial comment for ${newList.id}: ${waitingComment}`);
-                    upsertComment(newList.id, waitingComment.trim()).catch(err => {
-                        console.error("[Dashboard] Initial comment save failed:", err);
-                    });
-                }
-
-                console.log(`[Dashboard] Transitioned to ranking view for unified modal`);
-
             } catch (error: any) {
                 console.error("[Dashboard] List creation failed:", error);
                 toast.error(error.message?.includes('DB_ERROR') ? `Database error: ${error.message}` : "Failed to create list");
@@ -909,8 +873,6 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                 expandedList={expandedList}
                 expandedListId={expandedListId}
                 closeExpandedView={closeExpandedView}
-                creationStep={creationStep}
-                setCreationStep={setCreationStep}
                 editSession={editSession}
                 setEditSession={setEditSession}
                 handleUpdateTitle={handleUpdateTitle}

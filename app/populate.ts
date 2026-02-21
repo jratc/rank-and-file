@@ -189,7 +189,17 @@ export async function detectAndPopulateList(listId: string, title: string, categ
     const seenNames = new Set<string>();
     items = items.filter(item => {
         const normalized = item.name.toLowerCase().trim();
+        // Check for exact name match OR similar substrings for places
         if (seenNames.has(normalized)) return false;
+
+        // Prevent very similar names for places (e.g. "Joe's Pizza" vs "Joe's Pizza & Bar")
+        if (['food', 'bars', 'restaurants', 'places'].includes(category)) {
+            const isTooSimilar = Array.from(seenNames).some(seen =>
+                normalized.includes(seen) || seen.includes(normalized)
+            );
+            if (isTooSimilar) return false;
+        }
+
         seenNames.add(normalized);
         return true;
     });
@@ -248,9 +258,10 @@ export async function detectAndPopulateList(listId: string, title: string, categ
                                     metadata: {
                                         ...item.metadata,
                                         ...match,
-                                        id: item.metadata.id, // Preserve original ID
-                                        imageUrl: item.metadata.imageUrl || match.imageUrl // Keep original image if exists
-                                    }
+                                        id: match.id, // Use the STABLE identifier from Google/Photon
+                                        imageUrl: item.metadata.imageUrl || match.imageUrl
+                                    },
+                                    entity_id: match.id // Update entity_id to stable provider ID
                                 })
                                 .eq('id', item.id);
 
@@ -370,9 +381,10 @@ export async function populateBackgroundItems(listId: string, title: string, cat
                                     metadata: {
                                         ...item.metadata,
                                         ...match,
-                                        id: item.metadata.id,
+                                        id: match.id,
                                         imageUrl: item.metadata.imageUrl || match.imageUrl
-                                    }
+                                    },
+                                    entity_id: match.id
                                 })
                                 .eq('id', item.id);
                         }

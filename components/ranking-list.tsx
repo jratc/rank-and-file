@@ -396,7 +396,7 @@ export function RankingList({
                             {/* Ranking Separators & Map */}
                             {index === 4 && items.length > 5 && (
                                 <div className="flex items-center gap-4 py-4 mb-2 group/separator">
-                                    <div className="w-14 text-right"></div> {/* Spacer for num */}
+                                    <div className="w-14 text-right"></div>
                                     <div className="flex-1 flex items-center gap-4">
                                         <div className="h-px border-b-2 border-dashed border-slate-200 dark:border-white/10 flex-1"></div>
                                         <div className="flex items-center gap-2">
@@ -412,45 +412,40 @@ export function RankingList({
                                 </div>
                             )}
 
-                            {index === 9 && items.length >= 10 && (
-                                <>
-                                    {/* Inline Map Placement - only after rank 10 */}
-                                    {showMap && mapItems.length > 0 && (
-                                        <div className="my-4 px-4 pl-16 animate-in fade-in slide-in-from-top-4 duration-500">
-                                            <div className="p-4 bg-slate-50 border-2 border-dashed border-slate-100 rounded-3xl">
-                                                <PlacesMap
-                                                    items={mapItems}
-                                                    title={title}
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
+                            {/* Inline Map Placement - either after rank 10 or after the last item if list is shorter */}
+                            {showMap && mapItems.length > 0 && (index === 9 || (items.length < 10 && index === items.length - 1)) && (
+                                <div className="my-4 px-4 pl-16 animate-in fade-in slide-in-from-top-4 duration-500 w-full">
+                                    <div className="p-4 bg-slate-50 border-2 border-dashed border-slate-100 rounded-3xl">
+                                        <PlacesMap
+                                            items={mapItems}
+                                            title={title}
+                                        />
+                                    </div>
+                                </div>
+                            )}
 
-                                    {/* Separator only shows if there are more than 10 items */}
-                                    {items.length > 10 && (
-                                        <div className="flex items-center gap-4 py-4 mb-2 group/separator">
-                                            <div className="w-14 text-right"></div> {/* Spacer for num */}
-                                            <div className="flex-1 flex items-center gap-4">
-                                                <div className="h-px border-b-2 border-dashed border-slate-200 dark:border-white/10 flex-1"></div>
-                                                <div className="flex items-center gap-2">
-                                                    <button
-                                                        onClick={() => handleDeleteBelow(index)}
-                                                        className="text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-red-500 bg-slate-50 hover:bg-red-50 px-3 py-1 rounded-full transition-colors whitespace-nowrap"
-                                                    >
-                                                        Delete Below
-                                                    </button>
-                                                </div>
-                                                <div className="h-px border-b-2 border-dashed border-slate-200 dark:border-white/10 flex-1"></div>
-                                            </div>
+                            {index === 9 && items.length > 10 && (
+                                <div className="flex items-center gap-4 py-4 mb-2 group/separator">
+                                    <div className="w-14 text-right"></div>
+                                    <div className="flex-1 flex items-center gap-4">
+                                        <div className="h-px border-b-2 border-dashed border-slate-200 dark:border-white/10 flex-1"></div>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => handleDeleteBelow(index)}
+                                                className="text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-red-500 bg-slate-50 hover:bg-red-50 px-3 py-1 rounded-full transition-colors whitespace-nowrap"
+                                            >
+                                                Delete Below
+                                            </button>
                                         </div>
-                                    )}
-                                </>
+                                        <div className="h-px border-b-2 border-dashed border-slate-200 dark:border-white/10 flex-1"></div>
+                                    </div>
+                                </div>
                             )}
                         </React.Fragment>
                     ))}
 
-                    {/* Reward-based Map Button: only when trimmed to 10 */}
-                    {items.length === 10 && !showMap && (['places', 'food', 'restaurants', 'bars'].includes(category?.toLowerCase() || '')) && (
+                    {/* Reward-based Map Button: available for any count between 1 and 10 */}
+                    {items.length > 0 && items.length <= 10 && !showMap && (['places', 'food', 'restaurants', 'bars'].includes(category?.toLowerCase() || '')) && (
                         <div className="mt-4 flex justify-center">
                             <button
                                 onClick={() => {
@@ -460,7 +455,7 @@ export function RankingList({
                                 className="text-[10px] font-black uppercase tracking-widest text-green-600 hover:text-green-700 bg-green-50 hover:bg-green-100 px-6 py-3 rounded-full transition-all shadow-lg flex items-center gap-2 active:scale-95"
                             >
                                 <MapPin className="h-3 w-3" />
-                                View Top 10 on Map
+                                View on Map
                             </button>
                         </div>
                     )}
