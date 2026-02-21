@@ -174,17 +174,33 @@ export const universalProvider = {
 
             if (aiItems.length > 0) {
                 console.log(`[Universal] LLM generated ${aiItems.length} items for "${topic}"`);
-                return aiItems.map((item, index) => ({
+
+                // Hydrate items with thumbnails in parallel
+                const items = aiItems.map((item, index) => ({
                     id: `ai_${Date.now()}_${index}`,
                     name: item.name,
                     subtitle: item.subtitle,
-                    imageUrl: 'https://images.unsplash.com/photo-1516979187457-637abb4f9353?w=400&h=400&fit=crop', // Generic book/info fallback
+                    imageUrl: 'https://images.unsplash.com/photo-1516979187457-637abb4f9353?w=400&h=400&fit=crop', // Initial fallback
                     externalUrl: null,
                     provider: 'gemini' as const,
                     category: 'more' as Category,
                     rawMetadata: item,
-                    rank: index + 1 // Implicit rank from AI order
+                    rank: index + 1
                 }));
+
+                // HYDRATION: Fetch real thumbnails for each AI item
+                console.log(`[Universal] Hydrating ${items.length} AI items with thumbnails...`);
+                const hydratedItems = await Promise.all(
+                    items.map(async (item) => {
+                        const thumb = await universalProvider.fetchThumbnail(item.name, 'more');
+                        if (thumb) {
+                            return { ...item, imageUrl: thumb };
+                        }
+                        return item;
+                    })
+                );
+
+                return hydratedItems;
             }
         } catch (err) {
             console.error('[Universal] LLM Fallback failed', err);
@@ -229,7 +245,8 @@ export const universalProvider = {
             // 3. SPECIAL CONTEXT: Handle Peloton / Fitness Instructors
             if (/peloton|peleton|instructor|fitness/i.test(query)) {
                 const pQuery = cleanedQuery.replace(/peleton/i, 'Peloton');
-                if (!searchQueries.includes(pQuery)) searchQueries.push(pQuery);
+                // Force "Peloton instructor" for better disambiguation
+                searchQueries.unshift(`${pQuery} Peloton instructor`);
                 searchQueries.push(`${pQuery} instructor`);
             }
 
@@ -265,7 +282,11 @@ export const universalProvider = {
                                     src.includes('icon_') ||
                                     src.includes('increase_') ||
                                     src.includes('symbol_') ||
-                                    src.includes('question_mark');
+                                    src.includes('question_mark') ||
+                                    src.includes('logo') || // Standard logos are rarely helpful for people
+                                    src.includes('flag_') ||
+                                    src.includes('soccer') || // Filter out irrelevant sports images if searching for instructors
+                                    src.includes('football');
                                 if (isGarbage) continue;
                                 return page.thumbnail.source;
                             }

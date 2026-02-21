@@ -39,7 +39,7 @@ export function FeedbackHole() {
 
     return (
         <div
-            className="fixed right-6 bottom-6 z-50 flex flex-col items-center pointer-events-none group"
+            className="flex flex-col items-center group relative md:mt-0"
             onMouseEnter={() => setIsVisible(true)}
             onMouseLeave={() => !feedback && setIsVisible(false)}
         >
@@ -59,7 +59,7 @@ export function FeedbackHole() {
 
                 {/* STABLE INPUT CONTAINER (Now ABOVE) */}
                 <div
-                    className={`pointer-events-auto bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl border border-slate-200 dark:border-white/10 p-4 rounded-3xl shadow-2xl transition-all duration-300 w-64 mb-4 ${isSubmitted ? 'scale-90 opacity-0 blur-lg' : isVisible ? 'scale-100 opacity-100 -translate-y-2' : 'scale-75 opacity-0 pointer-events-none translate-y-4'} relative`}
+                    className={`absolute bottom-full right-0 z-50 pointer-events-auto bg-white/90 dark:bg-slate-900/90 backdrop-blur-3xl border border-slate-200 dark:border-white/10 p-4 rounded-3xl shadow-2xl transition-all duration-300 w-64 mb-4 ${isSubmitted ? 'scale-90 opacity-0 blur-lg' : isVisible ? 'scale-100 opacity-100 -translate-y-2' : 'scale-75 opacity-0 pointer-events-none translate-y-4'}`}
                     onClick={(e) => e.stopPropagation()}
                 >
                     <button
@@ -132,9 +132,9 @@ function DroppableHole({ isActive }: { isActive: boolean }) {
     return (
         <div
             ref={setNodeRef}
-            className={`pointer-events-auto relative w-24 h-24 rounded-full flex items-center justify-center transition-all duration-700 overflow-hidden
-                ${isActive ? 'opacity-100 scale-100 rotate-0' : 'opacity-20 scale-75 grayscale blur-[2px] pointer-events-none rotate-45'}
-                ${isOver ? 'bg-black scale-110 shadow-[0_0_50px_rgba(79,70,229,0.4)]' : 'bg-slate-900/10'}
+            className={`pointer-events-auto relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-700 overflow-hidden
+                ${isActive ? 'opacity-100 scale-100 rotate-0' : 'opacity-20 scale-75 grayscale blur-[1px] pointer-events-none rotate-45'}
+                ${isOver ? 'bg-black scale-110 shadow-[0_0_30px_rgba(79,70,229,0.3)]' : 'bg-slate-900/5'}
             `}
         >
             {/* The infinite void effect */}

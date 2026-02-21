@@ -735,7 +735,103 @@ export async function submitFeedback(content: string) {
     }
 
     console.log(`FEEDBACK SUCCESS (User: ${profile?.username || 'Guest'}):`, content);
+
+    // Trigger synthesis in the background (no await) to keep the summary fresh
+    synthesizeFeedback();
+
     return { success: true };
+}
+
+export async function synthesizeFeedback() {
+    const supabase = await createClient();
+
+    try {
+        // 1. Fetch all feedback
+        const { data: feedbackList } = await supabase
+            .from('feedback')
+            .select('content, created_at')
+            .order('created_at', { ascending: false });
+
+        if (!feedbackList || feedbackList.length === 0) return;
+
+        // 2. Prepare content for Gemini
+        const feedbackText = feedbackList.map(f => `- [${f.created_at}] ${f.content}`).join('\n');
+
+        // 3. Ask Gemini to synthesize
+        const apiKey = process.env.GEMINI_API_KEY;
+        const GEMINI_MODEL = 'gemini-flash-latest';
+
+        const prompt = `
+        You are a product analyst for a ranking app called "Rank and File".
+        Analyze the following user feedback and synthesize it into clear categories.
+        Focus on:
+        - Major issues / bugs
+        - Feature requests
+        - User flow friction
+        - General praise/sentiment
+
+        Feedback to analyze:
+        ${feedbackText}
+
+        Return a JSON object with:
+        {
+            "last_updated": "ISO timestamp",
+            "summary": "Short 1-2 sentence overview of current app pulse",
+            "categories": [
+                {
+                    "name": "Category Name",
+                    "issues": ["Issue 1", "Issue 2"],
+                    "sentiment": "positive | neutral | negative"
+                }
+            ]
+        }
+        Return valid JSON only.
+        `;
+
+        const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: { responseMimeType: "application/json" }
+                })
+            }
+        );
+
+        if (response.ok) {
+            const result = await response.json();
+            const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (text) {
+                const synthesis = JSON.parse(text);
+
+                // 4. Store the synthesis (singleton record - just keep the latest)
+                // We'll just insert a new record, and getLatestSynthesis will fetch newest
+                await supabase
+                    .from('feedback_synthesis')
+                    .insert({ content: synthesis });
+
+                console.log('[AI] Feedback synthesis updated.');
+                revalidatePath('/feedback');
+            }
+        }
+    } catch (error) {
+        console.error('[AI] Feedback synthesis failed:', error);
+    }
+}
+
+export async function getLatestSynthesis() {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from('feedback_synthesis')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    if (error || !data) return null;
+    return data.content;
 }
 
 export async function getFeedback() {
