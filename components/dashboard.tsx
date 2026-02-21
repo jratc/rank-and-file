@@ -248,17 +248,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
             setLists(prev => prev.filter(l => l.id !== id));
             setExpandedListId(null);
 
-            toast.success('List deleted', {
-                description: listToDelete?.title,
-                action: {
-                    label: "UNDO",
-                    onClick: () => {
-                        if (listToDelete) {
-                            handleCreateList(listToDelete.category, listToDelete.title);
-                        }
-                    }
-                }
-            });
+            // No notification on delete per user request
         } catch (error: any) {
             toast.error(error.message || 'Failed to delete list');
         } finally {
