@@ -751,7 +751,7 @@ export function ExpandedListOverlay({
                                                                     </div>
                                                                     <div className="flex-1 min-w-0">
                                                                         <div className="font-bold text-[11px] text-slate-900 truncate group-hover:text-black">{item.name}</div>
-                                                                        <div className="text-[9px] text-slate-400 truncate uppercase font-mono">{item.subtitle}</div>
+                                                                        <div className="text-[9px] text-slate-600 truncate uppercase font-medium">{item.subtitle}</div>
                                                                     </div>
                                                                 </div>
                                                             ))}

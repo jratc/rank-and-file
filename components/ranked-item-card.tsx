@@ -48,7 +48,7 @@ export function RankedItemCard({
                     </h4>
                     <div className="flex items-center gap-2 mt-0.5 min-w-0">
                         {item.metadata?.subtitle && (
-                            <div className="text-[10px] font-bold text-slate-400 uppercase mt-0.5 tracking-tight whitespace-normal break-words leading-tight px-0.5">
+                            <div className="text-[10px] font-medium text-slate-600 uppercase mt-0.5 tracking-tight whitespace-normal break-words leading-tight px-0.5">
                                 {item.metadata.subtitle}
                             </div>
                         )}
