@@ -669,7 +669,15 @@ export async function upsertComment(listId: string, content: string) {
     if (fetchErr) console.error(`[upsertComment] Fetch error:`, fetchErr);
 
     let result;
-    if (existing) {
+    if (!content.trim()) {
+        if (existing) {
+            console.log(`[upsertComment] Deleting empty comment ${existing.id}`);
+            result = await supabase.from('comments').delete().eq('id', existing.id);
+        } else {
+            console.log(`[upsertComment] No existing comment to delete`);
+            return { success: true };
+        }
+    } else if (existing) {
         console.log(`[upsertComment] Updating existing comment ${existing.id}`);
         result = await supabase
             .from('comments')

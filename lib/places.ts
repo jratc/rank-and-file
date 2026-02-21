@@ -108,9 +108,10 @@ function sanitizePlacesQuery(
     // Noise words to strip from subject for cleaner queries
     const noisePatterns = [
         /^places?\s+to\s+(?:eat|get|find|try|have|drink)\s*/i,
+        /^restaurants?\s+(?:that|which|to)\s+(?:serve|have|cook)\s*/i,
         /^(?:the\s+)?\d+(?:st|nd|rd|th)\s+best\s+/i,   // "the 3rd best"
-        /^top\s+(?:\d+\s+)?(?:rated\s+)?/i,              // "top rated", "top 10"
-        /^best\s+/i,
+        /^top\s+(?:\d+\s+)?(?:rated\s+)?(?:restaurants?\s+)?(?:for\s+)?/i,
+        /^best\s+(?:restaurants?\s+)?(?:for\s+)?/i,
         /^my\s+favorite\s+/i,
         /^favorite\s+/i,
         /^greatest\s+/i,
@@ -119,6 +120,7 @@ function sanitizePlacesQuery(
         /\s+spots?$/i,
         /\s+places?$/i,
         /\s+joints?$/i,
+        /\s+restaurants?$/i
     ];
 
     let cleanSubject = subject.trim();
@@ -223,19 +225,34 @@ export async function searchPlaces(query: string, category: Category, context?: 
                 if (data.results && data.results.length > 0) {
                     let validPlaces = data.results;
 
-                    // Relaxed location filtering
-                    // Google Places already handles location in the query,
-                    // but we can do a loose filter to remove obviously wrong locations
+                    // STRICT location filtering
+                    // Google will sometimes return globally famous places or irrelevant items
+                    // We enforce that the formatted address must contain the normalized city/state
                     if (location) {
+                        const locationParts = location.split(',').map(p => normalizeForComparison(p));
                         const normalizedLoc = normalizeForComparison(location);
+                        const targetCity = locationParts[0];
+                        const targetState = locationParts.length > 1 ? locationParts[1] : null;
+
                         const locationFiltered = validPlaces.filter((place: any) => {
                             const addr = normalizeForComparison(place.formatted_address || '');
-                            return addr.includes(normalizedLoc) || normalizedLoc.split(',')[0] && addr.includes(normalizedLoc.split(',')[0].trim());
+                            if (targetState) {
+                                // Must contain both city and state (strict)
+                                return addr.includes(targetCity) && addr.includes(targetState);
+                            }
+                            // Otherwise just needs city
+                            return addr.includes(targetCity);
                         });
-                        // Only apply filter if it doesn't eliminate all results
-                        if (locationFiltered.length > 0) {
-                            validPlaces = locationFiltered;
-                        }
+
+                        // Strict enforcement: only use filtered. If empty, return empty (don't relax).
+                        validPlaces = locationFiltered;
+                        console.log(`[searchPlaces] Strict Location Filter applied for "${location}": kept ${validPlaces.length}/${data.results.length}`);
+                    }
+
+                    if (validPlaces.length === 0) {
+                        // Return early if location filtering killed all results
+                        console.log('[searchPlaces] Location filter eliminated all Google results.');
+                        return [];
                     }
 
                     return validPlaces.map((place: any) => {

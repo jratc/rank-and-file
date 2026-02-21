@@ -372,25 +372,26 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
             const commentToSave = commentValueRef.current.trim();
             console.log(`[Dashboard] closeExpandedView: Saving dirty comment for ${expandedListId}`);
 
+            // Mark as clean immediately to prevent race conditions
+            isCommentDirty.current = false;
+
             // Optimistic sync for local state
             setLists(prev => prev.map(l => l.id === expandedListId ? {
                 ...l,
-                comments: [...(l.comments || []).filter((c: any) => c.user_id !== currentUserId), {
+                comments: commentToSave ? [...(l.comments || []).filter((c: any) => c.user_id !== currentUserId), {
                     id: `temp-${Date.now()}`,
                     user_id: currentUserId,
                     list_id: expandedListId,
                     content: commentToSave,
                     created_at: new Date().toISOString(),
                     profiles: { username: currentUsername, display_name: currentDisplayName }
-                }]
+                }] : [...(l.comments || []).filter((c: any) => c.user_id !== currentUserId)]
             } : l));
 
-            try {
-                await upsertComment(expandedListId, commentToSave);
-                isCommentDirty.current = false;
-            } catch (err) {
+            // Fire and forget (non-blocking)
+            upsertComment(expandedListId, commentToSave).catch(err => {
                 console.error("[Dashboard] Auto-save on close failed:", err);
-            }
+            });
         }
 
         setExpandedListId(null);
@@ -1454,27 +1455,28 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                                             commentValueRef.current = e.target.value;
                                                             isCommentDirty.current = true;
                                                         }}
-                                                        onBlur={async () => {
+                                                        onBlur={() => {
                                                             const commentToSave = commentValueRef.current.trim();
                                                             console.log(`[Dashboard] Textarea Blur: Dirty=${isCommentDirty.current}, Content="${commentToSave.substring(0, 15)}..."`);
-                                                            if (isCommentDirty.current && commentToSave && expandedList.id !== 'temp-pending') {
-                                                                const newComment = {
-                                                                    id: `temp-${Date.now()}`,
-                                                                    user_id: currentUserId,
-                                                                    list_id: expandedList.id,
-                                                                    content: waitingComment.trim(),
-                                                                    created_at: new Date().toISOString(),
-                                                                    profiles: { username: currentUsername, display_name: currentDisplayName }
-                                                                };
+                                                            if (isCommentDirty.current && expandedList.id !== 'temp-pending') {
+                                                                // Mark clean immediately
+                                                                isCommentDirty.current = false;
 
                                                                 // Optimistic update
                                                                 setLists(prev => prev.map(l => l.id === expandedList.id ? {
                                                                     ...l,
-                                                                    comments: [...(l.comments || []).filter((c: any) => c.user_id !== currentUserId), newComment]
+                                                                    comments: commentToSave ? [...(l.comments || []).filter((c: any) => c.user_id !== currentUserId), {
+                                                                        id: `temp-${Date.now()}`,
+                                                                        user_id: currentUserId,
+                                                                        list_id: expandedList.id,
+                                                                        content: commentToSave,
+                                                                        created_at: new Date().toISOString(),
+                                                                        profiles: { username: currentUsername, display_name: currentDisplayName }
+                                                                    }] : [...(l.comments || []).filter((c: any) => c.user_id !== currentUserId)]
                                                                 } : l));
 
-                                                                await upsertComment(expandedList.id, waitingComment.trim());
-                                                                isCommentDirty.current = false;
+                                                                // Fire and forget save
+                                                                upsertComment(expandedList.id, commentToSave).catch(e => console.error("Save error", e));
                                                             }
                                                         }}
                                                         className="min-h-[60px] max-h-[120px] font-bold text-sm resize-none border-none bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus-visible:ring-1 focus-visible:ring-slate-100 rounded-xl p-3 placeholder:opacity-40 transition-all overflow-y-auto"

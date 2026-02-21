@@ -44,12 +44,12 @@ export function SortableItem({ id, item, rank, category, onRemove, onDoubleClick
                 {...listeners}
                 onDoubleClick={onDoubleClick}
             >
-                <div className="flex flex-col items-center justify-center pl-2 pr-1 border-l border-slate-100 gap-1 bg-white z-10">
+                <div className="flex flex-row items-center justify-end pl-2 pr-1 border-l border-slate-100 gap-1 bg-white z-10 shrink-0">
                     {rank > 10 && (
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 w-auto px-1.5 text-[9px] font-black uppercase tracking-widest bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all absolute right-12 shadow-sm border border-blue-100"
+                            className="h-6 w-auto px-1.5 text-[9px] font-black uppercase tracking-widest bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all shadow-sm border border-blue-100 shrink-0"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 if (onDoubleClick) onDoubleClick();
