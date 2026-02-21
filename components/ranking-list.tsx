@@ -396,6 +396,18 @@ export function RankingList({
                             {/* Ranking Separators */}
                             {((index === 4 && items.length > 5) || (index === 9 && items.length > 10)) && (
                                 <>
+                                    {/* Inline Map Placement - moved ABOVE the separator */}
+                                    {index === 9 && showMap && mapItems.length > 0 && (
+                                        <div className="my-4 px-4 pl-16 animate-in fade-in slide-in-from-top-4 duration-500">
+                                            <div className="p-4 bg-slate-50 border-2 border-dashed border-slate-100 rounded-3xl">
+                                                <PlacesMap
+                                                    items={mapItems}
+                                                    title={title}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <div className="flex items-center gap-4 py-4 mb-2 group/separator">
                                         <div className="w-14 text-right"></div> {/* Spacer for num */}
                                         <div className="flex-1 flex items-center gap-4">
@@ -411,18 +423,6 @@ export function RankingList({
                                             <div className="h-px border-b-2 border-dashed border-slate-200 dark:border-white/10 flex-1"></div>
                                         </div>
                                     </div>
-
-                                    {/* Inline Map Placement - only after rank 10 */}
-                                    {index === 9 && showMap && mapItems.length > 0 && (
-                                        <div className="my-4 px-4 pl-16 animate-in fade-in slide-in-from-top-4 duration-500">
-                                            <div className="p-4 bg-slate-50 border-2 border-dashed border-slate-100 rounded-3xl">
-                                                <PlacesMap
-                                                    items={mapItems}
-                                                    title={title}
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
                                 </>
                             )}
                         </React.Fragment>
