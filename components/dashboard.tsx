@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight, Share2, Copy, Check, Plus, MessageSquare, Search, Loader2, Link as LinkIcon, MapPin, Download, Music, MessageCircle, Twitter, Mail, X, Users, Film, Beer, Utensils, MoreHorizontal, Clock, Trash2, Pencil, Facebook, Cloud, Sparkles } from 'lucide-react';
 import { RankingList } from "./ranking-list";
-import { deleteList, createList, updateListTitle, getThread, findListByTitle, updateProfile, getFollowingLists, addComment, addItemsToList, getComments, upsertComment } from "@/app/actions";
+import { deleteList, createList, updateListTitle, getThread, findListByTitle, updateProfile, getFollowingLists, addComment, addItemsToList, getComments, upsertComment, getListItems } from "@/app/actions";
 /* FEATURE: Places Map — to disable, comment out the PlacesMap import below */
 import { PlacesMap, itemsToPlaces } from './places-map';
 /* FEATURE: Music Playlist Export */
@@ -615,15 +615,35 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                 if (popResult.count < 80 && !popResult.isComplete) {
                     console.log(`[Dashboard] Starting background population for list: ${targetList.id}`);
                     setIsBackgroundPopulating(true);
-                    populateBackgroundItems(targetList.id, targetList.title, targetList.category, popResult.count).then((result: any) => {
+                    populateBackgroundItems(targetList.id, targetList.title, targetList.category, popResult.count).then(async (result: any) => {
                         setIsBackgroundPopulating(false);
                         if (result.isComplete) {
                             setIsPopulatingComplete(true);
+                        }
+
+                        // Refetch the list items so we get the newly hydrated Maps/Images data immediately
+                        try {
+                            const freshItems = await getListItems(targetList.id);
+                            if (freshItems && freshItems.length > 0) {
+                                setLists(prev => prev.map(l => l.id === targetList.id ? { ...l, list_items: freshItems } : l));
+                            }
+                        } catch (e) {
+                            console.error("[Dashboard] Failed to fetch enriched background items", e);
                         }
                     }).catch((err) => {
                         console.error("[Dashboard] Background population failed:", err);
                         setIsBackgroundPopulating(false);
                     });
+                } else {
+                    // Even if complete on first pass, wait a second for parallel hydration then refetch
+                    setTimeout(async () => {
+                        try {
+                            const freshItems = await getListItems(targetList.id);
+                            if (freshItems && freshItems.length > 0) {
+                                setLists(prev => prev.map(l => l.id === targetList.id ? { ...l, list_items: freshItems } : l));
+                            }
+                        } catch (e) { }
+                    }, 2500);
                 }
             }
         } catch (error) {
@@ -754,11 +774,31 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
 
                 setPendingListAfterCreate(newList);
 
-                // CRITICAL: Update lists state immediately so expandedListId points to a list that EXISTS in state
-                // This prevents the modal from closing when expandedList becomes null due to ID switch.
                 setLists(prev => [newList, ...prev.filter(l => l.id !== 'temp-pending')]);
                 setExpandedListId(newList.id);
                 setIsUpdatingTitle(false);
+
+                // Check if a comment was written during temp-pending phase
+                const pendingComment = commentValueRef.current?.trim();
+                if (pendingComment && isCommentDirty.current) {
+                    console.log(`[Dashboard] Saving pending comment on list creation:`, pendingComment);
+                    upsertComment(newList.id, pendingComment)
+                        .then(() => {
+                            isCommentDirty.current = false;
+                            setLists(prev => prev.map(l => l.id === newList.id ? {
+                                ...l,
+                                comments: [{
+                                    id: `temp-${Date.now()}`,
+                                    user_id: currentUserId,
+                                    list_id: newList.id,
+                                    content: pendingComment,
+                                    created_at: new Date().toISOString(),
+                                    profiles: { username: currentUsername, display_name: currentDisplayName }
+                                }]
+                            } : l));
+                        })
+                        .catch(e => console.error("Failed to save pending comment", e));
+                }
 
                 // START EARLY POPULATION
                 if (newList.category !== 'other' && newList.category !== 'places') {
@@ -1131,100 +1171,113 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                             <X className="h-4 w-4" />
                         </button>
 
-                        {creationStep === 'choosing' ? (
+                        {creationStep === 'choosing' || creationStep === 'drafting' ? (
                             <>
                                 <CardHeader className="p-5 pb-2 text-center pt-8">
                                     <Plus className="h-8 w-8 text-slate-200 mx-auto mb-4" />
-                                    <CardTitle className="text-xl font-black uppercase tracking-tighter">Choose your path</CardTitle>
-                                    <CardDescription className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-2 px-8 leading-relaxed">
-                                        How should we start this list?
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="p-6 pt-2 grid grid-cols-1 gap-3">
-                                    <button
-                                        onClick={() => {
-                                            if (pendingListAfterCreate) {
-                                                setCreationStep('waiting');
-                                                startEarlyPopulation(pendingListAfterCreate);
-                                            } else {
-                                                setCreationStep('ranking' as any);
-                                            }
-                                        }}
-                                        className="group w-full p-4 border-2 border-slate-100 hover:border-black rounded-xl transition-all text-left flex items-start gap-4"
-                                    >
-                                        <div className="p-2 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
-                                            <Loader2 className="h-5 w-5 text-blue-600" />
-                                        </div>
-                                        <div>
-                                            <div className="font-black text-sm uppercase tracking-tight">Magic Help (AI)</div>
-                                            <div className="text-[10px] font-bold text-slate-400 leading-tight mt-0.5 uppercase">We'll generate a draft for you based on the title.</div>
-                                        </div>
-                                    </button>
-
-                                    <button
-                                        onClick={() => setCreationStep('drafting')}
-                                        className="group w-full p-4 border-2 border-slate-100 hover:border-black rounded-xl transition-all text-left flex items-start gap-4"
-                                    >
-                                        <div className="p-2 bg-purple-50 rounded-lg group-hover:bg-purple-100 transition-colors">
-                                            <Pencil className="h-5 w-5 text-purple-600" />
-                                        </div>
-                                        <div>
-                                            <div className="font-black text-sm uppercase tracking-tight">Manual Entry</div>
-                                            <div className="text-[10px] font-bold text-slate-400 leading-tight mt-0.5 uppercase">Draft your own list from scratch (10 items).</div>
-                                        </div>
-                                    </button>
-                                </CardContent>
-                            </>
-                        ) : creationStep === 'drafting' ? (
-                            <>
-                                <CardHeader className="p-5 pb-2 text-center pt-8">
-                                    <Pencil className="h-8 w-8 text-slate-200 mx-auto mb-4" />
-                                    <CardTitle className="text-xl font-black uppercase tracking-tighter">Draft your list</CardTitle>
+                                    <CardTitle className="text-xl font-black uppercase tracking-tighter">Name your list</CardTitle>
                                     <div className="mt-4 px-6">
                                         <Input
+                                            autoFocus
                                             value={editSession.title || ''}
-                                            onChange={(e) => setEditSession(s => ({ ...s, title: e.target.value }))}
+                                            onChange={(e) => setEditSession(s => ({ ...s, title: e.target.value.toUpperCase() }))}
                                             placeholder="LIST TITLE"
                                             className="h-12 border-2 border-slate-100 rounded-xl font-black text-center text-lg focus-visible:ring-black uppercase placeholder:text-slate-200"
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') handleUpdateTitle(expandedList.id);
+                                            }}
                                         />
                                     </div>
                                     <CardDescription className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-4 px-8 leading-relaxed">
-                                        Enter up to 10 items for your ranking
+                                        Give your list a name to get started.
                                     </CardDescription>
                                 </CardHeader>
-                                <CardContent className="p-5 pt-2 space-y-2 overflow-y-auto max-h-[50vh]">
-                                    {freeFormItems.map((item, idx) => (
-                                        <div key={idx} className="flex items-center gap-3">
-                                            <span className="w-6 text-[10px] font-black text-slate-300">#{idx + 1}</span>
-                                            <Input
-                                                value={item}
-                                                onChange={(e) => {
-                                                    const newItems = [...freeFormItems];
-                                                    newItems[idx] = e.target.value;
-                                                    setFreeFormItems(newItems);
-                                                }}
-                                                placeholder={`Item #${idx + 1}`}
-                                                className="h-10 border-2 border-slate-50 rounded-lg font-bold text-sm focus-visible:ring-black uppercase"
-                                                autoFocus={idx === 0}
-                                            />
-                                        </div>
-                                    ))}
-                                    <div className="pt-4 space-y-3">
-                                        <Button
-                                            onClick={handleCreateFreeForm}
-                                            disabled={isUpdatingTitle || !freeFormItems.some(i => i.trim())}
-                                            className="w-full h-14 bg-black hover:bg-slate-800 text-white font-black uppercase tracking-widest text-sm rounded-xl transition-all shadow-md active:scale-[0.98]"
-                                        >
-                                            {isUpdatingTitle ? <Loader2 className="h-5 w-5 animate-spin" /> : "CREATE LIST"}
-                                        </Button>
+
+                                {creationStep === 'choosing' && (
+                                    <CardContent className="p-6 pt-2 grid grid-cols-1 gap-3">
                                         <button
-                                            onClick={() => setCreationStep('choosing')}
-                                            className="w-full text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-slate-500 transition-colors py-2"
+                                            onClick={() => {
+                                                if (!editSession.title || !editSession.title.trim()) {
+                                                    toast.error("Please name your list first!");
+                                                    return;
+                                                }
+                                                // Save title, then trigger AI
+                                                handleUpdateTitle(expandedList.id).then(() => {
+                                                    if (pendingListAfterCreate) {
+                                                        setCreationStep('waiting');
+                                                        startEarlyPopulation(pendingListAfterCreate);
+                                                    }
+                                                });
+                                            }}
+                                            disabled={!editSession.title?.trim()}
+                                            className="group w-full p-4 border-2 border-slate-100 disabled:opacity-50 disabled:cursor-not-allowed hover:border-black rounded-xl transition-all text-left flex items-start gap-4"
                                         >
-                                            Back
+                                            <div className="p-2 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
+                                                <Sparkles className="h-5 w-5 text-blue-600" />
+                                            </div>
+                                            <div>
+                                                <div className="font-black text-sm uppercase tracking-tight">Find some results</div>
+                                                <div className="text-[10px] font-bold text-slate-400 leading-tight mt-0.5 uppercase">We'll magically find items for you.</div>
+                                            </div>
                                         </button>
-                                    </div>
-                                </CardContent>
+
+                                        <button
+                                            onClick={() => {
+                                                if (!editSession.title || !editSession.title.trim()) {
+                                                    toast.error("Please name your list first!");
+                                                    return;
+                                                }
+                                                // Don't auto-save title yet, just switch to drafting mode
+                                                setCreationStep('drafting');
+                                            }}
+                                            disabled={!editSession.title?.trim()}
+                                            className="group w-full p-4 border-2 border-slate-100 disabled:opacity-50 disabled:cursor-not-allowed hover:border-black rounded-xl transition-all text-left flex items-start gap-4"
+                                        >
+                                            <div className="p-2 bg-purple-50 rounded-lg group-hover:bg-purple-100 transition-colors">
+                                                <Pencil className="h-5 w-5 text-purple-600" />
+                                            </div>
+                                            <div>
+                                                <div className="font-black text-sm uppercase tracking-tight">Type them in</div>
+                                                <div className="text-[10px] font-bold text-slate-400 leading-tight mt-0.5 uppercase">Draft your own list from scratch.</div>
+                                            </div>
+                                        </button>
+                                    </CardContent>
+                                )}
+
+                                {creationStep === 'drafting' && (
+                                    <CardContent className="p-5 pt-2 space-y-2 overflow-y-auto max-h-[50vh]">
+                                        {freeFormItems.map((item, idx) => (
+                                            <div key={idx} className="flex items-center gap-3">
+                                                <span className="w-6 text-[10px] font-black text-slate-300">#{idx + 1}</span>
+                                                <Input
+                                                    value={item}
+                                                    onChange={(e) => {
+                                                        const newItems = [...freeFormItems];
+                                                        newItems[idx] = e.target.value;
+                                                        setFreeFormItems(newItems);
+                                                    }}
+                                                    placeholder={`Item #${idx + 1}`}
+                                                    className="h-10 border-2 border-slate-50 rounded-lg font-bold text-sm focus-visible:ring-black uppercase"
+                                                    autoFocus={idx === 0}
+                                                />
+                                            </div>
+                                        ))}
+                                        <div className="pt-4 space-y-3">
+                                            <Button
+                                                onClick={handleCreateFreeForm}
+                                                disabled={isUpdatingTitle || !freeFormItems.some(i => i.trim())}
+                                                className="w-full h-14 bg-black hover:bg-slate-800 text-white font-black uppercase tracking-widest text-sm rounded-xl transition-all shadow-md active:scale-[0.98]"
+                                            >
+                                                {isUpdatingTitle ? <Loader2 className="h-5 w-5 animate-spin" /> : "CREATE LIST"}
+                                            </Button>
+                                            <button
+                                                onClick={() => setCreationStep('choosing')}
+                                                className="w-full text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-slate-500 transition-colors py-2"
+                                            >
+                                            </button>
+                                        </div>
+                                    </CardContent>
+                                )}
                             </>
                         ) : (
                             <div className="flex-1 flex flex-col min-h-0 relative">
@@ -1481,6 +1534,35 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                                         }}
                                                         className="min-h-[60px] max-h-[120px] font-bold text-sm resize-none border-none bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus-visible:ring-1 focus-visible:ring-slate-100 rounded-xl p-3 placeholder:opacity-40 transition-all overflow-y-auto"
                                                     />
+                                                    {isCommentDirty.current && (
+                                                        <div className="flex justify-end mt-1">
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="h-6 text-[9px] px-2 uppercase tracking-widest font-black text-slate-400 hover:text-green-600 hover:border-green-600 hover:bg-green-50 transition-colors"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    const commentToSave = commentValueRef.current.trim();
+                                                                    if (expandedList.id !== 'temp-pending') {
+                                                                        isCommentDirty.current = false;
+                                                                        upsertComment(expandedList.id, commentToSave).then(() => {
+                                                                            toast.success("Comment saved!");
+                                                                            // Force re-render just to hide button
+                                                                            setWaitingComment(commentToSave + " ");
+                                                                            setTimeout(() => setWaitingComment(commentToSave), 0);
+                                                                        }).catch(e => {
+                                                                            toast.error("Failed to save");
+                                                                            isCommentDirty.current = true;
+                                                                        });
+                                                                    } else {
+                                                                        toast.info("Comment will save when you name the list.");
+                                                                    }
+                                                                }}
+                                                            >
+                                                                Save Note
+                                                            </Button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             ) : waitingComment && (
                                                 <div className="mt-2 px-3 py-2 bg-slate-50/50 rounded-xl border border-slate-100/50">

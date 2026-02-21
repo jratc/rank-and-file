@@ -225,23 +225,20 @@ export function RankingList({
         const itemsToKeep = items.slice(0, cutoffIndex + 1);
         const itemsToDelete = items.slice(cutoffIndex + 1);
 
-        setItems(itemsToKeep); // Optimistic
-
-        // Delete from DB
-        // We can do this in parallel or usually just passing the new list to parent handles re-sync, 
-        // but we likely need to explicitly delete the items from DB to clean up.
-        // `updateListOrder` only updates order. `deleteListItem` deletes one.
-        // We might need a bulk delete, but loop is okay for now as lists are small (10-20 items).
+        setItems(itemsToKeep); // Optimistic local UI
+        if (onChange) onChange(itemsToKeep); // Optimistic parent sync
 
         // Trigger a background bulk delete
         deleteListItems(itemsToDelete.map(item => item.id))
             .then(() => {
                 toast.success('List trimmed!');
-                if (onChange) onChange(itemsToKeep);
             })
             .catch((err) => {
                 console.error("Trim failed:", err);
                 toast.error('Failed to trim list');
+                // Rollback if needed
+                setItems(items);
+                if (onChange) onChange(items);
             });
     };
 

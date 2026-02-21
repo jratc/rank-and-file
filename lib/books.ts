@@ -94,12 +94,18 @@ export const booksProvider = {
                         const authors = info.authors ? info.authors.join(', ') : 'Unknown Author';
                         const year = info.publishedDate ? info.publishedDate.split('-')[0] : '';
                         const categories = info.categories ? info.categories.join(', ') : '';
+                        const fallbackUrl = 'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=400&h=600&fit=crop';
+                        // Google Books sometimes returns http:// instead of https:// for thumbnails
+                        let imageUrl = fallbackUrl;
+                        if (info.imageLinks?.thumbnail) {
+                            imageUrl = info.imageLinks.thumbnail.replace('http:', 'https:');
+                        }
 
                         return {
                             id: `book_${book.id}`,
                             name: info.title,
                             subtitle: `${authors} ${year ? `• ${year}` : ''}`,
-                            imageUrl: info.imageLinks?.thumbnail?.replace('http:', 'https:') || 'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=400&h=600&fit=crop', // Fallback
+                            imageUrl: imageUrl,
                             externalUrl: info.infoLink,
                             provider: 'google_books' as const,
                             category: 'books' as const,
@@ -224,11 +230,17 @@ export const booksProvider = {
                         const year = info.publishedDate ? info.publishedDate.split('-')[0] : '';
                         const categories = info.categories ? info.categories.join(', ') : '';
 
+                        const fallbackUrl = 'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=400&h=600&fit=crop';
+                        let imageUrl = fallbackUrl;
+                        if (info.imageLinks?.thumbnail) {
+                            imageUrl = info.imageLinks.thumbnail.replace('http:', 'https:');
+                        }
+
                         return {
                             id: `book_${book.id}`,
                             name: info.title,
                             subtitle: `${authors} ${year ? `• ${year}` : ''}`,
-                            imageUrl: info.imageLinks?.thumbnail?.replace('http:', 'https:') || null,
+                            imageUrl: imageUrl,
                             externalUrl: info.infoLink,
                             provider: 'google_books' as const,
                             category: 'books' as const,
@@ -311,11 +323,17 @@ export const booksProvider = {
                     const year = info.publishedDate ? info.publishedDate.split('-')[0] : '';
                     const categories = info.categories ? info.categories.join(', ') : '';
 
+                    const fallbackUrl = 'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=400&h=600&fit=crop';
+                    let imageUrl = fallbackUrl;
+                    if (info.imageLinks?.thumbnail) {
+                        imageUrl = info.imageLinks.thumbnail.replace('http:', 'https:');
+                    }
+
                     return {
                         id: `book_${book.id}`,
                         name: info.title,
                         subtitle: `${authors} ${year ? `• ${year}` : ''}`,
-                        imageUrl: info.imageLinks?.thumbnail?.replace('http:', 'https:') || null,
+                        imageUrl: imageUrl,
                         externalUrl: info.infoLink,
                         provider: 'google_books' as const,
                         category: 'books' as const,

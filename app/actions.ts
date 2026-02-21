@@ -205,6 +205,24 @@ export async function getLists() {
     return listsWithCounts;
 }
 
+export async function getListItems(listId: string) {
+    const supabase = await createClient();
+
+    // Allows components to refetch items if background hydration (maps, images) has updated them
+    const { data: items, error } = await supabase
+        .from('list_items')
+        .select('*')
+        .eq('list_id', listId)
+        .order('rank', { ascending: true });
+
+    if (error) {
+        console.error('[getListItems] Failed to fetch items:', error);
+        return [];
+    }
+
+    return items || [];
+}
+
 export async function getFollowingLists() {
     const supabase = await createClient();
     const { data: authData } = await supabase.auth.getUser();
