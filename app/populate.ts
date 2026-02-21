@@ -227,7 +227,10 @@ export async function detectAndPopulateList(listId: string, title: string, categ
                 if (['food', 'bars', 'restaurants', 'places'].includes(category)) {
                     console.log(`[Populate] Enriching place data for: ${item.metadata.name}`);
                     try {
-                        const places = await searchPlaces(item.metadata.name, category as any, { location: context.subject || context.location });
+                        const places = await searchPlaces(item.metadata.name, category as any, {
+                            location: context.location,
+                            subject: context.subject
+                        });
                         if (places && places.length > 0) {
                             const match = places[0]; // Take the first best match
                             const { data: updated, error } = await supabase
@@ -322,7 +325,10 @@ export async function populateBackgroundItems(listId: string, title: string, cat
                 if (['food', 'bars', 'restaurants', 'places'].includes(category)) {
                     try {
                         const enrichmentContext = await import('@/lib/utils').then(m => m.extractContext(title, category));
-                        const places = await searchPlaces(item.metadata.name, category as any, { location: enrichmentContext.subject || enrichmentContext.location });
+                        const places = await searchPlaces(item.metadata.name, category as any, {
+                            location: enrichmentContext.location,
+                            subject: enrichmentContext.subject
+                        });
                         if (places && places.length > 0) {
                             const match = places[0];
                             await supabase

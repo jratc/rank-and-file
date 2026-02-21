@@ -128,7 +128,7 @@ export function ExpandedListOverlay({
                     <X className="h-4 w-4" />
                 </button>
 
-                {creationStep === 'choosing' || creationStep === 'drafting' ? (
+                {creationStep === 'naming' || creationStep === 'choosing' || creationStep === 'drafting' ? (
                     <>
                         <CardHeader className="p-5 pb-2 text-center pt-8">
                             <Plus className="h-8 w-8 text-slate-200 mx-auto mb-4" />
@@ -646,11 +646,13 @@ export function ExpandedListOverlay({
                                     initialItems={expandedList.list_items}
                                     listId={expandedList.id}
                                     category={expandedList.category}
+                                    title={expandedList.title}
                                     isPopulating={isPopulating || isBackgroundPopulating}
+                                    showMap={showMap}
+                                    mapItems={itemsToPlaces(expandedList.list_items.slice(0, 10))}
                                     onChange={(newItems) => {
                                         // Prevent updates to temp lists
                                         if (expandedList.id === 'temp-pending') return;
-
                                         setLists((prev: any[]) => prev.map(l =>
                                             l.id === expandedList.id ? { ...l, list_items: newItems } : l
                                         ));
@@ -690,34 +692,7 @@ export function ExpandedListOverlay({
                                         `}} />
                                     </div>
                                 )}
-                                {/* FEATURE: Places Map — inline map toggle */}
-                                {['places', 'bars', 'restaurants', 'food', 'other', 'more', 'food & drink', 'drinks'].some(cat => expandedList.category?.toLowerCase().includes(cat)) && itemsToPlaces(expandedList.list_items).length > 0 && (
-                                    <div className="mt-4 pt-3 border-t border-slate-100">
-                                        <button
-                                            onClick={() => {
-                                                const newShowMap = !showMap;
-                                                setShowMap(newShowMap);
-                                                if (newShowMap) {
-                                                    setSearchResults([]);
-                                                    setSearchQuery('');
-                                                }
-                                            }}
-                                            className={`flex items-center gap-2 px-4 py-2 w-full justify-center border rounded-lg transition-colors ${showMap ? 'bg-red-50 border-red-200 text-red-600' : 'bg-slate-50 hover:bg-red-50 border-slate-200 text-slate-600 hover:text-red-600'}`}
-                                        >
-                                            <MapPin className="h-4 w-4" />
-                                            <span className="font-black text-[10px] uppercase tracking-widest">{showMap ? 'Hide Map' : 'View on Map'}</span>
-                                        </button>
-                                        {showMap && (
-                                            <div className="mt-3">
-                                                <PlacesMap
-                                                    items={itemsToPlaces(expandedList.list_items)}
-                                                    title={expandedList.title}
-                                                    onClose={() => setShowMap(false)}
-                                                />
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
+
                                 {/* FEATURE: Music Playlist Export */}
                                 {expandedList.category === 'music' && expandedList.list_items.length > 0 && (
                                     <div className="mt-4 pt-3 border-t border-slate-100 flex justify-center">

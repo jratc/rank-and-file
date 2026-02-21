@@ -78,6 +78,13 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
         }
     }, [currentUserId, currentDisplayName]);
 
+    // Reset creation state when closing or switching lists
+    useEffect(() => {
+        if (!expandedListId || expandedListId !== 'temp-pending') {
+            setCreationStep(null);
+        }
+    }, [expandedListId]);
+
     // Auto-finalize creation when population completes
     useEffect(() => {
         if (isPopulatingComplete && creationStep === 'ranking') {
@@ -771,18 +778,19 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                         .catch(e => console.error("Failed to save pending comment", e));
                 }
 
-                // FOR 'MORE' CATEGORIES, SIMPLIFY: Skip choices, go straight to drafting
-                if (newList.category === 'other' || newList.category === 'places') {
-                    setCreationStep(null);
-                    setEditSession({ id: null, title: null, isExpanded: false });
+                // FOR 'MORE' CATEGORIES (Other, Places):
+                // These get the "AI vs Manual" choice step as requested.
+                if (newList.category === 'other' || newList.category === 'places' || newList.category === 'more') {
+                    setCreationStep('choosing');
                     setIsUpdatingTitle(false);
                     return;
                 }
 
-                // FOR OTHER CATEGORIES (Music, Movies, Books):
-                // Go to 'choosing' step so user can decide between AI and Manual.
-                // This prevents AI from auto-filling the top 10 while they are drafting.
-                setCreationStep('choosing');
+                // FOR PRIMARY CATEGORIES (Music, Movies, Books):
+                // These auto-populate and skip the choice step.
+                startEarlyPopulation(newList);
+                setCreationStep(null);
+                setEditSession({ id: null, title: null, isExpanded: false });
                 setIsUpdatingTitle(false);
                 return;
 

@@ -19,6 +19,7 @@ import {
     useSensors,
     DragEndEvent,
 } from '@dnd-kit/core';
+import { PlacesMap } from './places-map';
 import {
     arrayMove,
     SortableContext,
@@ -37,6 +38,8 @@ interface RankingListProps {
     onChange?: (newItems: any[]) => void;
     readOnly?: boolean;
     isPopulating?: boolean;
+    showMap?: boolean;
+    mapItems?: any[];
 }
 
 export function RankingList({
@@ -46,7 +49,9 @@ export function RankingList({
     title,
     onChange,
     readOnly = false,
-    isPopulating = false
+    isPopulating = false,
+    showMap = false,
+    mapItems = []
 }: RankingListProps) {
     const [items, setItems] = useState(initialItems);
     const [isSaving, setIsSaving] = useState(false);
@@ -371,19 +376,33 @@ export function RankingList({
 
                             {/* Ranking Separators */}
                             {((index === 4 && items.length > 5) || (index === 9 && items.length > 10)) && (
-                                <div className="flex items-center gap-4 py-4 mb-2 group/separator">
-                                    <div className="w-14 text-right"></div> {/* Spacer for num */}
-                                    <div className="flex-1 flex items-center gap-4">
-                                        <div className="h-px border-b-2 border-dashed border-slate-200 dark:border-white/10 flex-1"></div>
-                                        <button
-                                            onClick={() => handleDeleteBelow(index)}
-                                            className="text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-red-500 bg-slate-50 hover:bg-red-50 px-3 py-1 rounded-full transition-colors whitespace-nowrap"
-                                        >
-                                            Delete Below
-                                        </button>
-                                        <div className="h-px border-b-2 border-dashed border-slate-200 dark:border-white/10 flex-1"></div>
+                                <>
+                                    <div className="flex items-center gap-4 py-4 mb-2 group/separator">
+                                        <div className="w-14 text-right"></div> {/* Spacer for num */}
+                                        <div className="flex-1 flex items-center gap-4">
+                                            <div className="h-px border-b-2 border-dashed border-slate-200 dark:border-white/10 flex-1"></div>
+                                            <button
+                                                onClick={() => handleDeleteBelow(index)}
+                                                className="text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-red-500 bg-slate-50 hover:bg-red-50 px-3 py-1 rounded-full transition-colors whitespace-nowrap"
+                                            >
+                                                Delete Below
+                                            </button>
+                                            <div className="h-px border-b-2 border-dashed border-slate-200 dark:border-white/10 flex-1"></div>
+                                        </div>
                                     </div>
-                                </div>
+
+                                    {/* Inline Map Placement - only after rank 10 */}
+                                    {index === 9 && showMap && mapItems.length > 0 && (
+                                        <div className="my-4 px-4 pl-16 animate-in fade-in slide-in-from-top-4 duration-500">
+                                            <div className="p-4 bg-slate-50 border-2 border-dashed border-slate-100 rounded-3xl">
+                                                <PlacesMap
+                                                    items={mapItems}
+                                                    title={title}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </React.Fragment>
                     ))}
