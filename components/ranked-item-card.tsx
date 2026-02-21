@@ -4,6 +4,7 @@ import React from 'react';
 import { Card } from "@/components/ui/card";
 import { HydratedImage } from './hydrated-image';
 import { MusicPlayer } from './music-link';
+import { MapPin } from 'lucide-react';
 
 interface RankedItemCardProps extends React.HTMLAttributes<HTMLDivElement> {
     item: any;
@@ -42,9 +43,17 @@ export function RankedItemCard({
                     <h4 className="font-black text-xl tracking-tighter leading-tight break-words whitespace-pre-wrap text-slate-900 uppercase w-full">
                         {item.metadata.name}
                     </h4>
-                    <p className="font-mono text-[10px] font-bold text-slate-400 tracking-widest uppercase mt-1">
-                        {item.metadata.subtitle}
-                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                        <p className="font-mono text-[10px] font-bold text-slate-400 tracking-widest uppercase truncate">
+                            {item.metadata.subtitle}
+                        </p>
+                        {(item.metadata.lat || item.metadata.rawMetadata?.geometry?.location || item.metadata.rawMetadata?.geometry?.coordinates) && (
+                            <div className="flex items-center gap-0.5 text-red-500 animate-in fade-in duration-500">
+                                <MapPin className="w-2.5 h-2.5" />
+                                <span className="text-[8px] font-black uppercase tracking-tighter">Loc</span>
+                            </div>
+                        )}
+                    </div>
                     {/* Music Player Integration */}
                     {showMusicPlayer && item.metadata.category === 'music' && (
                         <div className="mt-1.5" onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>

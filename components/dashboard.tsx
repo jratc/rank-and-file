@@ -129,7 +129,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
 
         const fetchComments = async () => {
             // Don't overwrite if user is actively typing or has a dirty draft
-            if (isCommentDirty.current || waitingComment.trim() || isPopulating) return;
+            if (isCommentDirty.current || isPopulating) return;
 
             try {
                 const results = await getComments(expandedListId);
@@ -1388,7 +1388,6 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                                     {/* View Responses Button (Owner with responses) */}
                                                     {currentUserId === expandedList.user_id && expandedList.response_count > 0 && (
                                                         <Button
-                                                            variant="default"
                                                             size="sm"
                                                             onClick={async (e) => {
                                                                 e.stopPropagation();
@@ -1419,7 +1418,30 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
 
                                             {/* INTEGRATED COMMENT AREA (Description) */}
                                             {currentUserId === expandedList.user_id ? (
-                                                <div className="mt-2 group">
+                                                <div
+                                                    className="mt-2 group"
+                                                    onMouseLeave={async () => {
+                                                        if (isCommentDirty.current && waitingComment.trim() && expandedList.id !== 'temp-pending') {
+                                                            const newComment = {
+                                                                id: `temp-${Date.now()}`,
+                                                                user_id: currentUserId,
+                                                                list_id: expandedList.id,
+                                                                content: waitingComment.trim(),
+                                                                created_at: new Date().toISOString(),
+                                                                profiles: { username: currentUsername, display_name: currentDisplayName }
+                                                            };
+
+                                                            // Optimistic update
+                                                            setLists(prev => prev.map(l => l.id === expandedList.id ? {
+                                                                ...l,
+                                                                comments: [...(l.comments || []).filter((c: any) => c.user_id !== currentUserId), newComment]
+                                                            } : l));
+
+                                                            await upsertComment(expandedList.id, waitingComment.trim());
+                                                            isCommentDirty.current = false;
+                                                        }
+                                                    }}
+                                                >
                                                     <Textarea
                                                         placeholder={isPopulating ? "Building your list... jot down some notes?" : "Jot down some notes-what should people know about your list?"}
                                                         value={waitingComment}
@@ -1429,7 +1451,22 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                                             isCommentDirty.current = true;
                                                         }}
                                                         onBlur={async () => {
-                                                            if (waitingComment.trim() && expandedList.id !== 'temp-pending') {
+                                                            if (isCommentDirty.current && waitingComment.trim() && expandedList.id !== 'temp-pending') {
+                                                                const newComment = {
+                                                                    id: `temp-${Date.now()}`,
+                                                                    user_id: currentUserId,
+                                                                    list_id: expandedList.id,
+                                                                    content: waitingComment.trim(),
+                                                                    created_at: new Date().toISOString(),
+                                                                    profiles: { username: currentUsername, display_name: currentDisplayName }
+                                                                };
+
+                                                                // Optimistic update
+                                                                setLists(prev => prev.map(l => l.id === expandedList.id ? {
+                                                                    ...l,
+                                                                    comments: [...(l.comments || []).filter((c: any) => c.user_id !== currentUserId), newComment]
+                                                                } : l));
+
                                                                 await upsertComment(expandedList.id, waitingComment.trim());
                                                                 isCommentDirty.current = false;
                                                             }
@@ -1487,7 +1524,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                                             <div className="flex items-center justify-between px-3 py-2 border-b border-slate-50 mb-1">
                                                                 <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Search Results</span>
                                                                 <div className="flex items-center gap-3">
-                                                                    {(expandedList.category === 'places' || expandedList.category === 'food') && searchResults.length > 0 && (
+                                                                    {searchResults.length > 0 && itemsToPlaces(searchResults).length > 0 && (
                                                                         <button
                                                                             onClick={() => setShowMap(!showMap)}
                                                                             className="text-[9px] font-black uppercase tracking-widest text-green-600 hover:text-green-700 flex items-center gap-1"
@@ -1581,7 +1618,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                             </div>
                                         )}
                                         {/* FEATURE: Places Map — inline map toggle */}
-                                        {['places', 'bars', 'restaurants', 'other', 'more'].includes(expandedList.category) && itemsToPlaces(expandedList.list_items).length > 0 && (
+                                        {['places', 'bars', 'restaurants', 'food', 'other', 'more', 'food & drink', 'drinks'].some(cat => expandedList.category?.toLowerCase().includes(cat)) && itemsToPlaces(expandedList.list_items).length > 0 && (
                                             <div className="mt-4 pt-3 border-t border-slate-100">
                                                 <button
                                                     onClick={() => {
@@ -1677,9 +1714,11 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
             />
 
             {/* Conditional Feedback Hole */}
-            {!expandedListId && !responseView.isOpen && !showNameModal && !creationStep && (
-                <FeedbackHole />
-            )}
+            {
+                !expandedListId && !responseView.isOpen && !showNameModal && !creationStep && (
+                    <FeedbackHole />
+                )
+            }
         </div >
     );
 }

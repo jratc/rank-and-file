@@ -245,9 +245,10 @@ export const universalProvider = {
             // 3. SPECIAL CONTEXT: Handle Peloton / Fitness Instructors
             if (/peloton|peleton|instructor|fitness/i.test(query)) {
                 const pQuery = cleanedQuery.replace(/peleton/i, 'Peloton');
-                // Use "[Name] Peloton" as the most reliable search term
+                // Use First Name Last Name + Peloton for maximum specificity
+                searchQueries.unshift(`${pQuery} Peloton instructor`);
                 searchQueries.unshift(`${pQuery} Peloton`);
-                searchQueries.push(`${pQuery} instructor`);
+                searchQueries.push(`${pQuery} instructor official`);
             }
 
             // Final fallback for Wikipedia search
@@ -255,7 +256,7 @@ export const universalProvider = {
 
             for (const q of searchQueries) {
                 // Quick search for the page and its main image
-                const url = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(q)}&gsrnamespace=0&gsrlimit=5&prop=pageimages&piprop=thumbnail&pithumbsize=400&format=json&origin=*`;
+                const url = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(q)}&gsrnamespace=0&gsrlimit=20&prop=pageimages|extracts&piprop=thumbnail&pithumbsize=400&format=json&origin=*`;
 
                 // Set a strict timeout to avoid slowing down the main list generation
                 const controller = new AbortController();
@@ -271,25 +272,45 @@ export const universalProvider = {
                         // Sort by index to maintain relevance
                         const sortedPages = pages.sort((a, b) => (a.index || 0) - (b.index || 0));
 
-                        // Return the first one that actually has a thumbnail
-                        for (const page of sortedPages) {
-                            if (page.thumbnail?.source) {
-                                // Filter out generic Wikipedia logos and small icons
-                                const src = page.thumbnail.source.toLowerCase();
-                                const isGarbage = src.includes('wikipedia-logo') ||
-                                    src.includes('wiki-logo') ||
-                                    src.includes('padlock') ||
-                                    src.includes('icon_') ||
-                                    src.includes('increase_') ||
-                                    src.includes('symbol_') ||
-                                    src.includes('question_mark') ||
-                                    src.includes('logo') || // Standard logos are rarely helpful for people
-                                    src.includes('flag_') ||
-                                    src.includes('soccer') || // Filter out irrelevant sports images if searching for instructors
-                                    src.includes('football');
-                                if (isGarbage) continue;
-                                return page.thumbnail.source;
-                            }
+                        // Pick the BEST match
+                        const bestMatch = sortedPages.find(p => {
+                            const title = p.title.toLowerCase();
+                            const extract = p.extract?.toLowerCase() || '';
+                            const searchTerms = cleanedQuery.toLowerCase().split(' ').filter(t => t.length > 2);
+
+                            // It MUST contain at least one significant name term in the title
+                            const nameInTitle = searchTerms.some(term => title.includes(term));
+
+                            // It's a "good" match if title matches name or it's context-rich
+                            const isPersonMatch = nameInTitle && p.thumbnail && !p.thumbnail.source.toLowerCase().includes('logo');
+
+                            return isPersonMatch && p.thumbnail;
+                        });
+
+                        const finalChoice = bestMatch;
+
+                        if (finalChoice && finalChoice.thumbnail) {
+                            const src = finalChoice.thumbnail.source.toLowerCase();
+                            // Expanded garbage filter (case-insensitive check already handled by .toLowerCase())
+                            const isGarbage = src.includes('wikipedia-logo') ||
+                                src.includes('wiki-logo') ||
+                                src.includes('padlock') ||
+                                src.includes('icon_') ||
+                                src.includes('increase_') ||
+                                src.includes('symbol_') ||
+                                src.includes('question_mark') ||
+                                src.includes('logo') ||
+                                src.includes('mattel') ||
+                                src.includes('barbie') ||
+                                src.includes('corporate') ||
+                                src.includes('trademark') ||
+                                src.includes('brand') ||
+                                src.includes('official') ||
+                                src.includes('flag_') ||
+                                src.includes('soccer') ||
+                                src.includes('football') ||
+                                src.includes('placeholder');
+                            if (!isGarbage) return finalChoice.thumbnail.source;
                         }
                     }
                 }

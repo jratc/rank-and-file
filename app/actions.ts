@@ -181,7 +181,7 @@ export async function getLists() {
     // Only fetch ORIGINAL lists (no parent_id) — responses are accessed via thread view
     const { data, error } = await supabase
         .from('lists')
-        .select('*, list_items(*), profiles(username, display_name)')
+        .select('*, list_items(*), profiles(username, display_name), comments(*, profiles(username, display_name))')
         .eq('is_public', true)
         .is('parent_id', null)
         .order('created_at', { ascending: false });
@@ -331,11 +331,12 @@ export async function createResponse(parentListId: string) {
     }
 
     // 3. COPY ITEMS FROM PARENT
-    // Fetch parent items
+    // Fetch parent items (All of them, including background populated ones)
     const { data: parentItems, error: itemsError } = await supabase
         .from('list_items')
         .select('*')
-        .eq('list_id', parentListId);
+        .eq('list_id', parentListId)
+        .order('rank', { ascending: true });
 
     if (!itemsError && parentItems && parentItems.length > 0) {
         // Prepare new items
@@ -646,42 +647,50 @@ export async function addComment(listId: string, content: string, parentId?: str
 }
 
 export async function upsertComment(listId: string, content: string) {
+    console.log(`[upsertComment] Starting for list ${listId} | Content: ${content.substring(0, 20)}...`);
     const supabase = await createClient();
     const { data: authData } = await supabase.auth.getUser();
     const authUser = authData?.user;
     const user = IS_AUTH_DISABLED ? MOCK_USER : authUser;
 
-    if (!user) throw new Error("Must be logged in to comment");
+    if (!user) {
+        console.error(`[upsertComment] No user found`);
+        throw new Error("Not logged in");
+    }
+    console.log(`[upsertComment] User: ${user.id}`);
 
-    // Check for existing comment by this user on this list
-    const { data: existing } = await supabase
+    const { data: existing, error: fetchErr } = await supabase
         .from('comments')
         .select('id')
         .eq('list_id', listId)
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+        .maybeSingle();
 
+    if (fetchErr) console.error(`[upsertComment] Fetch error:`, fetchErr);
+
+    let result;
     if (existing) {
-        const { data, error } = await supabase
+        console.log(`[upsertComment] Updating existing comment ${existing.id}`);
+        result = await supabase
             .from('comments')
-            .update({ content })
-            .eq('id', existing.id)
-            .select(`*, profiles (username, display_name)`)
-            .single();
-        if (error) throw error;
-        return data;
+            .update({ content: content })
+            .eq('id', existing.id);
     } else {
-        const { data, error } = await supabase
+        console.log(`[upsertComment] Inserting new comment`);
+        result = await supabase
             .from('comments')
-            .insert({ list_id: listId, user_id: user.id, content })
-            .select(`*, profiles (username, display_name)`)
-            .single();
-        if (error) throw error;
-        revalidatePath(`/list/${listId}`);
-        return data;
+            .insert({
+                list_id: listId,
+                user_id: user.id,
+                content: content
+            });
     }
+
+    if (result.error) console.error(`[upsertComment] Save error:`, result.error);
+    else console.log(`[upsertComment] Save successful`);
+
+    revalidatePath('/');
+    return { success: true };
 }
 
 export async function deleteComment(commentId: string) {

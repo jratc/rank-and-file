@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useDraggable, useDroppable, DndContext, DragOverlay } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { submitFeedback } from '@/app/actions';
@@ -11,6 +11,19 @@ export function FeedbackHole() {
     const [feedback, setFeedback] = useState('');
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [isVisible, setIsVisible] = useState(false);
+    const leaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    const handleMouseEnter = () => {
+        if (leaveTimeoutRef.current) clearTimeout(leaveTimeoutRef.current);
+        setIsVisible(true);
+    };
+
+    const handleMouseLeave = () => {
+        if (feedback) return; // Stay open if user started typing
+        leaveTimeoutRef.current = setTimeout(() => {
+            setIsVisible(false);
+        }, 300); // 300ms grace period
+    };
 
     const handleDragEnd = async (event: any) => {
         const { over } = event;
@@ -38,11 +51,7 @@ export function FeedbackHole() {
     };
 
     return (
-        <div
-            className="flex flex-col items-center group relative md:mt-0"
-            onMouseEnter={() => setIsVisible(true)}
-            onMouseLeave={() => !feedback && setIsVisible(false)}
-        >
+        <div className="flex flex-col items-center group relative md:mt-0" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
             <DndContext onDragEnd={handleDragEnd}>
                 {/* 
                     The Parent Container (className above) wraps both Hole and Window.
@@ -59,8 +68,10 @@ export function FeedbackHole() {
 
                 {/* STABLE INPUT CONTAINER (Now BELOW) */}
                 <div
-                    className={`absolute top-full right-0 z-50 pointer-events-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-3xl border border-slate-200 dark:border-white/10 p-4 rounded-3xl shadow-2xl transition-all duration-300 w-72 mt-4 ${isSubmitted ? 'scale-90 opacity-0 blur-lg' : isVisible ? 'scale-100 opacity-100 translate-y-2' : 'scale-75 opacity-0 pointer-events-none -translate-y-4'}`}
+                    className={`absolute top-full right-0 z-50 pointer-events-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-3xl border border-slate-200 dark:border-white/10 p-4 rounded-3xl shadow-2xl transition-all duration-300 w-72 ${isSubmitted ? 'scale-90 opacity-0 blur-lg' : isVisible ? 'scale-100 opacity-100 translate-y-0' : 'scale-75 opacity-0 pointer-events-none -translate-y-4'}`}
+                    style={{ marginTop: '0px', paddingTop: '16px' }}
                     onClick={(e) => e.stopPropagation()}
+                    onMouseEnter={handleMouseEnter}
                 >
                     <button
                         onClick={() => { setIsVisible(false); setFeedback(''); }}
@@ -71,7 +82,7 @@ export function FeedbackHole() {
 
                     <textarea
                         placeholder="Speak to the void..."
-                        className="bg-transparent border-none outline-none text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-400 w-full h-32 resize-none font-medium custom-scrollbar mt-4 uppercase tracking-tighter"
+                        className="bg-transparent border-none outline-none text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-400 w-full h-32 resize-none font-medium custom-scrollbar mt-4 tracking-tight"
                         value={feedback}
                         onChange={(e) => setFeedback(e.target.value)}
                         disabled={isSubmitted}
@@ -80,7 +91,7 @@ export function FeedbackHole() {
 
                     <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-200/50 dark:border-white/10">
                         <div className="text-[10px] uppercase tracking-widest font-black text-slate-400">
-                            {feedback.length > 0 ? "Drag handle to toss" : "Feed the void"}
+                            {feedback.length > 0 ? "Toss into the void" : "Feed the void"}
                         </div>
                         {feedback.length > 0 && (
                             <TossHandle />
@@ -90,8 +101,10 @@ export function FeedbackHole() {
 
                 <DragOverlay>
                     {feedback ? (
-                        <div className="w-12 h-12 bg-black dark:bg-white rounded-full flex items-center justify-center shadow-2xl scale-110 cursor-grabbing border-4 border-indigo-500">
-                            <Send className="w-5 h-5 text-indigo-500 animate-pulse" />
+                        <div className="w-14 h-14 bg-indigo-600/20 backdrop-blur-md rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(79,70,229,0.4)] scale-110 cursor-grabbing border border-indigo-500/50">
+                            {/* Inner soul glow */}
+                            <div className="w-6 h-6 bg-indigo-400 rounded-full blur-[2px] animate-pulse" />
+                            <Send className="w-4 h-4 text-white absolute" />
                         </div>
                     ) : null}
                 </DragOverlay>
@@ -107,7 +120,7 @@ function TossHandle() {
 
     const style = {
         transform: CSS.Translate.toString(transform),
-        opacity: isDragging ? 0.3 : 1,
+        opacity: isDragging ? 0 : 1, // Hide original when dragging (overlay is visible)
     };
 
     return (
@@ -116,10 +129,15 @@ function TossHandle() {
             style={style}
             {...listeners}
             {...attributes}
-            className="p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-lg cursor-grab active:cursor-grabbing transition-colors"
-            title="Drag me to the hole"
+            className="w-10 h-10 flex items-center justify-center bg-gradient-to-br from-indigo-500 to-indigo-700 text-white rounded-full shadow-[0_0_15px_rgba(79,70,229,0.3)] cursor-grab active:cursor-grabbing transition-all hover:scale-110 active:scale-90 border border-white/20 relative group/handle"
+            title="Toss it in"
         >
-            <Move className="w-4 h-4" />
+            {/* Pulsing glow backplate */}
+            <div className="absolute inset-0 bg-indigo-400 rounded-full blur-md opacity-0 group-hover/handle:opacity-40 transition-opacity animate-pulse" />
+
+            <div className="relative z-10">
+                <Ghost className="w-5 h-5 group-hover/handle:rotate-12 transition-transform" />
+            </div>
         </div>
     );
 }

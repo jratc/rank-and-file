@@ -13,17 +13,30 @@ export default async function Home() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
+  const IS_AUTH_DISABLED = true; // Match actions.ts toggle
+  const MOCK_USER = {
+    id: '00000000-0000-0000-0000-000000000000',
+    email: 'jim@example.com',
+    user_metadata: { display_name: 'Jim' }
+  };
+
+  let activeUser = user;
+  if (!user && IS_AUTH_DISABLED) {
+    activeUser = MOCK_USER as any;
+  }
+
   let username = null;
-  if (user) {
+  let displayName = null;
+  if (activeUser) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('username, display_name')
-      .eq('id', user.id)
+      .eq('id', activeUser.id)
       .single();
     username = profile?.username || null;
-    var displayName = profile?.display_name || null;
+    displayName = profile?.display_name || 'Jim';
   }
-  const respondedListIds = user ? await getUserResponseIds(user.id) : [];
+  const respondedListIds = activeUser ? await getUserResponseIds(activeUser.id) : [];
 
   return (
     <>
@@ -45,9 +58,9 @@ export default async function Home() {
 
           <Dashboard
             initialLists={allLists}
-            currentUserId={user?.id || null}
-            currentUsername={username}
-            currentDisplayName={displayName}
+            currentUserId={activeUser?.id || null}
+            currentUsername={username || 'jim'}
+            currentDisplayName={displayName || 'Jim'}
             respondedListIds={respondedListIds}
           />
         </div>

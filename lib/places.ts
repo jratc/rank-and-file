@@ -315,7 +315,7 @@ export async function searchPlaces(query: string, category: Category, context?: 
                 externalUrl: `https://www.openstreetmap.org/${props.osm_type}/${props.osm_id}`,
                 provider: 'google', // Keep consistent provider ID for UI compatibility
                 category: category,
-                rawMetadata: props
+                rawMetadata: { ...props, geometry: feature.geometry }
             };
         });
     } catch (error) {
