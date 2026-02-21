@@ -303,8 +303,8 @@ export function RankingList({
             <div className="flex flex-col">
                 <div className="space-y-4">
                     {items.slice(0, isPopulating ? items.length : displayLimit).map((item, index) => (
-                        <div key={item.id} className="flex gap-4 items-center animate-in fade-in slide-in-from-left-4 duration-300" style={{ animationDelay: `${Math.min(index, 15) * 50}ms` }}>
-                            <span className={`font-mono font-black text-4xl w-14 text-right tabular-nums shrink-0 ${getRankColor(index)}`}>
+                        <div key={item.id} className="flex gap-2 items-center animate-in fade-in slide-in-from-left-4 duration-300" style={{ animationDelay: `${Math.min(index, 15) * 50}ms` }}>
+                            <span className={`font-mono font-black text-3xl w-14 text-right tabular-nums shrink-0 ${getRankColor(index)}`}>
                                 #{index + 1}
                             </span>
                             <div className="flex-1 min-w-0">
@@ -358,8 +358,8 @@ export function RankingList({
                 <div className="space-y-0">
                     {items.slice(0, isPopulating ? items.length : displayLimit).map((item, index) => (
                         <React.Fragment key={item.id}>
-                            <div className="flex gap-4 items-center mb-2">
-                                <span className={`font-mono font-black text-4xl w-14 text-right tabular-nums ${getRankColor(index)}`}>#{index + 1}</span>
+                            <div className="flex gap-2 items-center mb-1.5">
+                                <span className={`font-mono font-black text-3xl w-14 text-right tabular-nums ${getRankColor(index)}`}>#{index + 1}</span>
                                 <div className="flex-1">
                                     <SortableItem
                                         id={item.id}

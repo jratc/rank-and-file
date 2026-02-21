@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, Share2, Copy, Check, Plus, MessageSquare, Search, Loader2, Link as LinkIcon, MapPin, Download, Music, MessageCircle, Twitter, Mail, X, Users, Film, Beer, Utensils, MoreHorizontal, Clock, Trash2, Pencil, Facebook, Cloud } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Share2, Copy, Check, Plus, MessageSquare, Search, Loader2, Link as LinkIcon, MapPin, Download, Music, MessageCircle, Twitter, Mail, X, Users, Film, Beer, Utensils, MoreHorizontal, Clock, Trash2, Pencil, Facebook, Cloud, Sparkles } from 'lucide-react';
 import { RankingList } from "./ranking-list";
 import { deleteList, createList, updateListTitle, getThread, findListByTitle, updateProfile, getFollowingLists, addComment, addItemsToList, getComments, upsertComment } from "@/app/actions";
 /* FEATURE: Places Map — to disable, comment out the PlacesMap import below */
@@ -63,6 +63,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
     const [isWaitingForComment, setIsWaitingForComment] = useState(false);
     const [waitingComment, setWaitingComment] = useState('');
     const isCommentDirty = useRef(false);
+    const commentValueRef = useRef('');
     const [pendingListAfterCreate, setPendingListAfterCreate] = useState<any>(null);
     const [populatedCount, setPopulatedCount] = useState(0);
     const [isPopulating, setIsPopulating] = useState(false);
@@ -192,6 +193,19 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
 
     // Search Ref for focus management
     const searchInputRef = useRef<HTMLInputElement>(null);
+    const searchResultsRef = useRef<HTMLDivElement>(null);
+
+    // Auto-dismiss search results when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (searchResultsRef.current && !searchResultsRef.current.contains(event.target as Node) &&
+                searchInputRef.current && !searchInputRef.current.contains(event.target as Node)) {
+                setSearchResults([]);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     // Global Site Search State
     const [globalSearchQuery, setGlobalSearchQuery] = useState('');
@@ -354,7 +368,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
     const closeExpandedView = useCallback(async () => {
         // SAVE COMMENT IF DIRTY BEFORE CLOSING
         if (isCommentDirty.current && expandedListId && expandedListId !== 'temp-pending') {
-            const commentToSave = waitingComment.trim();
+            const commentToSave = commentValueRef.current.trim();
             console.log(`[Dashboard] closeExpandedView: Saving dirty comment for ${expandedListId}`);
 
             // Optimistic sync for local state
@@ -749,9 +763,10 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                     startEarlyPopulation(newList);
                 }
 
-                // FOR 'MORE' CATEGORIES, ASK AI VS MANUAL
+                // FOR 'MORE' CATEGORIES, DON'T JUMP IMMEDIATELY - STAY IN NAMING/DRAFTING
                 if (newList.category === 'other' || newList.category === 'places') {
-                    setCreationStep('choosing');
+                    // We stay in the modal, let the user trigger AI if they want
+                    setIsUpdatingTitle(false);
                     return;
                 }
 
@@ -1458,10 +1473,12 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                                         autoFocus={isWaitingForComment}
                                                         onChange={(e) => {
                                                             setWaitingComment(e.target.value);
+                                                            commentValueRef.current = e.target.value;
                                                             isCommentDirty.current = true;
                                                         }}
                                                         onBlur={async () => {
-                                                            if (isCommentDirty.current && waitingComment.trim() && expandedList.id !== 'temp-pending') {
+                                                            const commentToSave = commentValueRef.current.trim();
+                                                            if (isCommentDirty.current && commentToSave && expandedList.id !== 'temp-pending') {
                                                                 const newComment = {
                                                                     id: `temp-${Date.now()}`,
                                                                     user_id: currentUserId,
@@ -1521,6 +1538,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                                     {/* Search Results Dropdown-style */}
                                                     {searchResults.length > 0 && (
                                                         <div
+                                                            ref={searchResultsRef}
                                                             className="absolute left-5 right-5 mt-1 bg-white border border-slate-100 rounded-xl shadow-2xl z-50 p-1 max-h-[300px] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in duration-200"
                                                             onScroll={(e) => {
                                                                 const target = e.currentTarget;
@@ -1579,6 +1597,32 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                                     </CardHeader >
 
                                     <CardContent className="p-5 pt-0 flex-1 overflow-y-auto min-h-0 custom-scrollbar">
+                                        {/* INLINE AI NUDGE - Only for Owner, only for More/Places category, only when empty and not populating */}
+                                        {currentUserId === expandedList.user_id && expandedList.list_items.length === 0 && !isPopulating && !isBackgroundPopulating && (['other', 'places', 'more'].includes(expandedList.category?.toLowerCase())) && (
+                                            <div className="mb-6 p-6 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col items-center text-center gap-4 animate-in fade-in slide-in-from-top-4 duration-500 shadow-sm mt-4">
+                                                <div className="p-3 bg-white rounded-2xl shadow-sm border border-slate-50">
+                                                    <Sparkles className="w-6 h-6 text-indigo-500 animate-pulse" />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <h4 className="text-base font-black uppercase tracking-tight text-slate-900 leading-tight">Need a starting point?</h4>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest max-w-[240px]">Our Magic AI can build a draft for you based on the title.</p>
+                                                </div>
+                                                <div className="flex flex-col w-full gap-2">
+                                                    <Button
+                                                        onClick={() => startEarlyPopulation(expandedList)}
+                                                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-widest h-12 rounded-xl shadow-md transition-all active:scale-95"
+                                                    >
+                                                        Use Magic AI
+                                                    </Button>
+                                                    <button
+                                                        onClick={() => searchInputRef.current?.focus()}
+                                                        className="text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors py-2"
+                                                    >
+                                                        I'll add items manually
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
                                         <RankingList
                                             initialItems={expandedList.list_items}
                                             listId={expandedList.id}
