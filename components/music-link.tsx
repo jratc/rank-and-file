@@ -38,7 +38,7 @@ function getAppleMusicEmbedUrl(item: any): string | null {
     if (!meta) return null;
 
     // iTunes API returns trackViewUrl or collectionViewUrl like:
-    // https://music.apple.com/us/album/kind-of-blue/268443092
+    // https://music.apple.com/us/album/kind-of-blue/268443092?i=268443093
     const url = meta.trackViewUrl || meta.collectionViewUrl || item?.metadata?.externalUrl;
     if (!url) return null;
 
@@ -46,7 +46,8 @@ function getAppleMusicEmbedUrl(item: any): string | null {
     try {
         const parsed = new URL(url);
         if (parsed.hostname.includes('apple.com')) {
-            return `https://embed.music.apple.com${parsed.pathname}`;
+            // Preserve the search query (e.g., ?i=trackId) so the embed plays the specific song
+            return `https://embed.music.apple.com${parsed.pathname}${parsed.search}`;
         }
     } catch {
         // fallback: try to construct from collection ID
@@ -61,11 +62,12 @@ function getAppleMusicEmbedUrl(item: any): string | null {
 
 /**
  * Inline embedded music player. Uses Spotify or Apple Music embeds
- * for full playback (for logged-in users of those services).
+ * for playback. Now includes direct links for full playback.
  */
 export function MusicPlayer({ item, className = '' }: MusicPlayerProps) {
     const [isOpen, setIsOpen] = useState(false);
     const provider = item?.metadata?.provider;
+    const externalUrl = item?.metadata?.externalUrl;
 
     const embedUrl = provider === 'spotify'
         ? getSpotifyEmbedUrl(item)
@@ -76,7 +78,7 @@ export function MusicPlayer({ item, className = '' }: MusicPlayerProps) {
     const isSpotify = provider === 'spotify';
 
     return (
-        <div className={className}>
+        <div className={className + " flex items-center gap-2"}>
             <button
                 onClick={(e) => {
                     e.stopPropagation();
@@ -112,9 +114,27 @@ export function MusicPlayer({ item, className = '' }: MusicPlayerProps) {
                 )}
             </button>
 
+            {/* DIRECT EXTERNAL LINK FOR FULL PLAYBACK */}
+            {externalUrl && (
+                <a
+                    href={externalUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex items-center gap-1 text-[8px] font-black uppercase tracking-tighter text-slate-400 hover:text-blue-500 transition-colors"
+                >
+                    <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                        <polyline points="15 3 21 3 21 9" />
+                        <line x1="10" y1="14" x2="21" y2="3" />
+                    </svg>
+                    Open
+                </a>
+            )}
+
             {isOpen && (
                 <div
-                    className="mt-2 rounded-xl overflow-hidden shadow-sm border border-slate-100 animate-in slide-in-from-top-2 duration-200"
+                    className="absolute left-0 right-0 top-full mt-2 z-50 rounded-xl overflow-hidden shadow-xl border border-slate-100 animate-in slide-in-from-top-2 duration-200"
                     onClick={(e) => e.stopPropagation()}
                     onPointerDown={(e) => e.stopPropagation()}
                 >
@@ -146,61 +166,80 @@ interface PlaylistExportProps {
 
 export function PlaylistExport({ items, listTitle, className = '' }: PlaylistExportProps) {
     const musicItems = items.filter((item: any) =>
-        item.metadata?.category === 'music' && item.metadata?.externalUrl
+        item.metadata?.category === 'music'
     );
 
     if (musicItems.length === 0) return null;
 
-    const handleExport = (e: React.MouseEvent) => {
+    const handleSpotifyExport = (e: React.MouseEvent) => {
         e.stopPropagation();
-
-        // 1. Try to build a Spotify Trackset (Legacy but effective)
-        // Format: spotify:trackset:<SessionName>:<comma-separated-ids>
         const spotifyItems = musicItems.filter(i => i.metadata?.provider === 'spotify');
-        if (spotifyItems.length > 0) {
-            const ids = spotifyItems
-                .map(i => i.metadata?.rawMetadata?.id)
-                .filter(Boolean)
-                .join(',');
+        const ids = spotifyItems
+            .map(i => i.metadata?.rawMetadata?.id)
+            .filter(Boolean)
+            .join(',');
 
-            if (ids) {
-                // Use the trackset schema
-                // Note: This often works best on Desktop. On mobile it might just open the app.
-                // We could also try the web player URL?
-                window.open(`spotify:trackset:${encodeURIComponent(listTitle)}:${ids}`, '_self');
-                return;
-            }
-        }
-
-        // 2. Fallback: Open the first track's streaming URL as the entry point
-        const firstTrackUrl = musicItems[0]?.metadata?.externalUrl;
-        if (firstTrackUrl) {
-            window.open(firstTrackUrl, '_blank');
+        if (ids) {
+            window.open(`spotify:trackset:${encodeURIComponent(listTitle)}:${ids}`, '_self');
         } else {
-            // 3. Last resort: search Apple Music/Generic
-            const searchQuery = encodeURIComponent(listTitle);
-            window.open(`https://music.apple.com/search?term=${searchQuery}`, '_blank');
+            // Fallback to first external URL if no explicit IDs found
+            const firstUrl = musicItems.find(i => i.metadata?.externalUrl)?.metadata?.externalUrl;
+            if (firstUrl) window.open(firstUrl, '_blank');
         }
     };
 
+    const handleUniversalExport = (e: React.MouseEvent) => {
+        e.stopPropagation();
+
+        // Generate M3U content
+        let m3uContent = "#EXTM3U\n";
+        musicItems.forEach((item) => {
+            const name = item.metadata?.name || "Unknown Track";
+            const subtitle = item.metadata?.subtitle || "Unknown Artist";
+            const url = item.metadata?.externalUrl || "";
+
+            m3uContent += `#EXTINF:-1,${subtitle} - ${name}\n`;
+            m3uContent += `${url}\n`;
+        });
+
+        // Trigger download
+        const blob = new Blob([m3uContent], { type: 'audio/x-mpegurl' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${listTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_playlist.m3u`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
+    const hasSpotify = musicItems.some(i => i.metadata?.provider === 'spotify');
+
     return (
-        <button
-            onClick={handleExport}
-            className={`
-                inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg
-                bg-gradient-to-r from-[#FC3C44] to-[#8B5CF6]
-                hover:from-[#ff4f57] hover:to-[#9d6eff]
-                text-white text-[9px] font-black uppercase tracking-widest
-                transition-all duration-200 shadow-sm hover:shadow-md
-                hover:scale-105 active:scale-95
-                ${className}
-            `}
-            title={`Open "${listTitle}" as playlist`}
-        >
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-            </svg>
-            Open as Playlist
-        </button>
+        <div className={`flex flex-wrap gap-2 ${className}`}>
+            {hasSpotify && (
+                <button
+                    onClick={handleSpotifyExport}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1DB954] hover:bg-[#1ed760] text-white text-[9px] font-black uppercase tracking-widest transition-all duration-200 shadow-sm hover:shadow-md hover:scale-105 active:scale-95"
+                    title="Open in Spotify App"
+                >
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.503 17.306c-.216.354-.675.467-1.03.249-2.887-1.762-6.523-2.162-10.792-1.183-.404.092-.814-.16-.906-.565-.092-.402.16-.812.565-.904 4.673-1.07 8.688-.617 11.912 1.353.355.216.464.676.251 1.05zm1.47-3.253c-.273.443-.852.585-1.294.312-3.303-2.03-8.336-2.617-12.24-1.431-.5-.152-.843-.695-.69-1.196.153-.502.697-.842 1.197-.69 4.466 1.353 10.01 2.01 13.715 4.288.442.272.583.85.312 1.293v.024zm.146-3.41c-3.963-2.354-10.513-2.57-14.307-1.417-.608.185-1.248-.167-1.433-.774-.185-.607.168-1.248.775-1.432 4.356-1.323 11.58-1.066 16.143 1.643.548.325.728 1.033.403 1.58-.323.547-1.03.73-1.58.404l-.001-.024z" />
+                    </svg>
+                    Spotify App
+                </button>
+            )}
+            <button
+                onClick={handleUniversalExport}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#FC3C44] to-[#8B5CF6] hover:from-[#ff4f57] hover:to-[#9d6eff] text-white text-[9px] font-black uppercase tracking-widest transition-all duration-200 shadow-sm hover:shadow-md hover:scale-105 active:scale-95"
+                title="Download .m3u for iTunes/Apple Music"
+            >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
+                </svg>
+                iTunes / Universal
+            </button>
+        </div>
     );
 }

@@ -55,7 +55,7 @@ export function RankedItemCard({
                         )}
                     </div>
                     {/* Music Player Integration */}
-                    {showMusicPlayer && item.metadata.category === 'music' && (
+                    {showMusicPlayer && (category === 'music' || item.metadata.category === 'music') && (
                         <div className="mt-1.5" onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
                             <MusicPlayer item={item} />
                         </div>

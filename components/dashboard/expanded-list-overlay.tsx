@@ -4,13 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { MapPin, X, Plus, Sparkles, Pencil, Loader2, Share2, Copy, Mail, MessageCircle, Twitter, Facebook, Cloud, MessageSquare, Search } from 'lucide-react';
+import { MapPin, X, Plus, Sparkles, Pencil, Loader2, Share2, Copy, Mail, MessageCircle, Twitter, Facebook, Cloud, MessageSquare, Search, Reply, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { RankingList } from "@/components/ranking-list";
 import { categoryConfig, EditSession, ResponseView } from './shared';
 import { PlacesMap, itemsToPlaces } from '@/components/places-map';
 import { PlaylistExport } from '@/components/music-link';
-import { getThread, upsertComment } from "@/app/actions";
+import { getThread, upsertComment, addComment } from "@/app/actions";
 import { ResponseBtn } from '@/components/response-btn';
 
 interface ExpandedListOverlayProps {
@@ -59,6 +59,8 @@ interface ExpandedListOverlayProps {
     handleCopyLink: (list: any) => void;
     handleShareTwitter: (list: any) => void;
     handleSubmitWaitingComment: () => void;
+    allComments: any[];
+    refreshComments: () => Promise<void>;
     setResponseView: (view: ResponseView) => void;
     router: any;
 }
@@ -109,9 +111,29 @@ export function ExpandedListOverlay({
     handleCopyLink,
     handleShareTwitter,
     handleSubmitWaitingComment,
+    allComments,
+    refreshComments,
     setResponseView,
-    router
+    router,
 }: ExpandedListOverlayProps) {
+    const [replyContent, setReplyContent] = React.useState("");
+    const [isPostingReply, setIsPostingReply] = React.useState(false);
+
+    const handleReplySubmit = async () => {
+        if (!replyContent.trim()) return;
+        setIsPostingReply(true);
+        try {
+            await addComment(expandedList.id, replyContent.trim());
+            setReplyContent("");
+            toast.success("Thought added!");
+            await refreshComments();
+        } catch (error) {
+            toast.error("Failed to post comment");
+        } finally {
+            setIsPostingReply(false);
+        }
+    };
+
     if (!expandedListId || !expandedList) return null;
 
     return (
@@ -451,83 +473,195 @@ export function ExpandedListOverlay({
                                     {/* INTEGRATED COMMENT AREA (Description) */}
                                     {currentUserId === expandedList.user_id ? (
                                         <div className="mt-2 group">
-                                            <Textarea
-                                                placeholder={isPopulating ? "Building your list... jot down some notes?" : "Jot down some notes-what should people know about your list?"}
-                                                value={waitingComment}
-                                                autoFocus={isWaitingForComment}
-                                                onChange={(e) => {
-                                                    setWaitingComment(e.target.value);
-                                                    commentValueRef.current = e.target.value;
-                                                    isCommentDirty.current = true;
-                                                }}
-                                                onBlur={() => {
-                                                    const commentToSave = commentValueRef.current.trim();
-                                                    console.log(`[Dashboard] Textarea Blur: Dirty=${isCommentDirty.current}, Content="${commentToSave.substring(0, 15)}..."`);
-                                                    if (isCommentDirty.current && expandedList.id !== 'temp-pending') {
-                                                        // Mark clean immediately
-                                                        isCommentDirty.current = false;
+                                            <div className="relative">
+                                                <Textarea
+                                                    placeholder={isPopulating ? "Building your list... jot down some notes?" : "Jot down some notes-what should people know about your list?"}
+                                                    value={waitingComment}
+                                                    autoFocus={isWaitingForComment}
+                                                    onChange={(e) => {
+                                                        setWaitingComment(e.target.value);
+                                                        commentValueRef.current = e.target.value;
+                                                        isCommentDirty.current = true;
+                                                    }}
+                                                    onBlur={() => {
+                                                        const commentToSave = commentValueRef.current.trim();
+                                                        if (isCommentDirty.current && expandedList.id !== 'temp-pending') {
+                                                            isCommentDirty.current = false;
+                                                            setLists((prev: any[]) => prev.map(l => l.id === expandedList.id ? {
+                                                                ...l,
+                                                                comments: commentToSave ? [...(l.comments || []).filter((c: any) => c.user_id !== currentUserId), {
+                                                                    id: `temp-${Date.now()}`,
+                                                                    user_id: currentUserId,
+                                                                    list_id: expandedList.id,
+                                                                    content: commentToSave,
+                                                                    created_at: new Date().toISOString(),
+                                                                    profiles: { username: currentUsername, display_name: currentDisplayName }
+                                                                }] : [...(l.comments || []).filter((c: any) => c.user_id !== currentUserId)]
+                                                            } : l));
+                                                            upsertComment(expandedList.id, commentToSave).then(() => refreshComments()).catch(e => console.error("Save error", e));
+                                                        }
+                                                    }}
+                                                    className="min-h-[60px] max-h-[120px] font-bold text-sm resize-none border-none bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus-visible:ring-1 focus-visible:ring-slate-100 rounded-xl p-3 placeholder:opacity-40 transition-all overflow-y-auto"
+                                                />
+                                                {isCommentDirty.current && (
+                                                    <div className="flex justify-end mt-1">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="h-6 text-[9px] px-2 uppercase tracking-widest font-black text-slate-400 hover:text-green-600 hover:border-green-600 hover:bg-green-50 transition-colors"
+                                                            onMouseDown={(e) => e.preventDefault()}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const commentToSave = commentValueRef.current.trim();
+                                                                if (expandedList.id !== 'temp-pending') {
+                                                                    isCommentDirty.current = false;
+                                                                    upsertComment(expandedList.id, commentToSave)
+                                                                        .then(() => {
+                                                                            toast.success("Comment saved!");
+                                                                            refreshComments();
+                                                                        })
+                                                                        .catch(() => {
+                                                                            toast.error("Failed to save");
+                                                                            isCommentDirty.current = true;
+                                                                        });
+                                                                }
+                                                            }}
+                                                        >
+                                                            Save Note
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </div>
 
-                                                        // Optimistic update
-                                                        setLists((prev: any[]) => prev.map(l => l.id === expandedList.id ? {
-                                                            ...l,
-                                                            comments: commentToSave ? [...(l.comments || []).filter((c: any) => c.user_id !== currentUserId), {
-                                                                id: `temp-${Date.now()}`,
-                                                                user_id: currentUserId,
-                                                                list_id: expandedList.id,
-                                                                content: commentToSave,
-                                                                created_at: new Date().toISOString(),
-                                                                profiles: { username: currentUsername, display_name: currentDisplayName }
-                                                            }] : [...(l.comments || []).filter((c: any) => c.user_id !== currentUserId)]
-                                                        } : l));
+                                            {/* Thread View for Owners */}
+                                            {allComments.filter(c => c.content !== waitingComment || c.user_id !== expandedList.user_id).length > 0 && (
+                                                <div className="space-y-3 pt-4 border-t border-slate-100 mt-4">
+                                                    <h4 className="text-[9px] font-black uppercase tracking-widest text-slate-300 px-1">Conversation</h4>
+                                                    <div className="space-y-3">
+                                                        {allComments
+                                                            .filter(c => c.content !== waitingComment || c.user_id !== expandedList.user_id)
+                                                            .map((comment) => (
+                                                                <div key={comment.id} className="flex flex-col gap-1 group/comment pl-2 border-l-2 border-slate-100/50">
+                                                                    <div className="flex items-center justify-between">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="text-[10px] font-black uppercase text-slate-900">
+                                                                                {comment.profiles?.display_name || comment.profiles?.username || 'Guest'}
+                                                                            </span>
+                                                                            <span className="text-[8px] font-bold text-slate-400">
+                                                                                {new Date(comment.created_at).toLocaleDateString()}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <p className="text-xs text-slate-600 leading-tight pr-4">
+                                                                        {comment.content}
+                                                                    </p>
+                                                                </div>
+                                                            ))}
+                                                    </div>
+                                                </div>
+                                            )}
 
-                                                        // Fire and forget save
-                                                        upsertComment(expandedList.id, commentToSave).catch(e => console.error("Save error", e));
-                                                    }
-                                                }}
-                                                className="min-h-[60px] max-h-[120px] font-bold text-sm resize-none border-none bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus-visible:ring-1 focus-visible:ring-slate-100 rounded-xl p-3 placeholder:opacity-40 transition-all overflow-y-auto"
-                                            />
-                                            {isCommentDirty.current && (
-                                                <div className="flex justify-end mt-1">
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        className="h-6 text-[9px] px-2 uppercase tracking-widest font-black text-slate-400 hover:text-green-600 hover:border-green-600 hover:bg-green-50 transition-colors"
-                                                        onMouseDown={(e) => {
-                                                            // Prevent blur event on Textarea so onClick can fire synchronously
-                                                            e.preventDefault();
-                                                        }}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            const commentToSave = commentValueRef.current.trim();
-                                                            if (expandedList.id !== 'temp-pending') {
-                                                                isCommentDirty.current = false;
-                                                                upsertComment(expandedList.id, commentToSave).then(() => {
-                                                                    toast.success("Comment saved!");
-                                                                    // Force re-render just to hide button
-                                                                    setWaitingComment(commentToSave + " ");
-                                                                    setTimeout(() => setWaitingComment(commentToSave), 0);
-                                                                }).catch((e: any) => {
-                                                                    toast.error("Failed to save");
-                                                                    isCommentDirty.current = true;
-                                                                });
-                                                            } else {
-                                                                toast.info("Comment will save when you name the list.");
-                                                            }
-                                                        }}
-                                                    >
-                                                        Save Note
-                                                    </Button>
+                                            {/* QUICK REPLY BOX FOR OWNER (Optional but helpful) */}
+                                            {allComments.filter(c => c.user_id !== currentUserId).length > 0 && (
+                                                <div className="mt-4 bg-white/50 border border-slate-100 rounded-2xl p-2 transition-all focus-within:ring-2 focus-within:ring-blue-100">
+                                                    <div className="flex gap-2 min-h-[40px]">
+                                                        <Textarea
+                                                            placeholder="Respond to thoughts..."
+                                                            value={replyContent}
+                                                            onChange={(e) => setReplyContent(e.target.value)}
+                                                            className="flex-1 min-h-[40px] max-h-[100px] text-xs font-medium border-none bg-transparent focus-visible:ring-0 p-2 resize-none"
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter' && !e.shiftKey) {
+                                                                    e.preventDefault();
+                                                                    if (replyContent.trim()) handleReplySubmit();
+                                                                }
+                                                            }}
+                                                        />
+                                                        <Button
+                                                            size="icon"
+                                                            variant="ghost"
+                                                            disabled={!replyContent.trim() || isPostingReply}
+                                                            onClick={handleReplySubmit}
+                                                            className="h-8 w-8 self-end rounded-xl hover:bg-blue-50 text-blue-500 transition-all shrink-0"
+                                                        >
+                                                            {isPostingReply ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                                                        </Button>
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
-                                    ) : waitingComment && (
-                                        <div className="mt-2 px-3 py-2 bg-slate-50/50 rounded-xl border border-slate-100/50">
-                                            <p className="text-xs font-medium text-slate-600 italic leading-relaxed">
-                                                "{waitingComment}"
-                                            </p>
+                                    ) : (
+                                        <div className="mt-2 space-y-4">
+                                            {waitingComment ? (
+                                                <div className="px-3 py-2 bg-slate-50/50 rounded-xl border border-slate-100/50">
+                                                    <p className="text-xs font-medium text-slate-600 italic leading-relaxed">
+                                                        "{waitingComment}"
+                                                    </p>
+                                                </div>
+                                            ) : (
+                                                <div className="px-3 py-2 bg-slate-50/20 rounded-xl border border-dashed border-slate-100/50">
+                                                    <p className="text-[10px] font-bold text-slate-300 uppercase tracking-tight">No notes from the creator yet.</p>
+                                                </div>
+                                            )}
+
+                                            {/* Thread View for Viewers */}
+                                            {allComments.filter(c => c.content !== waitingComment || c.user_id !== expandedList.user_id).length > 0 && (
+                                                <div className="space-y-3 pt-2">
+                                                    <h4 className="text-[9px] font-black uppercase tracking-widest text-slate-300 px-1">Conversation</h4>
+                                                    <div className="space-y-3">
+                                                        {allComments
+                                                            .filter(c => c.content !== waitingComment || c.user_id !== expandedList.user_id)
+                                                            .map((comment) => (
+                                                                <div key={comment.id} className="flex flex-col gap-1 group/comment pl-2 border-l-2 border-slate-100/50">
+                                                                    <div className="flex items-center justify-between">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="text-[10px] font-black uppercase text-slate-900">
+                                                                                {comment.profiles?.display_name || comment.profiles?.username || 'Guest'}
+                                                                            </span>
+                                                                            <span className="text-[8px] font-bold text-slate-400">
+                                                                                {new Date(comment.created_at).toLocaleDateString()}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <p className="text-xs text-slate-600 leading-tight pr-4">
+                                                                        {comment.content}
+                                                                    </p>
+                                                                </div>
+                                                            ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* QUICK REPLY BOX */}
+                                            {currentUserId && (
+                                                <div className="mt-4 bg-white/50 border border-slate-100 rounded-2xl p-2 transition-all focus-within:ring-2 focus-within:ring-blue-100">
+                                                    <div className="flex gap-2 min-h-[40px]">
+                                                        <Textarea
+                                                            placeholder="Add a thought..."
+                                                            value={replyContent}
+                                                            onChange={(e) => setReplyContent(e.target.value)}
+                                                            className="flex-1 min-h-[40px] max-h-[100px] text-xs font-medium border-none bg-transparent focus-visible:ring-0 p-2 resize-none"
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter' && !e.shiftKey) {
+                                                                    e.preventDefault();
+                                                                    if (replyContent.trim()) handleReplySubmit();
+                                                                }
+                                                            }}
+                                                        />
+                                                        <Button
+                                                            size="icon"
+                                                            variant="ghost"
+                                                            disabled={!replyContent.trim() || isPostingReply}
+                                                            onClick={handleReplySubmit}
+                                                            className="h-8 w-8 self-end rounded-xl hover:bg-blue-50 text-blue-500 transition-all shrink-0"
+                                                        >
+                                                            {isPostingReply ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
-                                </div>
 
                                 {/* Search Section Inside Header - Only for Owner, only after list is named, and not while populating */}
                                 {
@@ -701,7 +835,7 @@ export function ExpandedListOverlay({
                                 )}
                             </CardContent>
                         </div>
-                    </div>
+                    </div >
                 )
                 }
             </Card >

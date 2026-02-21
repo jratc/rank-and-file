@@ -53,6 +53,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
 
     // FREE-FORM LIST STATE
     const [creationStep, setCreationStep] = useState<'naming' | 'choosing' | 'drafting' | 'waiting' | 'ranking' | null>(null);
+    const [allComments, setAllComments] = useState<any[]>([]);
     const [freeFormItems, setFreeFormItems] = useState<string[]>(Array(10).fill(''));
 
     const [commentModal, setCommentModal] = useState<{
@@ -111,17 +112,18 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
 
     // FETCH COMMENTS FOR EXPANDED LIST
     useEffect(() => {
-        if (!expandedListId || expandedListId === 'temp-pending') {
-            if (!isCommentDirty.current) setWaitingComment('');
-            return;
-        }
-
         const fetchComments = async () => {
+            if (!expandedListId || expandedListId === 'temp-pending') {
+                if (!isCommentDirty.current) setWaitingComment('');
+                return;
+            }
+
             // Don't overwrite if user is actively typing or has a dirty draft
             if (isCommentDirty.current || isPopulating) return;
 
             try {
                 const results = await getComments(expandedListId);
+                setAllComments(results || []);
                 // Look for the user's latest comment to show in the main area
                 const userComment = results?.findLast((c: any) => c.user_id === currentUserId);
                 if (userComment) {
@@ -135,7 +137,17 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
         };
 
         fetchComments();
-    }, [expandedListId, currentUserId]);
+    }, [expandedListId, currentUserId, isPopulating]); // Added isPopulating to dependencies
+
+    const refreshComments = async () => {
+        if (!expandedListId) return;
+        try {
+            const results = await getComments(expandedListId);
+            setAllComments(results || []);
+        } catch (err) {
+            console.error("[Dashboard] Failed to refresh comments:", err);
+        }
+    };
 
     // DEBOUNCED COMMENT SAVING
     useEffect(() => {
@@ -933,6 +945,8 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                 handleCopyLink={handleCopyLink}
                 handleShareTwitter={handleShareTwitter}
                 handleSubmitWaitingComment={handleSubmitWaitingComment}
+                allComments={allComments}
+                refreshComments={refreshComments}
                 setResponseView={setResponseView}
                 router={router}
             />
@@ -989,13 +1003,6 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                 listTitle={commentModal.listTitle}
                 currentUserId={currentUserId}
             />
-
-            {/* Conditional Feedback Hole */}
-            {
-                !expandedListId && !responseView.isOpen && !showNameModal && !creationStep && (
-                    <FeedbackHole />
-                )
-            }
         </div >
     );
 }

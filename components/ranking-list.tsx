@@ -55,6 +55,7 @@ export function RankingList({
 }: RankingListProps) {
     const [items, setItems] = useState(initialItems);
     const [isSaving, setIsSaving] = useState(false);
+    const lastManualOrderRef = useRef<number>(0);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [displayLimit, setDisplayLimit] = useState(15);
     const [prevListId, setPrevListId] = useState(listId);
@@ -95,9 +96,9 @@ export function RankingList({
 
     // REALTIME SUBSCRIPTION
     useEffect(() => {
-        if (!listId) return;
+        if (!listId || listId === 'temp-pending') return;
 
-        console.log(`[RankingList] Subscribing to realtime for list: ${listId}`);
+        console.log(`[RankingList] Subscribing to realtime for ${listId}`);
         const supabase = createClient();
         const channel = supabase
             .channel(`list-items-${listId}`)
@@ -110,11 +111,21 @@ export function RankingList({
                     filter: `list_id=eq.${listId}`,
                 },
                 (payload) => {
+                    // IGNORE realtime updates if we just did a manual reorder (avoid jump-back)
+                    if (Date.now() - lastManualOrderRef.current < 2000) {
+                        console.log('[Realtime] Ignoring update during manual reorder cooldown');
+                        return;
+                    }
+
                     console.log('[Realtime] Change received:', payload);
 
                     if (payload.eventType === 'INSERT') {
-                        const newItem = payload.new;
-                        console.log('[Realtime] INSERTING item:', newItem.id);
+                        console.log('[Realtime] NEW item:', payload.new.id);
+                        const newItem = {
+                            id: payload.new.entity_id,
+                            rank: payload.new.rank,
+                            metadata: payload.new.metadata,
+                        };
                         setItems((currentItems) => {
                             // Avoid duplicates
                             if (currentItems.some((i) => i.id === newItem.id)) {
@@ -178,6 +189,7 @@ export function RankingList({
     const saveOrder = async (newItems: any[]) => {
         if (readOnly) return;
         setIsSaving(true);
+        lastManualOrderRef.current = Date.now();
         const updates = newItems.map((item, index) => ({
             id: item.id,
             rank: index + 1

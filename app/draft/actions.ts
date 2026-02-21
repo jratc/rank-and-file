@@ -160,7 +160,19 @@ export async function hydrateItemImage(itemId: string, query: string, category?:
         // 2. Fetch thumbnail
         let imageUrl: string | null = null;
 
-        if (category === 'movies') {
+        if (category === 'music') {
+            try {
+                const { spotifyProvider } = await import('@/lib/spotify');
+                const spotifyItems = await spotifyProvider.searchTracks(query);
+                if (spotifyItems.length > 0) {
+                    imageUrl = spotifyItems[0].imageUrl;
+                }
+            } catch (err) {
+                console.error('Spotify hydration failed, falling back...', err);
+            }
+        }
+
+        if (category === 'movies' && !imageUrl) {
             const { moviesProvider } = await import('@/lib/movies');
             const movieItems = await moviesProvider.search(query);
             if (movieItems.length > 0) {
