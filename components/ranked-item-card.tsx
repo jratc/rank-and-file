@@ -28,8 +28,8 @@ export function RankedItemCard({
             onDoubleClick={onDoubleClick}
             {...props}
         >
-            <div className="flex-1 flex items-center gap-5 pl-4 min-w-0 select-none">
-                <div className="w-16 h-16 bg-slate-100 rounded-lg overflow-hidden shrink-0 shadow-sm border border-slate-200">
+            <div className="flex-1 flex items-center gap-3 pl-2 min-w-0 select-none">
+                <div className="w-14 h-14 bg-slate-100 rounded-lg overflow-hidden shrink-0 shadow-sm border border-slate-200">
                     <HydratedImage
                         initialUrl={item.metadata.imageUrl}
                         itemId={item.id}
@@ -40,7 +40,7 @@ export function RankedItemCard({
                 </div>
 
                 <div className="min-w-0 flex-1 py-1 w-full text-left pr-12">
-                    <h4 className="font-black text-xl tracking-tighter leading-tight break-words whitespace-pre-wrap text-slate-900 uppercase w-full">
+                    <h4 className="font-black text-lg tracking-tighter leading-tight break-words whitespace-pre-wrap text-slate-900 uppercase w-full">
                         {item.metadata.name}
                     </h4>
                     <div className="flex items-center gap-2 mt-1">

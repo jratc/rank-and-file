@@ -282,16 +282,18 @@ export const universalProvider = {
                             const nameInTitle = searchTerms.some(term => title.includes(term));
 
                             // It's a "good" match if title matches name or it's context-rich
-                            const isPersonMatch = nameInTitle && p.thumbnail && !p.thumbnail.source.toLowerCase().includes('logo');
+                            // Relaxed check: don't block based on 'logo' in the URL here, do it in isGarbage
+                            const hasThumbnail = !!p.thumbnail;
 
-                            return isPersonMatch && p.thumbnail;
+                            return nameInTitle && hasThumbnail;
                         });
 
                         const finalChoice = bestMatch;
 
                         if (finalChoice && finalChoice.thumbnail) {
                             const src = finalChoice.thumbnail.source.toLowerCase();
-                            // Expanded garbage filter (case-insensitive check already handled by .toLowerCase())
+                            // Refined garbage filter: allow names that might have 'logo' or 'official' in metadata
+                            // but still block actual Wikipedia/UI logos
                             const isGarbage = src.includes('wikipedia-logo') ||
                                 src.includes('wiki-logo') ||
                                 src.includes('padlock') ||
@@ -299,18 +301,16 @@ export const universalProvider = {
                                 src.includes('increase_') ||
                                 src.includes('symbol_') ||
                                 src.includes('question_mark') ||
-                                src.includes('logo') ||
+                                // src.includes('logo') || // REMOVED: Too aggressive for some brand-associated persons
                                 src.includes('mattel') ||
                                 src.includes('barbie') ||
-                                src.includes('corporate') ||
-                                src.includes('trademark') ||
-                                src.includes('brand') ||
-                                src.includes('official') ||
+                                // src.includes('official') || // REMOVED: Too aggressive
                                 src.includes('flag_') ||
-                                src.includes('soccer') ||
-                                src.includes('football') ||
                                 src.includes('placeholder');
-                            if (!isGarbage) return finalChoice.thumbnail.source;
+
+                            // Re-add a more specific 'logo' check if needed, but for Peloton instructors it might be okay.
+                            // Ensure it's not the generic Wikipedia logo
+                            if (!isGarbage && !src.includes('wikimedia-logo')) return finalChoice.thumbnail.source;
                         }
                     }
                 }

@@ -101,10 +101,11 @@ export function FeedbackHole() {
 
                 <DragOverlay>
                     {feedback ? (
-                        <div className="w-14 h-14 bg-indigo-600/20 backdrop-blur-md rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(79,70,229,0.4)] scale-110 cursor-grabbing border border-indigo-500/50">
+                        <div className="w-14 h-14 rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(79,70,229,0.4)] scale-110 cursor-grabbing border border-indigo-500/50 relative overflow-hidden">
                             {/* Inner soul glow */}
-                            <div className="w-6 h-6 bg-indigo-400 rounded-full blur-[2px] animate-pulse" />
-                            <Send className="w-4 h-4 text-white absolute" />
+                            <div className="absolute inset-0 bg-gradient-to-br from-indigo-400 via-purple-500 to-indigo-600 animate-pulse" />
+                            <div className="absolute inset-1 bg-white/20 rounded-full blur-[2px]" />
+                            <div className="relative z-10 w-4 h-4 bg-white rounded-full shadow-[0_0_15px_white]" />
                         </div>
                     ) : null}
                 </DragOverlay>
@@ -129,15 +130,20 @@ function TossHandle() {
             style={style}
             {...listeners}
             {...attributes}
-            className="w-10 h-10 flex items-center justify-center bg-gradient-to-br from-indigo-500 to-indigo-700 text-white rounded-full shadow-[0_0_15px_rgba(79,70,229,0.3)] cursor-grab active:cursor-grabbing transition-all hover:scale-110 active:scale-90 border border-white/20 relative group/handle"
+            className="w-10 h-10 flex items-center justify-center rounded-full shadow-[0_0_20px_rgba(79,70,229,0.5)] cursor-grab active:cursor-grabbing transition-all hover:scale-110 active:scale-90 relative group/handle"
             title="Toss it in"
         >
-            {/* Pulsing glow backplate */}
-            <div className="absolute inset-0 bg-indigo-400 rounded-full blur-md opacity-0 group-hover/handle:opacity-40 transition-opacity animate-pulse" />
+            {/* The Soul/Orb */}
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-400 via-purple-500 to-indigo-600 rounded-full animate-pulse" />
 
-            <div className="relative z-10">
-                <Ghost className="w-5 h-5 group-hover/handle:rotate-12 transition-transform" />
-            </div>
+            {/* Inner Glow */}
+            <div className="absolute inset-1 bg-white/20 rounded-full blur-[1px]" />
+
+            {/* Core */}
+            <div className="relative z-10 w-3 h-3 bg-white rounded-full shadow-[0_0_10px_white]" />
+
+            {/* Trail/Ghosting effect on hover */}
+            <div className="absolute inset-0 bg-indigo-400 rounded-full blur-xl opacity-0 group-hover/handle:opacity-60 transition-opacity" />
         </div>
     );
 }
@@ -164,7 +170,7 @@ function DroppableHole({ isActive }: { isActive: boolean }) {
 
             <div className={`relative flex flex-col items-center gap-1 transition-all duration-500 ${isOver ? 'scale-50 opacity-10 rotate-180' : 'scale-100'}`}>
                 <div className="w-16 h-16 rounded-full border-2 border-dashed border-white/20 animate-spin-slow flex items-center justify-center">
-                    <Ghost className="text-white/40 w-8 h-8" />
+                    <div className="w-3 h-3 bg-indigo-500/40 rounded-full blur-[1px]" />
                 </div>
             </div>
 

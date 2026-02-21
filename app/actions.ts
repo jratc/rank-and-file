@@ -689,6 +689,7 @@ export async function upsertComment(listId: string, content: string) {
     if (result.error) console.error(`[upsertComment] Save error:`, result.error);
     else console.log(`[upsertComment] Save successful`);
 
+    revalidatePath(`/list/${listId}`);
     revalidatePath('/');
     return { success: true };
 }

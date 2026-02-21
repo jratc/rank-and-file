@@ -351,9 +351,57 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
         }
     }, [expandedListId, lists]);
 
+    const closeExpandedView = useCallback(async () => {
+        // SAVE COMMENT IF DIRTY BEFORE CLOSING
+        if (isCommentDirty.current && expandedListId && expandedListId !== 'temp-pending') {
+            const commentToSave = waitingComment.trim();
+            console.log(`[Dashboard] closeExpandedView: Saving dirty comment for ${expandedListId}`);
 
+            // Optimistic sync for local state
+            setLists(prev => prev.map(l => l.id === expandedListId ? {
+                ...l,
+                comments: [...(l.comments || []).filter((c: any) => c.user_id !== currentUserId), {
+                    id: `temp-${Date.now()}`,
+                    user_id: currentUserId,
+                    list_id: expandedListId,
+                    content: commentToSave,
+                    created_at: new Date().toISOString(),
+                    profiles: { username: currentUsername, display_name: currentDisplayName }
+                }]
+            } : l));
 
-    // Live Search Effect (Debounced)
+            try {
+                await upsertComment(expandedListId, commentToSave);
+                isCommentDirty.current = false;
+            } catch (err) {
+                console.error("[Dashboard] Auto-save on close failed:", err);
+            }
+        }
+
+        setExpandedListId(null);
+        setSearchResults([]);
+        setSearchQuery('');
+        setShowShareOptions(false);
+        setShowMap(false);
+        setIsWaitingForComment(false);
+        setCreationStep(null);
+        setPendingListAfterCreate(null);
+        setIsPopulating(false);
+        setIsBackgroundPopulating(false);
+        setIsPopulatingComplete(false);
+        setPopulatedCount(0);
+        setFreeFormItems(Array(10).fill(''));
+
+        // Only clear waiting comment if it wasn't dirty (or we just saved it/attempted to)
+        // Reset dirty flag and comment state
+        isCommentDirty.current = false;
+        setWaitingComment('');
+
+        // Clean up temp list if it was never saved
+        if (expandedListId === 'temp-pending') {
+            setLists(prev => prev.filter(l => l.id !== 'temp-pending'));
+        }
+    }, [expandedListId, waitingComment, currentUserId, currentUsername, currentDisplayName]);
     useEffect(() => {
         if (!searchQuery.trim()) return;
 
@@ -1056,49 +1104,11 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-[2px]">
                     <div
                         className="fixed inset-0"
-                        onClick={() => {
-                            setExpandedListId(null);
-                            setSearchResults([]);
-                            setSearchQuery('');
-                            setShowShareOptions(false);
-                            setShowMap(false);
-                            setIsWaitingForComment(false);
-                            setCreationStep(null);
-                            setPendingListAfterCreate(null);
-                            setIsPopulating(false);
-                            setIsBackgroundPopulating(false);
-                            setIsPopulatingComplete(false);
-                            setPopulatedCount(0);
-                            setFreeFormItems(Array(10).fill(''));
-                            setWaitingComment('');
-                            // Clean up temp list if it was never saved
-                            if (expandedList.id === 'temp-pending') {
-                                setLists(prev => prev.filter(l => l.id !== 'temp-pending'));
-                            }
-                        }}
+                        onClick={closeExpandedView}
                     />
                     <Card className="relative w-full max-w-xl flex flex-col h-auto max-h-[90vh] border-slate-200 bg-white shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] animate-in slide-in-from-bottom-4 duration-300">
                         <button
-                            onClick={() => {
-                                setExpandedListId(null);
-                                setSearchResults([]);
-                                setSearchQuery('');
-                                setShowShareOptions(false);
-                                setShowMap(false);
-                                setIsWaitingForComment(false);
-                                setCreationStep(null);
-                                setPendingListAfterCreate(null);
-                                setIsPopulating(false);
-                                setIsBackgroundPopulating(false);
-                                setIsPopulatingComplete(false);
-                                setPopulatedCount(0);
-                                setFreeFormItems(Array(10).fill(''));
-                                setWaitingComment('');
-                                // Clean up temp list if it was never saved
-                                if (expandedList.id === 'temp-pending') {
-                                    setLists(prev => prev.filter(l => l.id !== 'temp-pending'));
-                                }
-                            }}
+                            onClick={closeExpandedView}
                             className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-slate-100 text-slate-400 transition-colors z-20"
                         >
                             <X className="h-4 w-4" />

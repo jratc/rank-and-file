@@ -99,7 +99,7 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
                 <X className="h-8 w-8" />
             </button>
 
-            <div className={`w-full h-full max-h-[85vh] flex flex-col lg:flex-row items-stretch justify-center gap-4 md:gap-8 lg:gap-8 relative max-w-7xl`}>
+            <div className={`w-full h-full max-h-[85vh] flex flex-col lg:flex-row items-stretch justify-center gap-4 md:gap-8 lg:gap-8 relative max-w-6xl`}>
 
                 {/* LEFT CARD: CAROUSEL (Thread) */}
                 <div className={`relative flex flex-col group/carousel w-full h-full ${isEditing ? 'lg:flex-1 lg:max-w-none' : ''}`}>
