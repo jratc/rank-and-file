@@ -57,7 +57,7 @@ export function RankingList({
     const [isSaving, setIsSaving] = useState(false);
     const lastManualOrderRef = useRef<number>(0);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
-    const [displayLimit, setDisplayLimit] = useState(15);
+    const [displayLimit, setDisplayLimit] = useState(25);
     const [prevListId, setPrevListId] = useState(listId);
 
     const sensors = useSensors(
@@ -81,7 +81,7 @@ export function RankingList({
         if (idChanged) {
             setItems(initialItems);
             setPrevListId(listId);
-            setDisplayLimit(15);
+            setDisplayLimit(25);
             prevInitialItemsLength.current = initialItems.length;
         } else if (propLengthChanged || isPopulating) {
             // Only sync if the prop actually changed or we are populating
@@ -89,7 +89,7 @@ export function RankingList({
             prevInitialItemsLength.current = initialItems.length;
 
             if (isPopulating) {
-                setDisplayLimit(Math.max(15, initialItems.length));
+                setDisplayLimit(Math.max(25, initialItems.length));
             }
         }
     }, [initialItems, listId, prevListId, isPopulating]);
@@ -382,6 +382,7 @@ export function RankingList({
                                         category={category}
                                         onRemove={handleRemove}
                                         onDoubleClick={() => handleDoubleClick(item.id)}
+                                        priority={index < 15}
                                     />
                                 </div>
                             </div>
@@ -400,27 +401,6 @@ export function RankingList({
                                                 >
                                                     Delete Below
                                                 </button>
-                                                {index === 9 && (['places', 'food', 'restaurants', 'bars'].includes(category?.toLowerCase() || '')) && !showMap && (
-                                                    <button
-                                                        onClick={() => {
-                                                            if (onChange) {
-                                                                // This triggers showMap in the parent ExpandedListOverlay
-                                                                // We need to make sure the parent handles this if we can't do it here
-                                                                // For now, we'll try to find a way to communicate this.
-                                                                // Actually, the easiest way is to let the user know they can toggle it.
-                                                                // BUT the user specifically asked for a button HERE.
-                                                                // Since showMap is a prop, we need the parent to update it.
-                                                                // We'll use a hack or assume the parent has a way to listen.
-                                                                const event = new CustomEvent('toggle-map', { detail: { show: true } });
-                                                                window.dispatchEvent(event);
-                                                            }
-                                                        }}
-                                                        className="text-[10px] font-black uppercase tracking-widest text-green-600 hover:text-green-700 bg-green-50 hover:bg-green-100 px-3 py-1 rounded-full transition-colors whitespace-nowrap flex items-center gap-1.5"
-                                                    >
-                                                        <MapPin className="h-2.5 w-2.5" />
-                                                        View Top 10 on Map
-                                                    </button>
-                                                )}
                                             </div>
                                             <div className="h-px border-b-2 border-dashed border-slate-200 dark:border-white/10 flex-1"></div>
                                         </div>
@@ -441,6 +421,22 @@ export function RankingList({
                             )}
                         </React.Fragment>
                     ))}
+
+                    {/* Reward-based Map Button: only when trimmed to 10 */}
+                    {items.length === 10 && !showMap && (['places', 'food', 'restaurants', 'bars'].includes(category?.toLowerCase() || '')) && (
+                        <div className="mt-4 flex justify-center">
+                            <button
+                                onClick={() => {
+                                    const event = new CustomEvent('toggle-map', { detail: { show: true } });
+                                    window.dispatchEvent(event);
+                                }}
+                                className="text-[10px] font-black uppercase tracking-widest text-green-600 hover:text-green-700 bg-green-50 hover:bg-green-100 px-6 py-3 rounded-full transition-all shadow-lg flex items-center gap-2 active:scale-95"
+                            >
+                                <MapPin className="h-3 w-3" />
+                                View Top 10 on Map
+                            </button>
+                        </div>
+                    )}
                 </div>
             </SortableContext>
             {isSaving && <div className="text-xs text-gray-400 text-center mt-2">Saving order...</div>}

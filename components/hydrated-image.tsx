@@ -10,9 +10,10 @@ interface HydratedImageProps {
     category?: string;
     className?: string;
     alt?: string;
+    priority?: boolean;
 }
 
-export function HydratedImage({ initialUrl, itemId, itemName, category, className, alt }: HydratedImageProps) {
+export function HydratedImage({ initialUrl, itemId, itemName, category, className, alt, priority }: HydratedImageProps) {
     const [imageUrl, setImageUrl] = useState<string | null>(initialUrl);
     const [isLoading, setIsLoading] = useState(!initialUrl);
 

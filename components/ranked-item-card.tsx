@@ -11,6 +11,7 @@ interface RankedItemCardProps extends React.HTMLAttributes<HTMLDivElement> {
     category?: string;
     showMusicPlayer?: boolean;
     onDoubleClick?: () => void;
+    priority?: boolean;
 }
 
 export function RankedItemCard({
@@ -20,6 +21,7 @@ export function RankedItemCard({
     className = "",
     children,
     onDoubleClick,
+    priority,
     ...props
 }: RankedItemCardProps) {
     return (
@@ -35,17 +37,18 @@ export function RankedItemCard({
                         itemId={item.id}
                         itemName={item.metadata.name}
                         category={category}
+                        priority={priority}
                         className="w-full h-full object-cover pointer-events-none"
                     />
                 </div>
 
                 <div className="min-w-0 flex-1 py-0.5 w-full text-left pr-2">
-                    <h4 className="font-black text-sm tracking-tighter leading-tight text-slate-900 uppercase w-full break-words whitespace-normal">
+                    <h4 className="font-black text-sm tracking-tighter leading-tight text-slate-900 uppercase w-full break-words whitespace-normal px-0.5">
                         {item.metadata.name}
                     </h4>
                     <div className="flex items-center gap-2 mt-0.5 min-w-0">
                         {item.metadata?.subtitle && (
-                            <div className="text-[10px] font-bold text-slate-400 truncate uppercase mt-0.5 tracking-tight">
+                            <div className="text-[10px] font-bold text-slate-400 uppercase mt-0.5 tracking-tight whitespace-normal break-words leading-tight px-0.5">
                                 {item.metadata.subtitle}
                             </div>
                         )}

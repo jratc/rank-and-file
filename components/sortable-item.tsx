@@ -16,9 +16,10 @@ interface SortableItemProps {
     category?: string;
     onRemove: (id: string) => void;
     onDoubleClick?: () => void;
+    priority?: boolean;
 }
 
-export function SortableItem({ id, item, rank, category, onRemove, onDoubleClick }: SortableItemProps) {
+export function SortableItem({ id, item, rank, category, onRemove, onDoubleClick, priority }: SortableItemProps) {
     const {
         attributes,
         listeners,
@@ -39,6 +40,7 @@ export function SortableItem({ id, item, rank, category, onRemove, onDoubleClick
             <RankedItemCard
                 item={item}
                 category={category}
+                priority={priority}
                 className="cursor-grab active:cursor-grabbing hover:bg-slate-50 hover:shadow-md"
                 {...attributes}
                 {...listeners}

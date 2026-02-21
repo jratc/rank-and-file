@@ -68,7 +68,7 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
         const isOwner = currentUserId === list.user_id;
 
         return (
-            <div className={`flex flex-col relative w-full h-full lg:flex-1 max-h-[85vh]`}>
+            <div className={`flex flex-col relative w-full h-full lg:w-[450px] shrink-0 max-h-[85vh]`}>
                 <div className={`bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border-2 ${isRoot ? 'border-slate-200 dark:border-white/10' : 'border-blue-200 dark:border-blue-500/30'} flex flex-col h-full w-full`}>
 
                     {/* Header */}
