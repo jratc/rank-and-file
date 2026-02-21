@@ -242,16 +242,32 @@ export const universalProvider = {
                 }
             }
 
-            // 3. SPECIAL CONTEXT: Handle Peloton / Fitness Instructors
-            if (/peloton|peleton|instructor|fitness/i.test(query)) {
-                const pQuery = cleanedQuery.replace(/peleton/i, 'Peloton');
-                // Use First Name Last Name + Peloton for maximum specificity
-                searchQueries.unshift(`${pQuery} Peloton instructor`);
-                searchQueries.unshift(`${pQuery} Peloton`);
-                searchQueries.push(`${pQuery} instructor official`);
+            // 3. ROBUST PERSON FALLBACK (TMDB)
+            // Before falling back to Wikipedia, try TMDB's person API which is excellent for public figures,
+            // including athletes, instructors, politicians, and media personalities.
+            const tmbdApiKey = process.env.TMDB_API_KEY;
+            if (tmbdApiKey) {
+                try {
+                    const personResp = await fetch(
+                        `https://api.themoviedb.org/3/search/person?api_key=${tmbdApiKey}&query=${encodeURIComponent(cleanedQuery)}`,
+                        { next: { revalidate: 86400 } }
+                    );
+                    if (personResp.ok) {
+                        const personData = await personResp.json();
+                        const topPerson = personData.results?.[0];
+
+                        // If we found a valid person with a profile image, use it!
+                        if (topPerson && topPerson.profile_path && topPerson.popularity > 1) {
+                            console.log(`[Universal] Found TMDB Person match for image: ${topPerson.name}`);
+                            return `https://image.tmdb.org/t/p/w400${topPerson.profile_path}`;
+                        }
+                    }
+                } catch (e) {
+                    console.error('[Universal] TMDB Person image fallback failed:', e);
+                }
             }
 
-            // Final fallback for Wikipedia search
+            // 4. Final fallback for Wikipedia search
             searchQueries.push(`${cleanedQuery} wiki`);
 
             for (const q of searchQueries) {
