@@ -84,6 +84,12 @@ export function RankingList({
             setDisplayLimit(25);
             prevInitialItemsLength.current = initialItems.length;
         } else if (propLengthChanged || isPopulating) {
+            // IGNORE prop updates if we just did a manual reorder
+            if (Date.now() - lastManualOrderRef.current < 4000) {
+                console.log('[RankingList] Skipping prop sync during manual reorder cooldown');
+                return;
+            }
+
             // Only sync if the prop actually changed or we are populating
             setItems(initialItems);
             prevInitialItemsLength.current = initialItems.length;
@@ -112,7 +118,7 @@ export function RankingList({
                 },
                 (payload) => {
                     // IGNORE realtime updates if we just did a manual reorder (avoid jump-back)
-                    if (Date.now() - lastManualOrderRef.current < 2000) {
+                    if (Date.now() - lastManualOrderRef.current < 4000) {
                         console.log('[Realtime] Ignoring update during manual reorder cooldown');
                         return;
                     }

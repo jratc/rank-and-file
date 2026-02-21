@@ -64,17 +64,20 @@ export async function updateListOrder(listId: string, items: { id: string, rank:
             return { error: 'List not found or unauthorized' };
         }
 
-        // Update ranks
-        for (const item of items) {
-            const { error } = await supabase
-                .from('list_items')
-                .update({ rank: item.rank })
-                .eq('id', item.id);
+        // Update ranks in bulk using upsert
+        const upsertData = items.map(item => ({
+            id: item.id,
+            rank: item.rank,
+            list_id: listId // Required for upsert to match properly if there are constraints
+        }));
 
-            if (error) {
-                console.error('updateListOrder rank update error:', error);
-                throw new Error('Failed to update item rank');
-            }
+        const { error: updateError } = await supabase
+            .from('list_items')
+            .upsert(upsertData, { onConflict: 'id' });
+
+        if (updateError) {
+            console.error('updateListOrder bulk update error:', updateError);
+            return { error: 'Failed to update item ranks' };
         }
 
         revalidatePath('/');
