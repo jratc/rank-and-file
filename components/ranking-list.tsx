@@ -295,22 +295,8 @@ export function RankingList({
     if (items.length === 0) {
         if (title && !readOnly) {
             return (
-                <div className="flex flex-col items-center justify-center py-24 px-4 text-center animate-in fade-in duration-1000">
-                    <div className="w-[70%] h-1 bg-slate-50/50 rounded-full overflow-hidden relative">
-                        <div
-                            className="absolute top-0 bottom-0 w-[20%] bg-slate-300/40 rounded-full"
-                            style={{
-                                animation: 'slide-puck-wide 3s ease-in-out infinite alternate'
-                            }}
-                        />
-                    </div>
-                    <style dangerouslySetInnerHTML={{
-                        __html: `
-                        @keyframes slide-puck-wide {
-                            0% { left: 0%; }
-                            100% { left: 80%; }
-                        }
-                    `}} />
+                <div className="flex flex-col items-center justify-center py-24 px-4 text-center">
+                    {/* Items are loading or list is empty - no pucks animation as requested */}
                 </div>
             );
         }
@@ -461,7 +447,6 @@ export function RankingList({
                     )}
                 </div>
             </SortableContext>
-            {isSaving && <div className="text-xs text-gray-400 text-center mt-2">Saving order...</div>}
 
             {/* Populating Indicator */}
             {isPopulating && (

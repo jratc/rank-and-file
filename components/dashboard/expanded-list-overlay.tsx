@@ -190,6 +190,12 @@ export function ExpandedListOverlay({
                                                 className={`text-3xl font-black tracking-tighter leading-tight min-h-[1.2em] h-auto p-0 border-none bg-transparent focus-visible:ring-0 uppercase resize-none placeholder:text-slate-300 placeholder:font-black placeholder:uppercase ${expandedList.id === 'temp-pending' && !editSession.title?.trim() ? 'text-slate-300' : 'text-slate-900'}`}
                                                 rows={1}
                                             />
+                                            {(isUpdatingTitle || (isPopulating && populatedCount === 0)) && (
+                                                <div className="flex items-center gap-2 mt-1 animate-in fade-in duration-300">
+                                                    <Loader2 className="h-3 w-3 animate-spin text-slate-400" />
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Building your list...</span>
+                                                </div>
+                                            )}
                                         </div>
                                     ) : (
                                         <CardTitle
@@ -695,35 +701,40 @@ export function ExpandedListOverlay({
                             }}
                         />
 
-                        {/* POPULATION FEEDBACK - Subtle Indicator */}
+                        {/* POPULATION FEEDBACK - Progress Bar */}
                         {isPopulating && (
-                            <div className="mt-4 px-4 py-2 border border-slate-100 rounded-lg bg-slate-50/50 flex flex-col items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                                <div className="w-full h-1 bg-slate-200/50 rounded-full overflow-hidden relative">
-                                    <div
-                                        className="absolute top-0 bottom-0 w-[40%] bg-slate-400/30 rounded-full"
-                                        style={{
-                                            animation: 'slide-puck-modal 2s ease-in-out infinite alternate'
-                                        }}
-                                    />
-                                </div>
+                            <div className="mt-4 px-4 py-3 border border-slate-100 rounded-2xl bg-slate-50/50 flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
                                 <div className="flex items-center justify-between w-full">
-                                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">
-                                        {populatedCount > 0 ? `Found ${populatedCount} items` : ""}
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <Loader2 className="h-3 w-3 animate-spin text-slate-400" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                            {populatedCount > 0 ? `Generating... ${populatedCount} found` : "Magic AI is working..."}
+                                        </span>
+                                    </div>
                                     {populatedCount > 0 && (
                                         <button
                                             onClick={() => handleSubmitWaitingComment()}
-                                            className="text-[9px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-700"
+                                            className="text-[10px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-600 transition-colors"
                                         >
                                             Done
                                         </button>
                                     )}
                                 </div>
+                                <div className="w-full h-1.5 bg-slate-200/50 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-blue-500 transition-all duration-500"
+                                        style={{
+                                            width: populatedCount > 0 ? `${Math.min(100, (populatedCount / 12) * 100)}%` : '15%',
+                                            animation: populatedCount === 0 ? 'pulse-progress 2s ease-in-out infinite' : 'none'
+                                        }}
+                                    />
+                                </div>
                                 <style dangerouslySetInnerHTML={{
                                     __html: `
-                                            @keyframes slide-puck-modal {
-                                                0% { left: 0%; }
-                                                100% { left: 60%; }
+                                            @keyframes pulse-progress {
+                                                0% { opacity: 0.6; width: 10%; }
+                                                50% { opacity: 1; width: 30%; }
+                                                100% { opacity: 0.6; width: 10%; }
                                             }
                                         `}} />
                             </div>

@@ -753,6 +753,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                 console.log(`[Dashboard] Created real list:`, newList.id);
 
                 setPendingListAfterCreate(newList);
+                setIsPopulating(true); // Ensure populating state is active immediately
 
                 setLists(prev => [newList, ...prev.filter(l => l.id !== 'temp-pending')]);
                 setExpandedListId(newList.id);
