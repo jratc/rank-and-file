@@ -109,8 +109,9 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
             try {
                 const results = await getComments(expandedListId);
                 setAllComments(results || []);
-                // Look for the user's latest comment to show in the main area
-                const userComment = results?.findLast((c: any) => c.user_id === currentUserId);
+                // Look for the LIST OWNER'S latest comment to show in the main area
+                const listOwnerId = lists.find(l => l.id === expandedListId)?.user_id;
+                const userComment = results?.findLast((c: any) => c.user_id === listOwnerId);
                 if (userComment) {
                     setWaitingComment(userComment.content);
                 } else {

@@ -287,7 +287,8 @@ export function PlacesMap({ items, title, onClose, fullScreen = false }: PlacesM
                     )}
                 </div>
 
-                {/* Place List beneath map */}
+                {/* Place List beneath map - Hidden as per request */}
+                {/* 
                 <div className="max-h-[200px] overflow-y-auto divide-y divide-slate-100">
                     {items.map((place, index) => (
                         <a
@@ -313,6 +314,7 @@ export function PlacesMap({ items, title, onClose, fullScreen = false }: PlacesM
                         </a>
                     ))}
                 </div>
+                */}
             </div>
         </div>
     );

@@ -330,7 +330,7 @@ export function RankingList({
                         <div className="flex gap-4 items-center w-full">
                             <div className="w-14 h-8 bg-slate-50 rounded-lg animate-pulse" />
                             <div className="flex-1 h-32 bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-100 flex items-center justify-center">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">Searching for more relevant items...</span>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">Building your list... jot some thoughts down about your list while we work</span>
                             </div>
                         </div>
                     </div>
@@ -362,6 +362,17 @@ export function RankingList({
                 strategy={verticalListSortingStrategy}
             >
                 <div className="space-y-0">
+                    {/* PLACEMENT: Map at the TOP for better mobile accessibility when toggled */}
+                    {showMap && mapItems.length > 0 && (
+                        <div className="mb-6 px-4 pl-16 animate-in fade-in slide-in-from-top-4 duration-500 w-full">
+                            <div className="p-4 bg-slate-50 border-2 border-dashed border-slate-100 rounded-3xl">
+                                <PlacesMap
+                                    items={mapItems}
+                                    title={title}
+                                />
+                            </div>
+                        </div>
+                    )}
                     {items.slice(0, isPopulating ? items.length : displayLimit).map((item, index) => (
                         <React.Fragment key={item.id}>
                             <div className="flex gap-2 items-center mb-1.5 flex-1 min-w-0">
@@ -398,17 +409,6 @@ export function RankingList({
                                 </div>
                             )}
 
-                            {/* Inline Map Placement - either after rank 10 or after the last item if list is shorter */}
-                            {showMap && mapItems.length > 0 && (index === 9 || (items.length < 10 && index === items.length - 1)) && (
-                                <div className="my-4 px-4 pl-16 animate-in fade-in slide-in-from-top-4 duration-500 w-full">
-                                    <div className="p-4 bg-slate-50 border-2 border-dashed border-slate-100 rounded-3xl">
-                                        <PlacesMap
-                                            items={mapItems}
-                                            title={title}
-                                        />
-                                    </div>
-                                </div>
-                            )}
 
                             {index === 9 && items.length > 10 && (
                                 <div className="flex items-center gap-4 py-4 mb-2 group/separator">
@@ -435,7 +435,7 @@ export function RankingList({
                         <div className="mt-4 flex justify-center">
                             <button
                                 onClick={() => {
-                                    const event = new CustomEvent('toggle-map', { detail: { show: true } });
+                                    const event = new CustomEvent('toggle-map', { detail: { listId, show: true } });
                                     window.dispatchEvent(event);
                                 }}
                                 className="text-[10px] font-black uppercase tracking-widest text-green-600 hover:text-green-700 bg-green-50 hover:bg-green-100 px-6 py-3 rounded-full transition-all shadow-lg flex items-center gap-2 active:scale-95"

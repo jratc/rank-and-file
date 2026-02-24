@@ -143,7 +143,7 @@ export async function publishList(listId: string) {
     }
 }
 
-export async function hydrateItemImage(itemId: string, query: string, category?: string) {
+export async function hydrateItemImage(itemId: string, query: string, category?: string, contextTopic?: string) {
     try {
         const supabase = await createClient();
 
@@ -188,14 +188,8 @@ export async function hydrateItemImage(itemId: string, query: string, category?:
         if (!imageUrl) {
             // Fallback to Universal Provider (Wikipedia)
             const { universalProvider } = await import('@/lib/universal');
-            // Try with category context first
-            imageUrl = await universalProvider.fetchThumbnail(query, category);
-
-            // If still no image and it looks like a person's name (short query), try prepending "Peloton" or other context
-            if (!imageUrl && query.split(' ').length <= 3) {
-                // Try with common contexts
-                imageUrl = await universalProvider.fetchThumbnail(`Peloton ${query}`, category);
-            }
+            // Try with category and topic context
+            imageUrl = await universalProvider.fetchThumbnail(query, category, contextTopic);
         }
 
         if (imageUrl) {

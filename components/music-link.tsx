@@ -162,7 +162,12 @@ export function PlaylistExport({ items, listTitle, className = '' }: PlaylistExp
         musicItems.forEach((item) => {
             const name = item.metadata?.name || "Unknown Track";
             const subtitle = item.metadata?.subtitle || "Unknown Artist";
-            const url = item.metadata?.externalUrl || "";
+            const provider = item.metadata?.provider;
+            const previewUrl = provider === 'spotify'
+                ? item.metadata?.rawMetadata?.preview_url
+                : item.metadata?.rawMetadata?.previewUrl;
+
+            const url = previewUrl || item.metadata?.externalUrl || "";
 
             m3uContent += `#EXTINF:-1,${subtitle} - ${name}\n`;
             m3uContent += `${url}\n`;

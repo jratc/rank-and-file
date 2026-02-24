@@ -127,9 +127,6 @@ export default async function Image({ params }: { params: Promise<{ id: string }
                             }}>
                                 #{index + 1}
                             </div>
-                            {/* Note: Standard img tags in Satori need absolute URLs or base64. 
-                        Supabase URLs are absolute, so they should work if the domain is allowed in next.config.js 
-                        or if they are public. */}
                             {item.metadata?.imageUrl && (
                                 <img
                                     src={item.metadata.imageUrl}

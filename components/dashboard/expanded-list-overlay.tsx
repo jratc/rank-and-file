@@ -160,190 +160,12 @@ export function ExpandedListOverlay({
                     {/* WHILE YOU WAIT VIEW - Hidden but keeps RankingList mounted if we want, 
                             actually we want the LIST to be mounted to catch events. */}
                     <CardHeader className="p-5 pb-3 shrink-0">
-                        <div className="flex flex-col gap-2">
-                            <div className="flex flex-row items-center justify-between gap-4">
-                                <div className="space-y-0 flex-1 min-w-0">
+                        <div className="flex flex-col gap-3">
+                            <div className="flex flex-col space-y-1">
+                                <div className="flex items-center gap-2">
                                     <div className={`text-[9px] font-black tracking-widest uppercase mb-0.5 ${categoryConfig[expandedList.category as keyof typeof categoryConfig]?.color || categoryConfig.other.color}`}>
                                         {categoryConfig[expandedList.category as keyof typeof categoryConfig]?.label || expandedList.category}
                                     </div>
-                                    {editSession.isExpanded && editSession.title !== null ? (
-                                        <div className="flex flex-col">
-                                            <Textarea
-                                                autoFocus
-                                                value={editSession.title}
-                                                placeholder="NAME YOUR LIST"
-                                                onChange={(e) => {
-                                                    setEditSession(s => ({ ...s, title: e.target.value }));
-                                                    e.target.style.height = 'auto';
-                                                    e.target.style.height = e.target.scrollHeight + 'px';
-                                                }}
-                                                onBlur={() => handleUpdateTitle(expandedList.id)}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') {
-                                                        e.preventDefault();
-                                                        handleUpdateTitle(expandedList.id);
-                                                    }
-                                                    if (e.key === 'Escape') {
-                                                        setEditSession({ id: null, title: null, isExpanded: false });
-                                                    }
-                                                }}
-                                                className={`text-3xl font-black tracking-tighter leading-tight min-h-[1.2em] h-auto p-0 border-none bg-transparent focus-visible:ring-0 uppercase resize-none placeholder:text-slate-300 placeholder:font-black placeholder:uppercase ${expandedList.id === 'temp-pending' && !editSession.title?.trim() ? 'text-slate-300' : 'text-slate-900'}`}
-                                                rows={1}
-                                            />
-                                            {(isUpdatingTitle || (isPopulating && populatedCount === 0)) && (
-                                                <div className="flex items-center gap-2 mt-1 animate-in fade-in duration-300">
-                                                    <Loader2 className="h-3 w-3 animate-spin text-slate-400" />
-                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Building your list...</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <CardTitle
-                                            onClick={() => {
-                                                if (currentUserId !== expandedList.user_id) return;
-                                                setEditSession({ id: expandedList.id, title: expandedList.title.toUpperCase(), isExpanded: true });
-                                            }}
-                                            className={`text-3xl font-black tracking-tighter text-slate-900 leading-[0.9] py-0.5 rounded break-words line-clamp-2 ${currentUserId === expandedList.user_id ? 'cursor-text hover:text-slate-500 transition-colors' : 'cursor-default'}`}
-                                        >
-                                            {expandedList.title.toUpperCase()}
-                                        </CardTitle>
-                                    )}
-                                </div>
-
-                                <div className="flex items-center gap-1.5 relative shrink-0">
-                                    {/* Share / Respond controls */}
-                                    {expandedList.id !== 'temp-pending' && !isPopulating && (
-                                        <div className="relative">
-                                            <Button
-                                                variant="default"
-                                                size="sm"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setShowShareOptions(!showShareOptions);
-                                                }}
-                                                className="h-8 px-4 text-[10px] font-black tracking-widest uppercase bg-slate-900 hover:bg-black text-white rounded-md flex items-center gap-2 shadow-sm transition-all"
-                                            >
-                                                <Share2 className="h-3 w-3" />
-                                                SHARE
-                                            </Button>
-
-                                            {showShareOptions && (
-                                                <>
-                                                    <div
-                                                        className="fixed inset-0 z-30"
-                                                        onClick={() => setShowShareOptions(false)}
-                                                    />
-                                                    <div className="absolute top-full right-0 mt-2 w-40 bg-white border border-slate-200 rounded-lg shadow-xl z-40 p-1 animate-in fade-in zoom-in-95 duration-100">
-                                                        <button
-                                                            onClick={() => { handleCopyLink(expandedList); setShowShareOptions(false); }}
-                                                            className="w-full flex items-center gap-2 p-2 rounded hover:bg-slate-50 text-[10px] font-bold text-slate-700 transition-colors"
-                                                        >
-                                                            <Copy className="h-3 w-3" />
-                                                            COPY LINK
-                                                        </button>
-                                                        <button
-                                                            onClick={() => {
-                                                                const authorName = expandedList.profiles?.display_name || expandedList.profiles?.username || 'Someone';
-                                                                const text = `${authorName} made a list on Rank and File. Take a look, and respond.`;
-                                                                const url = window.location.href;
-                                                                window.open(`mailto:?subject=${encodeURIComponent(expandedList.title)}&body=${encodeURIComponent(text + '\n' + url)}`);
-                                                                setShowShareOptions(false);
-                                                            }}
-                                                            className="w-full flex items-center gap-2 p-2 rounded hover:bg-slate-50 text-[10px] font-bold text-slate-700 transition-colors"
-                                                        >
-                                                            <Mail className="h-3 w-3" />
-                                                            EMAIL
-                                                        </button>
-                                                        <button
-                                                            onClick={() => {
-                                                                const authorName = expandedList.profiles?.display_name || expandedList.profiles?.username || 'Someone';
-                                                                const text = `${authorName} made a list on Rank and File. Take a look, and respond.`;
-                                                                const url = window.location.href;
-                                                                window.open(`sms:?&body=${encodeURIComponent(text + ' ' + url)}`);
-                                                                setShowShareOptions(false);
-                                                            }}
-                                                            className="w-full flex items-center gap-2 p-2 rounded hover:bg-slate-50 text-[10px] font-bold text-slate-700 transition-colors"
-                                                        >
-                                                            <MessageCircle className="h-3 w-3" />
-                                                            TEXT
-                                                        </button>
-                                                        <button
-                                                            onClick={() => { handleShareTwitter(expandedList); setShowShareOptions(false); }}
-                                                            className="w-full flex items-center gap-2 p-2 rounded hover:bg-slate-50 text-[10px] font-bold text-slate-700 transition-colors"
-                                                        >
-                                                            <Twitter className="h-3 w-3" />
-                                                            TWEET
-                                                        </button>
-                                                        <button
-                                                            onClick={() => {
-                                                                const url = encodeURIComponent(`${window.location.origin}?listId=${expandedList.id}`);
-                                                                window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank');
-                                                                setShowShareOptions(false);
-                                                            }}
-                                                            className="w-full flex items-center gap-2 p-2 rounded hover:bg-slate-50 text-[10px] font-bold text-slate-700 transition-colors"
-                                                        >
-                                                            <Facebook className="h-3 w-3" />
-                                                            FACEBOOK
-                                                        </button>
-                                                        <button
-                                                            onClick={() => {
-                                                                const authorName = expandedList.profiles?.display_name || expandedList.profiles?.username || 'Someone';
-                                                                const text = encodeURIComponent(`${authorName} made a list on Rank and File: "${expandedList.title}"`);
-                                                                const url = encodeURIComponent(`${window.location.origin}?listId=${expandedList.id}`);
-                                                                window.open(`https://bsky.app/intent/compose?text=${text}%20${url}`, '_blank');
-                                                                setShowShareOptions(false);
-                                                            }}
-                                                            className="w-full flex items-center gap-2 p-2 rounded hover:bg-slate-50 text-[10px] font-bold text-slate-700 transition-colors"
-                                                        >
-                                                            <Cloud className="h-3 w-3" />
-                                                            BLUESKY
-                                                        </button>
-                                                    </div>
-                                                </>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {/* Respond Button (Only for Non-Owners) */}
-                                    {currentUserId !== expandedList.user_id && (
-                                        <ResponseBtn
-                                            parentListId={expandedList.id}
-                                            parentTitle={expandedList.title}
-                                            onResponseCreated={async (newList: any) => {
-                                                setLists((prev: any[]) => prev.map(list => {
-                                                    if (list.id === expandedList.id) {
-                                                        return { ...list, response_count: (list.response_count || 0) + 1 };
-                                                    }
-                                                    return list;
-                                                }));
-
-                                                try {
-                                                    const thread = await getThread(expandedList.id);
-                                                    router.refresh();
-
-                                                    if (thread) {
-                                                        setResponseView({
-                                                            isOpen: true,
-                                                            threadData: thread,
-                                                            draftId: newList.id
-                                                        });
-                                                        closeExpandedView();
-                                                    } else {
-                                                        closeExpandedView();
-                                                    }
-                                                } catch (err) {
-                                                    console.error('Failed to load thread:', err);
-                                                    toast.error('Failed to open response view');
-                                                    closeExpandedView();
-                                                }
-                                            }}
-                                        />
-                                    )}
-
-                                    {/* Music Playlist Export - In Header */}
-                                    {expandedList.category === 'music' && expandedList.list_items.length > 0 && (
-                                        <PlaylistExport items={expandedList.list_items} listTitle={expandedList.title} />
-                                    )}
 
                                     {/* View Responses Button (Owner with responses) */}
                                     {currentUserId === expandedList.user_id && expandedList.response_count > 0 && (
@@ -367,7 +189,7 @@ export function ExpandedListOverlay({
                                                     toast.error('Failed to load responses');
                                                 }
                                             }}
-                                            className="h-7 px-3 text-[9px] font-black tracking-widest uppercase bg-blue-500 hover:bg-blue-600 text-white rounded-md flex items-center gap-1.5"
+                                            className="hidden md:flex h-7 px-3 text-[9px] font-black tracking-widest uppercase bg-blue-500 hover:bg-blue-600 text-white rounded-md items-center gap-1.5"
                                         >
                                             <MessageSquare className="h-2.5 w-2.5" />
                                             {expandedList.response_count} {expandedList.response_count === 1 ? 'RESPONSE' : 'RESPONSES'}
@@ -381,7 +203,7 @@ export function ExpandedListOverlay({
                                 <div className="mt-2 group">
                                     <div className="relative">
                                         <Textarea
-                                            placeholder={isPopulating ? "Building your list... jot down some notes?" : "Jot down some notes-what should people know about your list?"}
+                                            placeholder={isPopulating ? "Building your list... jot some thoughts down about your list while we work" : "Jot down some notes-what should people know about your list?"}
                                             value={waitingComment}
                                             autoFocus={isWaitingForComment}
                                             onChange={(e) => {
@@ -440,12 +262,11 @@ export function ExpandedListOverlay({
                                     </div>
 
                                     {/* Thread View for Owners */}
-                                    {allComments.filter(c => c.content !== waitingComment || c.user_id !== expandedList.user_id).length > 0 && (
+                                    {allComments.length > 0 && (
                                         <div className="space-y-3 pt-4 border-t border-slate-100 mt-4">
                                             <h4 className="text-[9px] font-black uppercase tracking-widest text-slate-300 px-1">Conversation</h4>
                                             <div className="space-y-3">
                                                 {allComments
-                                                    .filter(c => c.content !== waitingComment || c.user_id !== expandedList.user_id)
                                                     .map((comment) => (
                                                         <div key={comment.id} className="flex flex-col gap-1 group/comment pl-2 border-l-2 border-slate-100/50">
                                                             <div className="flex items-center justify-between">
@@ -511,12 +332,11 @@ export function ExpandedListOverlay({
                                     )}
 
                                     {/* Thread View for Viewers */}
-                                    {allComments.filter(c => c.content !== waitingComment || c.user_id !== expandedList.user_id).length > 0 && (
+                                    {allComments.length > 0 && (
                                         <div className="space-y-3 pt-2">
                                             <h4 className="text-[9px] font-black uppercase tracking-widest text-slate-300 px-1">Conversation</h4>
                                             <div className="space-y-3">
                                                 {allComments
-                                                    .filter(c => c.content !== waitingComment || c.user_id !== expandedList.user_id)
                                                     .map((comment) => (
                                                         <div key={comment.id} className="flex flex-col gap-1 group/comment pl-2 border-l-2 border-slate-100/50">
                                                             <div className="flex items-center justify-between">
@@ -666,14 +486,14 @@ export function ExpandedListOverlay({
                                 </div>
                                 <div className="space-y-1">
                                     <h4 className="text-base font-black uppercase tracking-tight text-slate-900 leading-tight">Need a starting point?</h4>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest max-w-[240px]">Our Magic AI can build a draft for you based on the title.</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest max-w-[240px]">We can build a draft for you based on the title.</p>
                                 </div>
                                 <div className="flex flex-col w-full gap-2">
                                     <Button
                                         onClick={() => startEarlyPopulation(expandedList)}
                                         className="bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-widest h-12 rounded-xl shadow-md transition-all active:scale-95"
                                     >
-                                        Use Magic AI
+                                        Generate List
                                     </Button>
                                     <button
                                         onClick={() => searchInputRef.current?.focus()}
@@ -708,7 +528,7 @@ export function ExpandedListOverlay({
                                     <div className="flex items-center gap-2">
                                         <Loader2 className="h-3 w-3 animate-spin text-slate-400" />
                                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                            {populatedCount > 0 ? `Generating... ${populatedCount} found` : "Magic AI is working..."}
+                                            {populatedCount > 0 ? `Generating... ${populatedCount} found` : "Building your list... jot some thoughts down about your list while we work"}
                                         </span>
                                     </div>
                                     {populatedCount > 0 && (

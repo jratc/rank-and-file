@@ -42,13 +42,13 @@ export function RankedItemCard({
                     />
                 </div>
 
-                <div className="min-w-0 flex-1 py-0.5 w-full text-left pr-2">
-                    <h4 className="font-black text-sm tracking-tighter leading-tight text-slate-900 uppercase w-full break-words whitespace-normal px-0.5">
+                <div className="min-w-0 flex-1 py-0.5 w-full text-left pr-1 md:pr-2">
+                    <h4 className="font-black text-xs md:text-sm tracking-tighter leading-tight text-slate-900 uppercase w-full break-words whitespace-normal line-clamp-2 md:line-clamp-none px-0.5" title={item.metadata.name}>
                         {item.metadata.name}
                     </h4>
                     <div className="flex items-center gap-2 mt-0.5 min-w-0">
                         {item.metadata?.subtitle && (
-                            <div className="text-[10px] font-medium text-slate-600 uppercase mt-0.5 tracking-tight whitespace-normal break-words leading-tight px-0.5">
+                            <div className="text-[9px] md:text-[10px] font-medium text-slate-600 uppercase mt-0.5 tracking-tight whitespace-normal break-words leading-tight px-0.5 line-clamp-1" title={item.metadata.subtitle}>
                                 {item.metadata.subtitle}
                             </div>
                         )}

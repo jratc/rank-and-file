@@ -368,16 +368,17 @@ export async function createResponse(parentListId: string) {
         }));
 
         // Batch insert
-        const { error: copyError } = await supabase
+        const { data: insertedItems, error: copyError } = await supabase
             .from('list_items')
-            .insert(newItems);
+            .insert(newItems)
+            .select();
 
         if (copyError) {
             console.error('Failed to copy list items:', copyError);
             // We don't fail the whole request, just log it. The user gets an empty list.
-        } else {
+        } else if (insertedItems) {
             // Attach items to returned object so UI updates immediately
-            newList.list_items = newItems;
+            newList.list_items = insertedItems;
         }
     }
 
@@ -677,12 +678,15 @@ export async function upsertComment(listId: string, content: string) {
     }
     console.log(`[upsertComment] User: ${user.id}`);
 
-    const { data: existing, error: fetchErr } = await supabase
+    const { data: existingData, error: fetchErr } = await supabase
         .from('comments')
         .select('id')
         .eq('list_id', listId)
         .eq('user_id', user.id)
-        .maybeSingle();
+        .order('created_at', { ascending: true })
+        .limit(1);
+
+    const existing = existingData?.[0];
 
     if (fetchErr) console.error(`[upsertComment] Fetch error:`, fetchErr);
 

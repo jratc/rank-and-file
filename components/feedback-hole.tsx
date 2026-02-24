@@ -61,15 +61,15 @@ export function FeedbackHole() {
                 {/* The Hole (Now on Top) */}
                 <div
                     onClick={() => setIsVisible(!isVisible)}
-                    className="pointer-events-auto cursor-pointer relative z-10 p-2"
+                    className="pointer-events-auto cursor-pointer relative z-10 p-2 group"
                 >
                     <DroppableHole isActive={!!feedback || isVisible} />
                 </div>
 
                 {/* STABLE INPUT CONTAINER (Now BELOW) */}
                 <div
-                    className={`absolute top-full right-0 z-50 pointer-events-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-3xl border border-slate-200 dark:border-white/10 p-4 rounded-3xl shadow-2xl transition-all duration-300 w-72 ${isSubmitted ? 'scale-90 opacity-0 blur-lg' : isVisible ? 'scale-100 opacity-100 translate-y-0' : 'scale-75 opacity-0 pointer-events-none -translate-y-4'}`}
-                    style={{ marginTop: '0px', paddingTop: '16px' }}
+                    className={`absolute top-full right-0 z-50 pointer-events-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-3xl border border-slate-200 dark:border-white/10 p-4 rounded-3xl shadow-2xl transition-all duration-300 w-72 origin-top-right ${isSubmitted ? 'scale-90 opacity-0 blur-lg' : isVisible ? 'scale-100 opacity-100 translate-y-2' : 'scale-75 opacity-0 pointer-events-none -translate-y-2'}`}
+                    style={{ marginTop: '0px' }}
                     onClick={(e) => e.stopPropagation()}
                     onMouseEnter={handleMouseEnter}
                 >
@@ -135,7 +135,8 @@ function TossHandle() {
             {/* Pulsing glow backplate */}
             <div className="absolute inset-0 bg-indigo-400 rounded-full blur-md opacity-0 group-hover/handle:opacity-40 transition-opacity animate-pulse" />
 
-            <div className="relative z-10">
+            <div className="relative z-10 flex flex-col items-center">
+                <Move className="w-3 h-3 mb-0.5 opacity-40 group-hover/handle:opacity-100 transition-opacity" />
                 <Ghost className="w-5 h-5 group-hover/handle:rotate-12 transition-transform" />
             </div>
         </div>

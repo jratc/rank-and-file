@@ -47,8 +47,8 @@ export function ListGrid({
 
     return (
         <div className={`
-            flex flex-col gap-8 pb-8
-            md:grid md:grid-cols-2 md:gap-6 md:overflow-visible md:pb-0 md:mx-0 md:px-0
+            flex flex-row overflow-x-auto snap-x snap-mandatory gap-4 pb-8 px-4 -mx-4
+            md:grid md:grid-cols-2 md:gap-6 md:overflow-visible md:pb-0 md:mx-0 md:px-0 md:flex-none md:snap-none
             lg:grid-cols-3 xl:grid-cols-5 
             transition-all duration-500 
             scrollbar-hide
@@ -60,8 +60,8 @@ export function ListGrid({
 
                 return (
                     <div key={catKey} className="
-                        w-full
-                        md:min-w-0 md:w-auto
+                        w-[85vw] shrink-0 snap-center
+                        md:min-w-0 md:w-auto md:shrink md:snap-align-none
                         flex flex-col gap-4 group/cat
                     ">
                         <div
@@ -102,8 +102,8 @@ export function ListGrid({
                                                 // Owner — always open editable expanded view
                                                 console.log('OPENING LIST (owner):', list.id);
                                                 setExpandedListId(list.id);
-                                            } else if (list.response_count > 0) {
-                                                // Non-owner with responses — open thread split view
+                                            } else if (list.response_count > 0 && window.innerWidth >= 1024) {
+                                                // Non-owner with responses on desktop — open thread split view
                                                 try {
                                                     const thread = await getThread(list.id);
                                                     if (thread) {

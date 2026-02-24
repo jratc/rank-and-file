@@ -187,20 +187,29 @@ export async function detectAndPopulateList(listId: string, title: string, categ
 
     // 3.5 INTERNAL DEDUPLICATION (Safeguard against repetitive LLM results)
     const seenNames = new Set<string>();
+    const seenBaselines = new Set<string>();
     items = items.filter(item => {
         const normalized = item.name.toLowerCase().trim();
-        // Check for exact name match OR similar substrings for places
+        // Create a "baseline" name (remove punctuation, possessives, and common trailing noise)
+        const baseline = normalized
+            .replace(/['’]s\b/g, '') // remove possessive
+            .replace(/[^\w\s]/g, '') // remove punctuation
+            .replace(/\s+/g, ' ')    // collapse whitespace
+            .trim();
+
         if (seenNames.has(normalized)) return false;
+        if (seenBaselines.has(baseline)) return false;
 
         // Prevent very similar names for places (e.g. "Joe's Pizza" vs "Joe's Pizza & Bar")
         if (['food', 'bars', 'restaurants', 'places'].includes(category)) {
-            const isTooSimilar = Array.from(seenNames).some(seen =>
-                normalized.includes(seen) || seen.includes(normalized)
+            const isTooSimilar = Array.from(seenBaselines).some(seen =>
+                baseline.includes(seen) || seen.includes(baseline)
             );
             if (isTooSimilar) return false;
         }
 
         seenNames.add(normalized);
+        seenBaselines.add(baseline);
         return true;
     });
 
@@ -336,6 +345,13 @@ export async function populateBackgroundItems(listId: string, title: string, cat
 
     // 4. Insert into database, ensuring we start after the actual current count
     const { data: currentItems } = await supabase.from('list_items').select('rank').eq('list_id', listId);
+
+    // ABORT CHECK: If the user trimmed the list while we were generating, the count will be less than offset.
+    if (currentItems && currentItems.length < offset) {
+        console.log(`[Populate] List was trimmed during generation (${currentItems.length} < ${offset})! Aborting insert.`);
+        return { count: 0, isComplete: true };
+    }
+
     const currentMaxRank = (currentItems && currentItems.length > 0) ? Math.max(...currentItems.map(c => c.rank || 0)) : offset;
 
     const { data: insertedData, error: insertError } = await supabase.from('list_items').insert(
@@ -364,7 +380,7 @@ export async function populateBackgroundItems(listId: string, title: string, cat
 
         Promise.allSettled(
             insertedData.map(async (item) => {
-                hydrateItemImage(item.id, item.metadata.name, category);
+                hydrateItemImage(item.id, item.metadata.name, category, title);
 
                 if (['food', 'bars', 'restaurants', 'places'].includes(category)) {
                     try {

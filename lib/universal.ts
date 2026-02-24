@@ -140,9 +140,16 @@ export const universalProvider = {
                 const members = Object.values(membersData.query.pages);
 
                 // Filter and Map
+                const seenNames = new Set<string>();
                 let items = members
                     // @ts-ignore
-                    .filter((p: any) => !p.title.startsWith('List of') && !p.title.includes('disambiguation'))
+                    .filter((p: any) => {
+                        const title = p.title.toLowerCase().trim();
+                        if (title.startsWith('list of') || title.includes('disambiguation')) return false;
+                        if (seenNames.has(title)) return false;
+                        seenNames.add(title);
+                        return true;
+                    })
                     .map((page: any) => ({
                         id: `wiki_${page.pageid}`,
                         name: page.title,
@@ -192,7 +199,7 @@ export const universalProvider = {
                 console.log(`[Universal] Hydrating ${items.length} AI items with thumbnails...`);
                 const hydratedItems = await Promise.all(
                     items.map(async (item) => {
-                        const thumb = await universalProvider.fetchThumbnail(item.name, 'more');
+                        const thumb = await universalProvider.fetchThumbnail(item.name, 'more', topic);
                         if (thumb) {
                             return { ...item, imageUrl: thumb };
                         }
@@ -209,7 +216,7 @@ export const universalProvider = {
         return [];
     },
 
-    async fetchThumbnail(query: string, category?: string): Promise<string | null> {
+    async fetchThumbnail(query: string, category?: string, contextTopic?: string): Promise<string | null> {
         if (!query) return null;
         try {
             // 1. Clean the query: Remove parentheticals and extra whitespace
@@ -242,7 +249,21 @@ export const universalProvider = {
                 }
             }
 
-            // 3. ROBUST PERSON FALLBACK (TMDB)
+            // 3. Add List Topic Context for highly specific searches (e.g. "Peloton Instructors")
+            if (contextTopic) {
+                // Strip out generic words from topic to avoid over-constraining the search
+                const cleanTopic = contextTopic.replace(/best|top|favorite|list of|my/gi, '').trim();
+
+                // SPECIAL CASE: Peloton Instructors
+                if (cleanTopic.toLowerCase().includes('peloton') && cleanTopic.toLowerCase().includes('instructor')) {
+                    searchQueries.unshift(`${cleanedQuery} peloton instructor`);
+                    searchQueries.unshift(`${cleanedQuery} peloton`);
+                } else if (cleanTopic) {
+                    searchQueries.push(`${cleanedQuery} ${cleanTopic}`);
+                }
+            }
+
+            // 4. ROBUST PERSON FALLBACK (TMDB)
             // Before falling back to Wikipedia, try TMDB's person API which is excellent for public figures,
             // including athletes, instructors, politicians, and media personalities.
             const tmbdApiKey = process.env.TMDB_API_KEY;

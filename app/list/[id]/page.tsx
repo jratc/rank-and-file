@@ -20,7 +20,7 @@ export async function generateMetadata(
 
     const { data: list } = await supabase
         .from('lists')
-        .select(`*, profiles:user_id (username, display_name)`)
+        .select(`*, profiles:user_id (username, display_name), list_items (*)`)
         .eq('id', id)
         .single();
 
@@ -32,7 +32,14 @@ export async function generateMetadata(
 
     const displayName = list.profiles?.display_name || list.profiles?.username || 'Someone';
     const title = `${list.title} by ${displayName}`;
-    const description = `Check out this ${list.category} list on Rank and File.`;
+
+    const topItems = (list.list_items || [])
+        .sort((a: any, b: any) => a.rank - b.rank)
+        .slice(0, 5)
+        .map((item: any) => `${item.rank}. ${item.metadata?.name || 'Item'}`);
+
+    const itemsText = topItems.length > 0 ? ` ${topItems.join(', ')}` : '';
+    const description = `${displayName} made a list on Rank and File. Take a look, and respond.${itemsText}`;
 
     return {
         title,

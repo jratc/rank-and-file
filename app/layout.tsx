@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   title: "Rank and File",
   description: "Rank and share your favorite albums",
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
