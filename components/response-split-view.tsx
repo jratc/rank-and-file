@@ -129,7 +129,7 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
     };
 
     const nextItem = () => setCurrentIndex(prev => Math.min(prev + 1, thread.length - 1));
-    const prevItem = () => setCurrentIndex(prev => Math.max(prev - 1, 1)); // Don't go to 0 (root) because root is always on left
+    const prevItem = () => setCurrentIndex(prev => Math.max(prev - 1, 0));
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -153,7 +153,7 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
         const isOwner = currentUserId === list.user_id;
 
         return (
-            <div className={`flex flex-col relative w-full h-full lg:w-[450px] shrink-0 max-h-[85vh]`}>
+            <div className={`flex flex-col relative w-full h-full lg:w-[450px] shrink-0 min-h-0`}>
                 <div className={`bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border-2 ${isRoot ? 'border-slate-200 dark:border-white/10' : 'border-blue-200 dark:border-blue-500/30'} flex flex-col h-full w-full`}>
 
                     {/* Header */}
@@ -422,14 +422,32 @@ export function ResponseSplitView({ thread, initialDraftId, onClose, currentUser
                 </div>
             )}
 
-            <div className="w-full h-full max-h-[90vh] flex flex-col lg:flex-row items-stretch justify-center gap-4 lg:gap-8 relative max-w-[90vw] mt-12 lg:mt-0">
-                {/* ROOT LIST (Always visible on left in desktop) */}
-                <div className="hidden lg:flex flex-1 relative w-full h-full">
+            {/* Mobile Tab Switcher */}
+            <div className="flex lg:hidden w-full gap-2 mb-4 shrink-0 mt-8">
+                <Button
+                    variant={currentIndex === 0 ? "default" : "outline"}
+                    onClick={() => setCurrentIndex(0)}
+                    className="flex-1 h-10 font-black text-[10px] uppercase tracking-widest rounded-xl"
+                >
+                    Original
+                </Button>
+                <Button
+                    variant={currentIndex > 0 ? "default" : "outline"}
+                    onClick={() => setCurrentIndex(1)}
+                    className="flex-1 h-10 font-black text-[10px] uppercase tracking-widest rounded-xl"
+                >
+                    Response
+                </Button>
+            </div>
+
+            <div className="w-full flex-1 flex flex-col lg:flex-row items-stretch justify-center gap-4 lg:gap-8 relative lg:max-w-[90vw] lg:h-[90vh] overflow-hidden">
+                {/* ROOT LIST (Visible on left in desktop, or when active tab on mobile) */}
+                <div className={`${currentIndex === 0 ? 'flex' : 'hidden'} lg:flex flex-1 relative w-full h-full min-h-0`}>
                     {renderListCard(rootList, true)}
                 </div>
 
-                {/* CURRENT RESPONSE (Right side) */}
-                <div className="flex flex-1 relative w-full h-full">
+                {/* CURRENT RESPONSE (Right side in desktop, or when active tab on mobile) */}
+                <div className={`${currentIndex > 0 ? 'flex' : 'hidden'} lg:flex flex-1 relative w-full h-full min-h-0`}>
                     {thread.length > 1 ? renderListCard(currentResponse, false) : renderListCard(rootList, true)}
                 </div>
             </div>

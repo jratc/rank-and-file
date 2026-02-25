@@ -148,7 +148,7 @@ export function ExpandedListOverlay({
                 className="fixed inset-0"
                 onClick={closeExpandedView}
             />
-            <Card className="relative w-full max-w-xl flex flex-col h-auto max-h-[90vh] border-slate-200 bg-white shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] animate-in slide-in-from-bottom-4 duration-300">
+            <Card className="relative w-full max-w-xl flex flex-col h-full sm:h-auto sm:max-h-[90vh] border-slate-200 bg-white shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] animate-in slide-in-from-bottom-4 duration-300">
                 <button
                     onClick={closeExpandedView}
                     className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-slate-100 text-slate-400 transition-colors z-20"
@@ -196,373 +196,390 @@ export function ExpandedListOverlay({
                                         </Button>
                                     )}
                                 </div>
+
+                                {currentUserId === expandedList.user_id ? (
+                                    <Input
+                                        value={editSession.title || ''}
+                                        placeholder="NAME YOUR LIST"
+                                        onChange={(e) => setEditSession(s => ({ ...s, title: e.target.value.toUpperCase() }))}
+                                        onBlur={() => handleUpdateTitle(expandedList.id)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') handleUpdateTitle(expandedList.id);
+                                        }}
+                                        className="text-2xl md:text-3xl font-black uppercase tracking-tighter leading-none h-auto p-0 border-none bg-transparent focus-visible:ring-0 placeholder:text-slate-200"
+                                    />
+                                ) : (
+                                    <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter leading-none text-slate-900 line-clamp-2">
+                                        {expandedList.title}
+                                    </h2>
+                                )}
                             </div>
-
-                            {/* INTEGRATED COMMENT AREA (Description) */}
-                            {currentUserId === expandedList.user_id ? (
-                                <div className="mt-2 group">
-                                    <div className="relative">
-                                        <Textarea
-                                            placeholder={isPopulating ? "Building your list... jot some thoughts down about your list while we work" : "Jot down some notes-what should people know about your list?"}
-                                            value={waitingComment}
-                                            autoFocus={isWaitingForComment}
-                                            onChange={(e) => {
-                                                setWaitingComment(e.target.value);
-                                                commentValueRef.current = e.target.value;
-                                                isCommentDirty.current = true;
-                                            }}
-                                            onBlur={() => {
-                                                const commentToSave = commentValueRef.current.trim();
-                                                if (isCommentDirty.current && expandedList.id !== 'temp-pending') {
-                                                    isCommentDirty.current = false;
-                                                    setLists((prev: any[]) => prev.map(l => l.id === expandedList.id ? {
-                                                        ...l,
-                                                        comments: commentToSave ? [...(l.comments || []).filter((c: any) => c.user_id !== currentUserId), {
-                                                            id: `temp-${Date.now()}`,
-                                                            user_id: currentUserId,
-                                                            list_id: expandedList.id,
-                                                            content: commentToSave,
-                                                            created_at: new Date().toISOString(),
-                                                            profiles: { username: currentUsername, display_name: currentDisplayName }
-                                                        }] : [...(l.comments || []).filter((c: any) => c.user_id !== currentUserId)]
-                                                    } : l));
-                                                    upsertComment(expandedList.id, commentToSave).then(() => refreshComments()).catch(e => console.error("Save error", e));
-                                                }
-                                            }}
-                                            className="min-h-[60px] max-h-[120px] font-bold text-sm resize-none border-none bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus-visible:ring-1 focus-visible:ring-slate-100 rounded-xl p-3 placeholder:opacity-40 transition-all overflow-y-auto"
-                                        />
-                                        {isCommentDirty.current && (
-                                            <div className="flex justify-end mt-1">
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    className="h-6 text-[9px] px-2 uppercase tracking-widest font-black text-slate-400 hover:text-green-600 hover:border-green-600 hover:bg-green-50 transition-colors"
-                                                    onMouseDown={(e) => e.preventDefault()}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        const commentToSave = commentValueRef.current.trim();
-                                                        if (expandedList.id !== 'temp-pending') {
-                                                            isCommentDirty.current = false;
-                                                            upsertComment(expandedList.id, commentToSave)
-                                                                .then(() => {
-                                                                    toast.success("Comment saved!");
-                                                                    refreshComments();
-                                                                })
-                                                                .catch(() => {
-                                                                    toast.error("Failed to save");
-                                                                    isCommentDirty.current = true;
-                                                                });
-                                                        }
-                                                    }}
-                                                >
-                                                    Save Note
-                                                </Button>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Thread View for Owners */}
-                                    {allComments.length > 0 && (
-                                        <div className="space-y-3 pt-4 border-t border-slate-100 mt-4">
-                                            <h4 className="text-[9px] font-black uppercase tracking-widest text-slate-300 px-1">Conversation</h4>
-                                            <div className="space-y-3">
-                                                {allComments
-                                                    .map((comment) => (
-                                                        <div key={comment.id} className="flex flex-col gap-1 group/comment pl-2 border-l-2 border-slate-100/50">
-                                                            <div className="flex items-center justify-between">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-[10px] font-black uppercase text-slate-900">
-                                                                        {comment.profiles?.display_name || comment.profiles?.username || 'Guest'}
-                                                                    </span>
-                                                                    <span className="text-[8px] font-bold text-slate-400">
-                                                                        {new Date(comment.created_at).toLocaleDateString()}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                            <p className="text-xs text-slate-600 leading-tight pr-4">
-                                                                {comment.content}
-                                                            </p>
-                                                        </div>
-                                                    ))}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* QUICK REPLY BOX FOR OWNER (Optional but helpful) */}
-                                    {allComments.filter(c => c.user_id !== currentUserId).length > 0 && (
-                                        <div className="mt-4 bg-white/50 border border-slate-100 rounded-2xl p-2 transition-all focus-within:ring-2 focus-within:ring-blue-100">
-                                            <div className="flex gap-2 min-h-[40px]">
-                                                <Textarea
-                                                    placeholder="Respond to thoughts..."
-                                                    value={replyContent}
-                                                    onChange={(e) => setReplyContent(e.target.value)}
-                                                    className="flex-1 min-h-[40px] max-h-[100px] text-xs font-medium border-none bg-transparent focus-visible:ring-0 p-2 resize-none"
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter' && !e.shiftKey) {
-                                                            e.preventDefault();
-                                                            if (replyContent.trim()) handleReplySubmit();
-                                                        }
-                                                    }}
-                                                />
-                                                <Button
-                                                    size="icon"
-                                                    variant="ghost"
-                                                    disabled={!replyContent.trim() || isPostingReply}
-                                                    onClick={handleReplySubmit}
-                                                    className="h-8 w-8 self-end rounded-xl hover:bg-blue-50 text-blue-500 transition-all shrink-0"
-                                                >
-                                                    {isPostingReply ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            ) : (
-                                <div className="mt-2 space-y-4">
-                                    {waitingComment ? (
-                                        <div className="px-3 py-2 bg-slate-50/50 rounded-xl border border-slate-100/50">
-                                            <p className="text-xs font-medium text-slate-600 italic leading-relaxed">
-                                                &quot;{waitingComment}&quot;
-                                            </p>
-                                        </div>
-                                    ) : (
-                                        <div className="px-3 py-2 bg-slate-50/20 rounded-xl border border-dashed border-slate-100/50">
-                                            <p className="text-[10px] font-bold text-slate-300 uppercase tracking-tight">No notes from the creator yet.</p>
-                                        </div>
-                                    )}
-
-                                    {/* Thread View for Viewers */}
-                                    {allComments.length > 0 && (
-                                        <div className="space-y-3 pt-2">
-                                            <h4 className="text-[9px] font-black uppercase tracking-widest text-slate-300 px-1">Conversation</h4>
-                                            <div className="space-y-3">
-                                                {allComments
-                                                    .map((comment) => (
-                                                        <div key={comment.id} className="flex flex-col gap-1 group/comment pl-2 border-l-2 border-slate-100/50">
-                                                            <div className="flex items-center justify-between">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-[10px] font-black uppercase text-slate-900">
-                                                                        {comment.profiles?.display_name || comment.profiles?.username || 'Guest'}
-                                                                    </span>
-                                                                    <span className="text-[8px] font-bold text-slate-400">
-                                                                        {new Date(comment.created_at).toLocaleDateString()}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                            <p className="text-xs text-slate-600 leading-tight pr-4">
-                                                                {comment.content}
-                                                            </p>
-                                                        </div>
-                                                    ))}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* QUICK REPLY BOX */}
-                                    {currentUserId && (
-                                        <div className="mt-4 bg-white/50 border border-slate-100 rounded-2xl p-2 transition-all focus-within:ring-2 focus-within:ring-blue-100">
-                                            <div className="flex gap-2 min-h-[40px]">
-                                                <Textarea
-                                                    placeholder="Add a thought..."
-                                                    value={replyContent}
-                                                    onChange={(e) => setReplyContent(e.target.value)}
-                                                    className="flex-1 min-h-[40px] max-h-[100px] text-xs font-medium border-none bg-transparent focus-visible:ring-0 p-2 resize-none"
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter' && !e.shiftKey) {
-                                                            e.preventDefault();
-                                                            if (replyContent.trim()) handleReplySubmit();
-                                                        }
-                                                    }}
-                                                />
-                                                <Button
-                                                    size="icon"
-                                                    variant="ghost"
-                                                    disabled={!replyContent.trim() || isPostingReply}
-                                                    onClick={handleReplySubmit}
-                                                    className="h-8 w-8 self-end rounded-xl hover:bg-blue-50 text-blue-500 transition-all shrink-0"
-                                                >
-                                                    {isPostingReply ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    )}
-                                    {/* Feature: Music Playlist Export - Moved to Header */}
-                                </div>
-                            )}
-
-                            {/* Search Section Inside Header - Only for Owner, only after list is named, and not while populating */}
-                            {
-                                currentUserId === expandedList.user_id && expandedList.id !== 'temp-pending' && !isPopulating && (
-                                    <div className="mt-4">
-                                        <form onSubmit={(e) => { e.preventDefault(); handleSearch(searchQuery); }} className="relative group">
-                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-300 group-focus-within:text-black transition-colors" />
-                                            <Input
-                                                ref={searchInputRef}
-                                                placeholder={`Add to list...`}
-                                                value={searchQuery}
-                                                onChange={(e) => setSearchQuery(e.target.value)}
-                                                className="h-8 pl-9 pr-20 bg-slate-50 border-none rounded-lg text-xs font-bold focus:bg-white focus:ring-1 focus:ring-slate-200 transition-all"
-                                            />
-                                            <div className="absolute right-1 top-1 bottom-1">
-                                                <Button
-                                                    type="submit"
-                                                    size="sm"
-                                                    disabled={isSearching || !searchQuery.trim()}
-                                                    className="h-full px-3 rounded-md font-black text-[9px] tracking-widest uppercase bg-white border border-slate-200 text-slate-900 hover:bg-slate-50"
-                                                >
-                                                    {isSearching ? <Loader2 className="h-3 w-3 animate-spin text-slate-400" /> : 'SEARCH'}
-                                                </Button>
-                                            </div>
-                                        </form>
-
-                                        {/* Search Results Dropdown-style */}
-                                        {searchResults.length > 0 && (
-                                            <div
-                                                ref={searchResultsRef}
-                                                className="absolute left-5 right-5 mt-1 bg-white border border-slate-100 rounded-xl shadow-2xl z-50 p-1 max-h-[300px] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in duration-200"
-                                                onScroll={(e) => {
-                                                    const target = e.currentTarget;
-                                                    if (target.scrollHeight - target.scrollTop <= target.clientHeight + 50 && !isSearching && hasMore) {
-                                                        const nextPage = page + 1;
-                                                        setPage(nextPage);
-                                                        handleSearch(searchQuery, true, nextPage);
-                                                    }
-                                                }}
-                                            >
-                                                <div className="flex items-center justify-between px-3 py-2 border-b border-slate-50 mb-1">
-                                                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Search Results</span>
-                                                    <div className="flex items-center gap-3">
-                                                        {searchResults.length > 0 && itemsToPlaces(searchResults).length > 0 && (
-                                                            <button
-                                                                onClick={() => setShowMap(!showMap)}
-                                                                className="text-[9px] font-black uppercase tracking-widest text-green-600 hover:text-green-700 flex items-center gap-1"
-                                                            >
-                                                                <MapPin className="h-2.5 w-2.5" />
-                                                                {showMap ? 'Hide Map' : 'View on Map'}
-                                                            </button>
-                                                        )}
-                                                        <button
-                                                            onClick={() => setSearchResults([])}
-                                                            className="text-[9px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-700"
-                                                        >
-                                                            Close
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                                <div className="space-y-0.5">
-                                                    {searchResults.map((item) => (
-                                                        <div
-                                                            key={item.id}
-                                                            onClick={() => handleAddItem(item)}
-                                                            className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer group border border-transparent"
-                                                        >
-                                                            <div className="w-7 h-7 rounded bg-slate-100 overflow-hidden shrink-0">
-                                                                {item.imageUrl && <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />}
-                                                            </div>
-                                                            <div className="flex-1 min-w-0">
-                                                                <div className="font-bold text-[11px] text-slate-900 truncate group-hover:text-black">{item.name}</div>
-                                                                <div className="text-[9px] text-slate-600 truncate uppercase font-medium">{item.subtitle}</div>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                    {isSearching && page > 1 && (
-                                                        <div className="p-2 text-center text-[10px] text-slate-400">Loading more...</div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                )
-                            }
                         </div>
                     </CardHeader>
 
-                    <CardContent className="p-5 pt-0 flex-1 overflow-y-auto min-h-0 custom-scrollbar">
-                        {/* INLINE AI NUDGE - Only for Owner, only for More/Places category, only when empty and not populating */}
-                        {currentUserId === expandedList.user_id && expandedList.list_items.length === 0 && !isPopulating && !isBackgroundPopulating && (['other', 'places', 'more'].includes(expandedList.category?.toLowerCase() || '')) && (
-                            <div className="mb-6 p-6 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col items-center text-center gap-4 animate-in fade-in slide-in-from-top-4 duration-500 shadow-sm mt-4">
-                                <div className="p-3 bg-white rounded-2xl shadow-sm border border-slate-50">
-                                    <Sparkles className="w-6 h-6 text-indigo-500 animate-pulse" />
-                                </div>
-                                <div className="space-y-1">
-                                    <h4 className="text-base font-black uppercase tracking-tight text-slate-900 leading-tight">Need a starting point?</h4>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest max-w-[240px]">We can build a draft for you based on the title.</p>
-                                </div>
-                                <div className="flex flex-col w-full gap-2">
-                                    <Button
-                                        onClick={() => startEarlyPopulation(expandedList)}
-                                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-widest h-12 rounded-xl shadow-md transition-all active:scale-95"
-                                    >
-                                        Generate List
-                                    </Button>
-                                    <button
-                                        onClick={() => searchInputRef.current?.focus()}
-                                        className="text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors py-2"
-                                    >
-                                        I&apos;ll add items manually
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                        <RankingList
-                            initialItems={expandedList.list_items}
-                            listId={expandedList.id}
-                            category={expandedList.category}
-                            title={expandedList.title}
-                            isPopulating={isPopulating || isBackgroundPopulating}
-                            showMap={showMap}
-                            mapItems={itemsToPlaces(expandedList.list_items.slice(0, 10))}
-                            onChange={(newItems) => {
-                                // Prevent updates to temp lists
-                                if (expandedList.id === 'temp-pending') return;
-                                setLists((prev: any[]) => prev.map(l =>
-                                    l.id === expandedList.id ? { ...l, list_items: newItems } : l
-                                ));
-                            }}
-                        />
-
-                        {/* POPULATION FEEDBACK - Progress Bar */}
-                        {isPopulating && (
-                            <div className="mt-4 px-4 py-3 border border-slate-100 rounded-2xl bg-slate-50/50 flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                                <div className="flex items-center justify-between w-full">
-                                    <div className="flex items-center gap-2">
-                                        <Loader2 className="h-3 w-3 animate-spin text-slate-400" />
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                            {populatedCount > 0 ? `Generating... ${populatedCount} found` : "Building your list... jot some thoughts down about your list while we work"}
-                                        </span>
-                                    </div>
-                                    {populatedCount > 0 && (
-                                        <button
-                                            onClick={() => handleSubmitWaitingComment()}
-                                            className="text-[10px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-600 transition-colors"
+                    {/* INTEGRATED COMMENT AREA (Description) */}
+                    {currentUserId === expandedList.user_id ? (
+                        <div className="mt-2 group">
+                            <div className="relative">
+                                <Textarea
+                                    placeholder={isPopulating ? "Building your list... jot some thoughts down about your list while we work" : "Jot down some notes-what should people know about your list?"}
+                                    value={waitingComment}
+                                    autoFocus={isWaitingForComment}
+                                    onChange={(e) => {
+                                        setWaitingComment(e.target.value);
+                                        commentValueRef.current = e.target.value;
+                                        isCommentDirty.current = true;
+                                    }}
+                                    onBlur={() => {
+                                        const commentToSave = commentValueRef.current.trim();
+                                        if (isCommentDirty.current && expandedList.id !== 'temp-pending') {
+                                            isCommentDirty.current = false;
+                                            setLists((prev: any[]) => prev.map(l => l.id === expandedList.id ? {
+                                                ...l,
+                                                comments: commentToSave ? [...(l.comments || []).filter((c: any) => c.user_id !== currentUserId), {
+                                                    id: `temp-${Date.now()}`,
+                                                    user_id: currentUserId,
+                                                    list_id: expandedList.id,
+                                                    content: commentToSave,
+                                                    created_at: new Date().toISOString(),
+                                                    profiles: { username: currentUsername, display_name: currentDisplayName }
+                                                }] : [...(l.comments || []).filter((c: any) => c.user_id !== currentUserId)]
+                                            } : l));
+                                            upsertComment(expandedList.id, commentToSave).then(() => refreshComments()).catch(e => console.error("Save error", e));
+                                        }
+                                    }}
+                                    className="min-h-[60px] max-h-[120px] font-bold text-sm resize-none border-none bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus-visible:ring-1 focus-visible:ring-slate-100 rounded-xl p-3 placeholder:opacity-40 transition-all overflow-y-auto"
+                                />
+                                {isCommentDirty.current && (
+                                    <div className="flex justify-end mt-1">
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-6 text-[9px] px-2 uppercase tracking-widest font-black text-slate-400 hover:text-green-600 hover:border-green-600 hover:bg-green-50 transition-colors"
+                                            onMouseDown={(e) => e.preventDefault()}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                const commentToSave = commentValueRef.current.trim();
+                                                if (expandedList.id !== 'temp-pending') {
+                                                    isCommentDirty.current = false;
+                                                    upsertComment(expandedList.id, commentToSave)
+                                                        .then(() => {
+                                                            toast.success("Comment saved!");
+                                                            refreshComments();
+                                                        })
+                                                        .catch(() => {
+                                                            toast.error("Failed to save");
+                                                            isCommentDirty.current = true;
+                                                        });
+                                                }
+                                            }}
                                         >
-                                            Done
-                                        </button>
-                                    )}
+                                            Save Note
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Thread View for Owners */}
+                            {allComments.length > 0 && (
+                                <div className="space-y-3 pt-4 border-t border-slate-100 mt-4">
+                                    <h4 className="text-[9px] font-black uppercase tracking-widest text-slate-300 px-1">Conversation</h4>
+                                    <div className="space-y-3">
+                                        {allComments
+                                            .map((comment) => (
+                                                <div key={comment.id} className="flex flex-col gap-1 group/comment pl-2 border-l-2 border-slate-100/50">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[10px] font-black uppercase text-slate-900">
+                                                                {comment.profiles?.display_name || comment.profiles?.username || 'Guest'}
+                                                            </span>
+                                                            <span className="text-[8px] font-bold text-slate-400">
+                                                                {new Date(comment.created_at).toLocaleDateString()}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-xs text-slate-600 leading-tight pr-4">
+                                                        {comment.content}
+                                                    </p>
+                                                </div>
+                                            ))}
+                                    </div>
                                 </div>
-                                <div className="w-full h-1.5 bg-slate-200/50 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-blue-500 transition-all duration-500"
-                                        style={{
-                                            width: populatedCount > 0 ? `${Math.min(100, (populatedCount / 12) * 100)}%` : '15%',
-                                            animation: populatedCount === 0 ? 'pulse-progress 2s ease-in-out infinite' : 'none'
-                                        }}
+                            )}
+
+                            {/* QUICK REPLY BOX FOR OWNER (Optional but helpful) */}
+                            {allComments.filter(c => c.user_id !== currentUserId).length > 0 && (
+                                <div className="mt-4 bg-white/50 border border-slate-100 rounded-2xl p-2 transition-all focus-within:ring-2 focus-within:ring-blue-100">
+                                    <div className="flex gap-2 min-h-[40px]">
+                                        <Textarea
+                                            placeholder="Respond to thoughts..."
+                                            value={replyContent}
+                                            onChange={(e) => setReplyContent(e.target.value)}
+                                            className="flex-1 min-h-[40px] max-h-[100px] text-xs font-medium border-none bg-transparent focus-visible:ring-0 p-2 resize-none"
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && !e.shiftKey) {
+                                                    e.preventDefault();
+                                                    if (replyContent.trim()) handleReplySubmit();
+                                                }
+                                            }}
+                                        />
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            disabled={!replyContent.trim() || isPostingReply}
+                                            onClick={handleReplySubmit}
+                                            className="h-8 w-8 self-end rounded-xl hover:bg-blue-50 text-blue-500 transition-all shrink-0"
+                                        >
+                                            {isPostingReply ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="mt-2 space-y-4">
+                            {waitingComment ? (
+                                <div className="px-3 py-2 bg-slate-50/50 rounded-xl border border-slate-100/50">
+                                    <p className="text-xs font-medium text-slate-600 italic leading-relaxed">
+                                        &quot;{waitingComment}&quot;
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="px-3 py-2 bg-slate-50/20 rounded-xl border border-dashed border-slate-100/50">
+                                    <p className="text-[10px] font-bold text-slate-300 uppercase tracking-tight">No notes from the creator yet.</p>
+                                </div>
+                            )}
+
+                            {/* Thread View for Viewers */}
+                            {allComments.length > 0 && (
+                                <div className="space-y-3 pt-2">
+                                    <h4 className="text-[9px] font-black uppercase tracking-widest text-slate-300 px-1">Conversation</h4>
+                                    <div className="space-y-3">
+                                        {allComments
+                                            .map((comment) => (
+                                                <div key={comment.id} className="flex flex-col gap-1 group/comment pl-2 border-l-2 border-slate-100/50">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[10px] font-black uppercase text-slate-900">
+                                                                {comment.profiles?.display_name || comment.profiles?.username || 'Guest'}
+                                                            </span>
+                                                            <span className="text-[8px] font-bold text-slate-400">
+                                                                {new Date(comment.created_at).toLocaleDateString()}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-xs text-slate-600 leading-tight pr-4">
+                                                        {comment.content}
+                                                    </p>
+                                                </div>
+                                            ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* QUICK REPLY BOX */}
+                            {currentUserId && (
+                                <div className="mt-4 bg-white/50 border border-slate-100 rounded-2xl p-2 transition-all focus-within:ring-2 focus-within:ring-blue-100">
+                                    <div className="flex gap-2 min-h-[40px]">
+                                        <Textarea
+                                            placeholder="Add a thought..."
+                                            value={replyContent}
+                                            onChange={(e) => setReplyContent(e.target.value)}
+                                            className="flex-1 min-h-[40px] max-h-[100px] text-xs font-medium border-none bg-transparent focus-visible:ring-0 p-2 resize-none"
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && !e.shiftKey) {
+                                                    e.preventDefault();
+                                                    if (replyContent.trim()) handleReplySubmit();
+                                                }
+                                            }}
+                                        />
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            disabled={!replyContent.trim() || isPostingReply}
+                                            onClick={handleReplySubmit}
+                                            className="h-8 w-8 self-end rounded-xl hover:bg-blue-50 text-blue-500 transition-all shrink-0"
+                                        >
+                                            {isPostingReply ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+                            {/* Feature: Music Playlist Export - Moved to Header */}
+                        </div>
+                    )}
+
+                    {/* Search Section Inside Header - Only for Owner, only after list is named, and not while populating */}
+                    {
+                        currentUserId === expandedList.user_id && expandedList.id !== 'temp-pending' && !isPopulating && (
+                            <div className="mt-4">
+                                <form onSubmit={(e) => { e.preventDefault(); handleSearch(searchQuery); }} className="relative group">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-300 group-focus-within:text-black transition-colors" />
+                                    <Input
+                                        ref={searchInputRef}
+                                        placeholder={`Add to list...`}
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="h-8 pl-9 pr-20 bg-slate-50 border-none rounded-lg text-xs font-bold focus:bg-white focus:ring-1 focus:ring-slate-200 transition-all"
                                     />
+                                    <div className="absolute right-1 top-1 bottom-1">
+                                        <Button
+                                            type="submit"
+                                            size="sm"
+                                            disabled={isSearching || !searchQuery.trim()}
+                                            className="h-full px-3 rounded-md font-black text-[9px] tracking-widest uppercase bg-white border border-slate-200 text-slate-900 hover:bg-slate-50"
+                                        >
+                                            {isSearching ? <Loader2 className="h-3 w-3 animate-spin text-slate-400" /> : 'SEARCH'}
+                                        </Button>
+                                    </div>
+                                </form>
+
+                                {/* Search Results Dropdown-style */}
+                                {searchResults.length > 0 && (
+                                    <div
+                                        ref={searchResultsRef}
+                                        className="absolute left-5 right-5 mt-1 bg-white border border-slate-100 rounded-xl shadow-2xl z-50 p-1 max-h-[300px] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in duration-200"
+                                        onScroll={(e) => {
+                                            const target = e.currentTarget;
+                                            if (target.scrollHeight - target.scrollTop <= target.clientHeight + 50 && !isSearching && hasMore) {
+                                                const nextPage = page + 1;
+                                                setPage(nextPage);
+                                                handleSearch(searchQuery, true, nextPage);
+                                            }
+                                        }}
+                                    >
+                                        <div className="flex items-center justify-between px-3 py-2 border-b border-slate-50 mb-1">
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Search Results</span>
+                                            <div className="flex items-center gap-3">
+                                                {searchResults.length > 0 && itemsToPlaces(searchResults).length > 0 && (
+                                                    <button
+                                                        onClick={() => setShowMap(!showMap)}
+                                                        className="text-[9px] font-black uppercase tracking-widest text-green-600 hover:text-green-700 flex items-center gap-1"
+                                                    >
+                                                        <MapPin className="h-2.5 w-2.5" />
+                                                        {showMap ? 'Hide Map' : 'View on Map'}
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => setSearchResults([])}
+                                                    className="text-[9px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-700"
+                                                >
+                                                    Close
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-0.5">
+                                            {searchResults.map((item) => (
+                                                <div
+                                                    key={item.id}
+                                                    onClick={() => handleAddItem(item)}
+                                                    className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer group border border-transparent"
+                                                >
+                                                    <div className="w-7 h-7 rounded bg-slate-100 overflow-hidden shrink-0">
+                                                        {item.imageUrl && <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="font-bold text-[11px] text-slate-900 truncate group-hover:text-black">{item.name}</div>
+                                                        <div className="text-[9px] text-slate-600 truncate uppercase font-medium">{item.subtitle}</div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            {isSearching && page > 1 && (
+                                                <div className="p-2 text-center text-[10px] text-slate-400">Loading more...</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )
+                    }
+                </div>
+
+                <CardContent className="p-5 pt-0 flex-1 overflow-y-auto min-h-0 custom-scrollbar">
+                    {/* INLINE AI NUDGE - Only for Owner, only for More/Places category, only when empty and not populating */}
+                    {currentUserId === expandedList.user_id && expandedList.list_items.length === 0 && !isPopulating && !isBackgroundPopulating && (['other', 'places', 'more'].includes(expandedList.category?.toLowerCase() || '')) && (
+                        <div className="mb-6 p-6 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col items-center text-center gap-4 animate-in fade-in slide-in-from-top-4 duration-500 shadow-sm mt-4">
+                            <div className="p-3 bg-white rounded-2xl shadow-sm border border-slate-50">
+                                <Sparkles className="w-6 h-6 text-indigo-500 animate-pulse" />
+                            </div>
+                            <div className="space-y-1">
+                                <h4 className="text-base font-black uppercase tracking-tight text-slate-900 leading-tight">Need a starting point?</h4>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest max-w-[240px]">We can build a draft for you based on the title.</p>
+                            </div>
+                            <div className="flex flex-col w-full gap-2">
+                                <Button
+                                    onClick={() => startEarlyPopulation(expandedList)}
+                                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-widest h-12 rounded-xl shadow-md transition-all active:scale-95"
+                                >
+                                    Generate List
+                                </Button>
+                                <button
+                                    onClick={() => searchInputRef.current?.focus()}
+                                    className="text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors py-2"
+                                >
+                                    I&apos;ll add items manually
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                    <RankingList
+                        initialItems={expandedList.list_items}
+                        listId={expandedList.id}
+                        category={expandedList.category}
+                        title={expandedList.title}
+                        isPopulating={isPopulating || isBackgroundPopulating}
+                        showMap={showMap}
+                        mapItems={itemsToPlaces(expandedList.list_items.slice(0, 10))}
+                        onChange={(newItems) => {
+                            // Prevent updates to temp lists
+                            if (expandedList.id === 'temp-pending') return;
+                            setLists((prev: any[]) => prev.map(l =>
+                                l.id === expandedList.id ? { ...l, list_items: newItems } : l
+                            ));
+                        }}
+                    />
+
+                    {/* POPULATION FEEDBACK - Progress Bar */}
+                    {isPopulating && (
+                        <div className="mt-4 px-4 py-3 border border-slate-100 rounded-2xl bg-slate-50/50 flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                            <div className="flex items-center justify-between w-full">
+                                <div className="flex items-center gap-2">
+                                    <Loader2 className="h-3 w-3 animate-spin text-slate-400" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                        {populatedCount > 0 ? `Generating... ${populatedCount} found` : "Building your list... jot some thoughts down about your list while we work"}
+                                    </span>
                                 </div>
-                                <style dangerouslySetInnerHTML={{
-                                    __html: `
+                                {populatedCount > 0 && (
+                                    <button
+                                        onClick={() => handleSubmitWaitingComment()}
+                                        className="text-[10px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-600 transition-colors"
+                                    >
+                                        Done
+                                    </button>
+                                )}
+                            </div>
+                            <div className="w-full h-1.5 bg-slate-200/50 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-blue-500 transition-all duration-500"
+                                    style={{
+                                        width: populatedCount > 0 ? `${Math.min(100, (populatedCount / 12) * 100)}%` : '15%',
+                                        animation: populatedCount === 0 ? 'pulse-progress 2s ease-in-out infinite' : 'none'
+                                    }}
+                                />
+                            </div>
+                            <style dangerouslySetInnerHTML={{
+                                __html: `
                                             @keyframes pulse-progress {
                                                 0% { opacity: 0.6; width: 10%; }
                                                 50% { opacity: 1; width: 30%; }
                                                 100% { opacity: 0.6; width: 10%; }
                                             }
                                         `}} />
-                            </div>
-                        )}
+                        </div>
+                    )}
 
-                        {/* FEATURE: Music Playlist Export - Removed from bottom */}
-                    </CardContent>
-                </div>
+                    {/* FEATURE: Music Playlist Export - Removed from bottom */}
+                </CardContent>
             </Card>
         </div>
     );
