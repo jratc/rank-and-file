@@ -199,6 +199,11 @@ export function ExpandedListOverlay({
                                     {/* Top Social Actions */}
                                     {expandedList.id !== 'temp-pending' && (
                                         <div className="flex items-center gap-2 ml-auto">
+                                            {/* Music Export Button */}
+                                            {expandedList.category === 'music' && expandedList.list_items.length > 0 && (
+                                                <PlaylistExport items={expandedList.list_items} listTitle={expandedList.title} />
+                                            )}
+
                                             {/* Respond Button (Only if NOT the owner) */}
                                             {currentUserId !== expandedList.user_id && (
                                                 <div className="scale-90 origin-right">
@@ -603,14 +608,6 @@ export function ExpandedListOverlay({
                         </div>
                     )}
 
-                    {/* Playlist Export (Kept at bottom if music) */}
-                    {expandedList.category === 'music' && expandedList.list_items.length > 0 && (
-                        <div className="mt-8 pt-8 border-t border-slate-100 pb-20 md:pb-0">
-                            <div className="bg-slate-50/50 rounded-2xl p-6 border border-slate-100 flex flex-col items-center">
-                                <PlaylistExport items={expandedList.list_items} listTitle={expandedList.title} />
-                            </div>
-                        </div>
-                    )}
                 </CardContent>
             </Card>
         </div>

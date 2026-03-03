@@ -158,26 +158,33 @@ export function PlaylistExport({ items, listTitle, className = '' }: PlaylistExp
     const handleUniversalExport = (e: React.MouseEvent) => {
         e.stopPropagation();
 
-        let m3uContent = "#EXTM3U\n";
+        // Apple Music Desktop natively imports Tab-Separated Values (.txt)
+        // Format: Name  Artist  Album
+        // It uses this raw data to match with its massive cloud catalog natively
+        let txtContent = "Name\tArtist\tAlbum\n";
+
         musicItems.forEach((item) => {
             const name = item.metadata?.name || "Unknown Track";
-            const subtitle = item.metadata?.subtitle || "Unknown Artist";
-            const provider = item.metadata?.provider;
-            const previewUrl = provider === 'spotify'
-                ? item.metadata?.rawMetadata?.preview_url
-                : item.metadata?.rawMetadata?.previewUrl;
+            // Use subtitle (which is artist usually)
+            const artist = item.metadata?.subtitle || "Unknown Artist";
 
-            const url = previewUrl || item.metadata?.externalUrl || "";
+            // Extract album if available from rawMetadata, else leave blank
+            let album = "";
+            if (item.metadata?.provider === 'itunes') {
+                album = item.metadata?.rawMetadata?.collectionName || "";
+            } else if (item.metadata?.provider === 'spotify') {
+                album = item.metadata?.rawMetadata?.album?.name || "";
+            }
 
-            m3uContent += `#EXTINF:-1,${subtitle} - ${name}\n`;
-            m3uContent += `${url}\n`;
+            // Write Tab-separated row
+            txtContent += `${name}\t${artist}\t${album}\n`;
         });
 
-        const blob = new Blob([m3uContent], { type: 'audio/x-mpegurl' });
+        const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `${listTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_playlist.m3u`;
+        link.download = `${listTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_playlist.txt`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -187,12 +194,11 @@ export function PlaylistExport({ items, listTitle, className = '' }: PlaylistExp
     const hasSpotify = musicItems.some(i => i.metadata?.provider === 'spotify');
 
     return (
-        <div className={`flex items-center gap-2 ${className}`}>
-            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 mr-1">Save playlist:</span>
+        <div className={`flex items-center gap-1.5 ${className}`}>
             {hasSpotify && (
                 <button
                     onClick={handleSpotifyExport}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1DB954] hover:bg-[#1ed760] text-white text-[9px] font-black uppercase tracking-widest transition-all duration-200 shadow-sm hover:shadow-md hover:scale-105 active:scale-95"
+                    className="inline-flex items-center justify-center h-7 px-3 rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-white text-[9px] font-black uppercase tracking-widest transition-all duration-200 shadow-sm hover:shadow-md hover:scale-105 active:scale-95"
                     title="Open in Spotify App"
                 >
                     Spotify
@@ -200,10 +206,10 @@ export function PlaylistExport({ items, listTitle, className = '' }: PlaylistExp
             )}
             <button
                 onClick={handleUniversalExport}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#FC3C44] to-[#8B5CF6] hover:from-[#ff4f57] hover:to-[#9d6eff] text-white text-[9px] font-black uppercase tracking-widest transition-all duration-200 shadow-sm hover:shadow-md hover:scale-105 active:scale-95"
-                title="Download .m3u for iTunes/Apple Music"
+                className="inline-flex items-center justify-center h-7 px-3 rounded-full bg-gradient-to-r from-[#FC3C44] to-[#8B5CF6] hover:from-[#ff4f57] hover:to-[#9d6eff] text-white text-[9px] font-black uppercase tracking-widest transition-all duration-200 shadow-sm hover:shadow-md hover:scale-105 active:scale-95"
+                title="Download .txt for Apple Music Import"
             >
-                iTunes / Universal
+                Apple Music
             </button>
         </div>
     );
