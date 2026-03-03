@@ -189,11 +189,44 @@ export function ExpandedListOverlay({
                                                     toast.error('Failed to load responses');
                                                 }
                                             }}
-                                            className="hidden md:flex h-7 px-3 text-[9px] font-black tracking-widest uppercase bg-blue-500 hover:bg-blue-600 text-white rounded-md items-center gap-1.5"
+                                            className="h-7 px-3 text-[9px] font-black tracking-widest uppercase bg-blue-500 hover:bg-blue-600 text-white rounded-md flex items-center gap-1.5"
                                         >
                                             <MessageSquare className="h-2.5 w-2.5" />
                                             {expandedList.response_count} {expandedList.response_count === 1 ? 'RESPONSE' : 'RESPONSES'}
                                         </Button>
+                                    )}
+
+                                    {/* Top Social Actions */}
+                                    {expandedList.id !== 'temp-pending' && (
+                                        <div className="flex items-center gap-2 ml-auto">
+                                            {/* Respond Button (Only if NOT the owner) */}
+                                            {currentUserId !== expandedList.user_id && (
+                                                <div className="scale-90 origin-right">
+                                                    <ResponseBtn parentListId={expandedList.id} parentTitle={expandedList.title} />
+                                                </div>
+                                            )}
+
+                                            {/* Share Button */}
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-7 w-7 rounded-full bg-slate-50 text-slate-600 hover:bg-slate-100 transition-all active:scale-95 flex items-center justify-center"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    if (navigator.share) {
+                                                        navigator.share({
+                                                            title: expandedList.title,
+                                                            url: window.location.href
+                                                        });
+                                                    } else {
+                                                        handleCopyLink(expandedList);
+                                                    }
+                                                }}
+                                            >
+                                                <Share2 className="h-3.5 w-3.5" />
+                                            </Button>
+                                        </div>
                                     )}
                                 </div>
 
@@ -570,64 +603,15 @@ export function ExpandedListOverlay({
                         </div>
                     )}
 
-                    {/* Desktop Features (Playlist, etc) */}
-                    <div className="hidden md:flex flex-col gap-6 mt-12 pt-8 border-t border-slate-100">
-                        {expandedList.category === 'music' && expandedList.list_items.length > 0 && (
-                            <div className="bg-slate-50/50 rounded-2xl p-6 border border-slate-100">
+                    {/* Playlist Export (Kept at bottom if music) */}
+                    {expandedList.category === 'music' && expandedList.list_items.length > 0 && (
+                        <div className="mt-8 pt-8 border-t border-slate-100 pb-20 md:pb-0">
+                            <div className="bg-slate-50/50 rounded-2xl p-6 border border-slate-100 flex flex-col items-center">
                                 <PlaylistExport items={expandedList.list_items} listTitle={expandedList.title} />
                             </div>
-                        )}
-                        <div className="flex items-center gap-4">
-                            <ResponseBtn parentListId={expandedList.id} parentTitle={expandedList.title} />
-                            <Button
-                                variant="outline"
-                                className="font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-slate-50"
-                                onClick={() => {
-                                    if (navigator.share) {
-                                        navigator.share({
-                                            title: expandedList.title,
-                                            url: window.location.href
-                                        });
-                                    } else {
-                                        handleCopyLink(expandedList);
-                                    }
-                                }}
-                            >
-                                <Share2 className="h-4 w-4 mr-2" />
-                                SHARE LIST
-                            </Button>
-                        </div>
-                    </div>
-                </CardContent>
-
-                {/* MOBILE BOTTOM ACTION BAR - Radical Redo for Parity */}
-                <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-slate-100 p-4 flex items-center justify-between gap-3 z-50">
-                    {expandedList.category === 'music' && expandedList.list_items.length > 0 && (
-                        <div className="flex-1">
-                            <PlaylistExport items={expandedList.list_items} listTitle={expandedList.title} />
                         </div>
                     )}
-                    <div className="flex items-center gap-2">
-                        <ResponseBtn parentListId={expandedList.id} parentTitle={expandedList.title} />
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-12 w-12 rounded-2xl bg-slate-50 text-slate-600 hover:bg-slate-100 transition-all active:scale-95"
-                            onClick={() => {
-                                if (navigator.share) {
-                                    navigator.share({
-                                        title: expandedList.title,
-                                        url: window.location.href
-                                    });
-                                } else {
-                                    handleCopyLink(expandedList);
-                                }
-                            }}
-                        >
-                            <Share2 className="h-5 w-5" />
-                        </Button>
-                    </div>
-                </div>
+                </CardContent>
             </Card>
         </div>
     );

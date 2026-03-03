@@ -104,7 +104,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
             }
 
             // Don't overwrite if user is actively typing or has a dirty draft
-            if (isCommentDirty.current || isPopulating) return;
+            if (isCommentDirty.current) return;
 
             try {
                 const results = await getComments(expandedListId);
@@ -112,9 +112,11 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                 // Look for the LIST OWNER'S latest comment to show in the main area
                 const listOwnerId = lists.find(l => l.id === expandedListId)?.user_id;
                 const userComment = results?.filter((c: any) => c.user_id === listOwnerId).pop();
+
                 if (userComment) {
-                    setWaitingComment(userComment.content);
-                } else {
+                    // Only update if it's different to avoid jarring UI resets
+                    setWaitingComment(prev => prev === userComment.content ? prev : userComment.content);
+                } else if (!isCommentDirty.current && !waitingComment.trim()) {
                     setWaitingComment('');
                 }
             } catch (err) {
@@ -123,7 +125,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
         };
 
         fetchComments();
-    }, [expandedListId, currentUserId, isPopulating]); // Added isPopulating to dependencies
+    }, [expandedListId, currentUserId]); // Removed isPopulating to prevent clearing notes on complete
 
     const refreshComments = async () => {
         if (!expandedListId) return;

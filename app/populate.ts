@@ -223,7 +223,7 @@ export async function detectAndPopulateList(listId: string, title: string, categ
     const { data: existing } = await supabase.from('list_items').select('rank').eq('list_id', listId);
     const startRank = (existing && existing.length > 0) ? Math.max(...existing.map(e => e.rank || 0)) : 0;
 
-    const maxItems = 15;
+    const maxItems = 45; // Allow up to 45 items directly from the provider without background loading
     const itemsToInsert = items.slice(0, maxItems);
     console.log(`[Populate] Inserting ${itemsToInsert.length} items for list: ${listId} (Start Rank: ${startRank + 1})...`);
 
@@ -294,11 +294,10 @@ export async function detectAndPopulateList(listId: string, title: string, categ
     }
 
     // 5. Check if complete
-    // We only consider it "complete" if less than our initial 15 items were found.
-    // If we inserted zero or very few items, it might be incomplete (especially for books search)
-    // We only consider it "Complete" if we hit the maxItems or if we are sure there's nothing left.
-    // For now, let's be more lenient and allow background population if we have < 15.
-    const isComplete = (populatedItems < 5); // Only truly "complete" if we found almost nothing
+    // We consider it "complete" if we found a decent amount (>= 15),
+    // OR if the items came directly from Gemini (meaning we already used LLM, don't cascade).
+    const isGeminiSourced = itemsToInsert.length > 0 && itemsToInsert[0].provider === 'gemini';
+    const isComplete = (populatedItems >= 15) || isGeminiSourced;
 
     return { populated: true, count: populatedItems, items: insertedData, isComplete };
 }
