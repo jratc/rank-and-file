@@ -129,11 +129,15 @@ export async function detectAndPopulateList(listId: string, title: string, categ
                 } else {
                     items = await booksProvider.getBooksByAuthor(context.author);
                 }
-            } else if (category === 'music' && context.artist) {
-                if (context.intent === 'song') {
-                    items = await itunesProvider.getTopSongs(context.artist);
+            } else if (category === 'music') {
+                if (context.artist) {
+                    if (context.intent === 'song') {
+                        items = await itunesProvider.getTopSongs(context.artist);
+                    } else {
+                        items = await itunesProvider.getDiscography(context.artist);
+                    }
                 } else {
-                    items = await itunesProvider.getDiscography(context.artist);
+                    items = await itunesProvider.searchAlbums(title, context);
                 }
             } else if (['food', 'bars', 'restaurants', 'places', 'other', 'more'].includes(category)) {
                 if (process.env.GEMINI_API_KEY) {
@@ -147,6 +151,7 @@ export async function detectAndPopulateList(listId: string, title: string, categ
                                 imageUrl: null,
                                 externalUrl: null,
                                 provider: 'gemini',
+                                category: category as any,
                                 type: 'custom'
                             }));
                         }
@@ -175,6 +180,7 @@ export async function detectAndPopulateList(listId: string, title: string, categ
                     imageUrl: null,
                     externalUrl: null,
                     provider: 'gemini',
+                    category: category as any,
                     type: 'custom'
                 }));
             }
@@ -363,6 +369,7 @@ export async function populateBackgroundItems(listId: string, title: string, cat
                 ...item,
                 id: `llm-bg-${Date.now()}-${index}`,
                 provider: 'gemini',
+                category: category,
                 type: 'custom'
             }
         }))

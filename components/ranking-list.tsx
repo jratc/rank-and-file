@@ -69,8 +69,8 @@ export function RankingList({
         }),
         useSensor(TouchSensor, {
             activationConstraint: {
-                delay: 250,
-                tolerance: 5,
+                delay: 150,
+                tolerance: 10,
             },
         }),
         useSensor(KeyboardSensor, {

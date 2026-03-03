@@ -111,7 +111,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                 setAllComments(results || []);
                 // Look for the LIST OWNER'S latest comment to show in the main area
                 const listOwnerId = lists.find(l => l.id === expandedListId)?.user_id;
-                const userComment = results?.findLast((c: any) => c.user_id === listOwnerId);
+                const userComment = results?.filter((c: any) => c.user_id === listOwnerId).pop();
                 if (userComment) {
                     setWaitingComment(userComment.content);
                 } else {
@@ -173,6 +173,20 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
         isExpanded: false
     });
     const [isUpdatingTitle, setIsUpdatingTitle] = useState(false);
+
+    // Sync Edit Session with Expanded List
+    useEffect(() => {
+        if (expandedListId && expandedListId !== 'temp-pending') {
+            const list = lists.find(l => l.id === expandedListId);
+            if (list) {
+                setEditSession({
+                    id: list.id,
+                    title: (list.title || '').toUpperCase(),
+                    isExpanded: true
+                });
+            }
+        }
+    }, [expandedListId, lists]);
 
     // Share State
     const [showShareOptions, setShowShareOptions] = useState(false);
@@ -716,7 +730,6 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
 
     const handleUpdateTitle = async (targetListId: string) => {
         const cleanup = () => {
-            setEditSession({ id: null, title: null, isExpanded: false });
             setIsUpdatingTitle(false);
         };
 
@@ -743,6 +756,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                 // But for a TEMP list, empty title means "Cancel Creation".
                 setLists(prev => prev.filter(l => l.id !== 'temp-pending'));
                 setExpandedListId(null);
+                setEditSession({ id: null, title: null, isExpanded: false });
                 cleanup();
                 return;
             }
@@ -793,6 +807,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
                 toast.error(error.message?.includes('DB_ERROR') ? `Database error: ${error.message}` : "Failed to create list");
                 setLists(prev => prev.filter(l => l.id !== 'temp-pending'));
                 setExpandedListId(null);
+                setEditSession({ id: null, title: null, isExpanded: false });
                 cleanup();
             }
             return;

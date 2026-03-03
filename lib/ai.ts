@@ -64,6 +64,8 @@ export async function generateSearchIntent(query: string, category: string): Pro
         4. If the query asks for a group of people or items (e.g. "NPR Journalists", "Best Sci-Fi Books"), set intent to 'list' and subject to the topic.
         5. "Sean Penn Movies" -> subject: "Sean Penn", actor: "Sean Penn", intent: "movie"
         6. "Best Pizza in Chicago" -> subject: "Pizza", intent: "place", location: "Chicago"
+        7. If the query contains "songs" or "tracks", MUST set intent: "song".
+        8. If the query contains "albums" or "discography", MUST set intent: "album".
         
         Response must be valid JSON only. No markdown formatting.
         `;
@@ -128,7 +130,7 @@ export async function generateListFromLLM(topic: string, count: number = 20): Pr
         [
             {
                 "name": "Item Name",
-                "subtitle": "Short description (10-15 words) explaining why it matches the topic or its specific location/neighborhood within the city",
+                "subtitle": "Short description (10-15 words) explaining why it matches the topic or its specific location/neighborhood within the city. For music, explicitly state 'Album' or 'Song' if relevant.",
                 "score": 95
             },
             ...

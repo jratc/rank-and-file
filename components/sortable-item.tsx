@@ -36,14 +36,22 @@ export function SortableItem({ id, item, rank, category, onRemove, onDoubleClick
     };
 
     return (
-        <div ref={setNodeRef} style={style} className="mb-3">
+        <div ref={setNodeRef} style={style} className="mb-3 flex items-center gap-2">
+            {/* Explicit Drag Handle for Mobile */}
+            <div
+                {...attributes}
+                {...listeners}
+                className="md:hidden p-2 text-slate-300 active:text-blue-500 touch-none"
+            >
+                <GripVertical className="h-5 w-5" />
+            </div>
+
             <RankedItemCard
                 item={item}
                 category={category}
                 priority={priority}
-                className="cursor-grab active:cursor-grabbing hover:bg-slate-50 hover:shadow-md"
-                {...attributes}
-                {...listeners}
+                className="flex-1 cursor-grab active:cursor-grabbing hover:bg-slate-50 hover:shadow-md"
+                {...(typeof window !== 'undefined' && window.innerWidth >= 768 ? { ...attributes, ...listeners } : {})}
                 onDoubleClick={onDoubleClick}
             >
                 <div className="flex flex-row items-center justify-end pl-2 pr-1 border-l border-slate-100 gap-1 bg-white z-10 shrink-0">
@@ -65,12 +73,16 @@ export function SortableItem({ id, item, rank, category, onRemove, onDoubleClick
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
-                        onClick={() => onRemove(item.id)}
-                        onPointerDown={(e) => e.stopPropagation()} // Prevent drag start
-                        onMouseDown={(e) => e.stopPropagation()}   // Prevent drag start
+                        className="h-9 w-9 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors shrink-0"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onRemove(item.id);
+                        }}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
                     >
-                        <X className="h-4 w-4" />
+                        <X className="h-5 w-5" />
                     </Button>
                 </div>
             </RankedItemCard>

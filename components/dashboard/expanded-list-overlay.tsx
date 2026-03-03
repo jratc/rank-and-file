@@ -148,7 +148,7 @@ export function ExpandedListOverlay({
                 className="fixed inset-0"
                 onClick={closeExpandedView}
             />
-            <Card className="relative w-full max-w-xl flex flex-col h-full sm:h-auto sm:max-h-[90vh] border-slate-200 bg-white shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] animate-in slide-in-from-bottom-4 duration-300">
+            <Card className="relative w-full max-w-xl flex flex-col h-[100dvh] sm:h-auto sm:max-h-[90vh] border-slate-200 bg-white shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] animate-in slide-in-from-bottom-4 duration-300">
                 <button
                     onClick={closeExpandedView}
                     className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-slate-100 text-slate-400 transition-colors z-20"
@@ -199,7 +199,7 @@ export function ExpandedListOverlay({
 
                                 {currentUserId === expandedList.user_id ? (
                                     <Input
-                                        value={editSession.title || ''}
+                                        value={editSession.title ?? expandedList.title ?? ''}
                                         placeholder="NAME YOUR LIST"
                                         onChange={(e) => setEditSession(s => ({ ...s, title: e.target.value.toUpperCase() }))}
                                         onBlur={() => handleUpdateTitle(expandedList.id)}
@@ -219,7 +219,7 @@ export function ExpandedListOverlay({
 
                     {/* INTEGRATED COMMENT AREA (Description) */}
                     {currentUserId === expandedList.user_id ? (
-                        <div className="mt-2 group">
+                        <div className="mt-2 group shrink-0 px-5">
                             <div className="relative">
                                 <Textarea
                                     placeholder={isPopulating ? "Building your list... jot some thoughts down about your list while we work" : "Jot down some notes-what should people know about your list?"}
@@ -337,7 +337,7 @@ export function ExpandedListOverlay({
                             )}
                         </div>
                     ) : (
-                        <div className="mt-2 space-y-4">
+                        <div className="mt-2 space-y-4 shrink-0 px-5">
                             {waitingComment ? (
                                 <div className="px-3 py-2 bg-slate-50/50 rounded-xl border border-slate-100/50">
                                     <p className="text-xs font-medium text-slate-600 italic leading-relaxed">
@@ -412,7 +412,7 @@ export function ExpandedListOverlay({
                     {/* Search Section Inside Header - Only for Owner, only after list is named, and not while populating */}
                     {
                         currentUserId === expandedList.user_id && expandedList.id !== 'temp-pending' && !isPopulating && (
-                            <div className="mt-4">
+                            <div className="mt-4 shrink-0 px-5 z-20">
                                 <form onSubmit={(e) => { e.preventDefault(); handleSearch(searchQuery); }} className="relative group">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-300 group-focus-within:text-black transition-colors" />
                                     <Input
@@ -495,7 +495,7 @@ export function ExpandedListOverlay({
                     }
                 </div>
 
-                <CardContent className="p-5 pt-0 flex-1 overflow-y-auto min-h-0 custom-scrollbar">
+                <CardContent className="p-5 flex-1 overflow-y-auto min-h-0 custom-scrollbar pb-24 md:pb-5">
                     {/* INLINE AI NUDGE - Only for Owner, only for More/Places category, only when empty and not populating */}
                     {currentUserId === expandedList.user_id && expandedList.list_items.length === 0 && !isPopulating && !isBackgroundPopulating && (['other', 'places', 'more'].includes(expandedList.category?.toLowerCase() || '')) && (
                         <div className="mb-6 p-6 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col items-center text-center gap-4 animate-in fade-in slide-in-from-top-4 duration-500 shadow-sm mt-4">
@@ -567,19 +567,67 @@ export function ExpandedListOverlay({
                                     }}
                                 />
                             </div>
-                            <style dangerouslySetInnerHTML={{
-                                __html: `
-                                            @keyframes pulse-progress {
-                                                0% { opacity: 0.6; width: 10%; }
-                                                50% { opacity: 1; width: 30%; }
-                                                100% { opacity: 0.6; width: 10%; }
-                                            }
-                                        `}} />
                         </div>
                     )}
 
-                    {/* FEATURE: Music Playlist Export - Removed from bottom */}
+                    {/* Desktop Features (Playlist, etc) */}
+                    <div className="hidden md:flex flex-col gap-6 mt-12 pt-8 border-t border-slate-100">
+                        {expandedList.category === 'music' && expandedList.list_items.length > 0 && (
+                            <div className="bg-slate-50/50 rounded-2xl p-6 border border-slate-100">
+                                <PlaylistExport items={expandedList.list_items} listTitle={expandedList.title} />
+                            </div>
+                        )}
+                        <div className="flex items-center gap-4">
+                            <ResponseBtn parentListId={expandedList.id} parentTitle={expandedList.title} />
+                            <Button
+                                variant="outline"
+                                className="font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-slate-50"
+                                onClick={() => {
+                                    if (navigator.share) {
+                                        navigator.share({
+                                            title: expandedList.title,
+                                            url: window.location.href
+                                        });
+                                    } else {
+                                        handleCopyLink(expandedList);
+                                    }
+                                }}
+                            >
+                                <Share2 className="h-4 w-4 mr-2" />
+                                SHARE LIST
+                            </Button>
+                        </div>
+                    </div>
                 </CardContent>
+
+                {/* MOBILE BOTTOM ACTION BAR - Radical Redo for Parity */}
+                <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-slate-100 p-4 flex items-center justify-between gap-3 z-50">
+                    {expandedList.category === 'music' && expandedList.list_items.length > 0 && (
+                        <div className="flex-1">
+                            <PlaylistExport items={expandedList.list_items} listTitle={expandedList.title} />
+                        </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                        <ResponseBtn parentListId={expandedList.id} parentTitle={expandedList.title} />
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-12 w-12 rounded-2xl bg-slate-50 text-slate-600 hover:bg-slate-100 transition-all active:scale-95"
+                            onClick={() => {
+                                if (navigator.share) {
+                                    navigator.share({
+                                        title: expandedList.title,
+                                        url: window.location.href
+                                    });
+                                } else {
+                                    handleCopyLink(expandedList);
+                                }
+                            }}
+                        >
+                            <Share2 className="h-5 w-5" />
+                        </Button>
+                    </div>
+                </div>
             </Card>
         </div>
     );
