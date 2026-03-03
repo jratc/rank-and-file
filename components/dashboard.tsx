@@ -585,7 +585,7 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
     };
 
     const startEarlyPopulation = async (targetList: any) => {
-        if (!targetList || isPopulating) return;
+        if (!targetList) return;
 
         setIsPopulating(true);
         setPopulatedCount(0);
@@ -805,10 +805,8 @@ export function Dashboard({ initialLists, currentUserId, currentUsername, curren
             } catch (error: any) {
                 console.error("[Dashboard] List creation failed:", error);
                 toast.error(error.message?.includes('DB_ERROR') ? `Database error: ${error.message}` : "Failed to create list");
-                setLists(prev => prev.filter(l => l.id !== 'temp-pending'));
-                setExpandedListId(null);
-                setEditSession({ id: null, title: null, isExpanded: false });
-                cleanup();
+                // Do not aggressively close the UI on error, allow user to retry or see the error
+                setIsUpdatingTitle(false);
             }
             return;
         }

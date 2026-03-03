@@ -222,9 +222,9 @@ export const moviesProvider = {
                         moviesProvider.getDirectorFilmography(context.director)
                     ]);
 
-                    // Merge and deduplicate
+                    // Merge and deduplicate, prioritizing director credits
                     const merged = new Map<string, RankedItem>();
-                    [...actorMovies, ...directorMovies].forEach(item => {
+                    [...directorMovies, ...actorMovies].forEach(item => {
                         const key = item.name.toLowerCase().trim();
                         if (!merged.has(key)) {
                             merged.set(key, item);
